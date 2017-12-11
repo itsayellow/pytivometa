@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # Copyright (c) 2008, Graham Dunn <gmd@kurai.org>
 # Copyright (c) 2009-2011, Josh Harding <theamigo@gmail.com>
+# Copyright (c) 2017, Matthew Clapp <itsayellow+dev@gmail.com>
 #
 # All rights reserved.
 #

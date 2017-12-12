@@ -33,6 +33,11 @@
 
 # Python required: > 3.0
 
+"""Look in current directory, or specified directory, find all video files,
+fetch their metadata, and write metadata out into format that pytivo can
+parse and use.
+"""
+
 import argparse
 import gzip
 import io

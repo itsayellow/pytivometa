@@ -117,8 +117,11 @@ def debug(level, text):
                 except UnicodeDecodeError as e:
                     print("Unable to display debug message, error is: " + str(e))
 
+class TimeOutException(Exception):
+    pass
+
 def alarmHandler():
-    raise Exception('TimeOut')
+    raise TimeOutException
 
 def getMirrorURL():
     global TVDB
@@ -136,7 +139,7 @@ def getMirrorURL():
             try:
                 signal.alarm(timeout)
                 mirrorsXML = parse(urllib.request.urlopen(mirrorsURL))
-            except 'TimeOut':
+            except TimeOutException:
                 debug(0, "Timeout looking up mirrors for thetvdb.com, site down?  No metadata will be retrieved for TV shows.")
                 TVDB = 0
             signal.alarm(0)

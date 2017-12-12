@@ -35,6 +35,7 @@ import errno
 import sqlite3
 import gzip
 import io
+import argparse
 
 from optparse import OptionParser
 from xml.etree.ElementTree import parse, Element, SubElement
@@ -60,12 +61,6 @@ parser.add_option("-t", "--tidy", action="store_true", dest="metadir", help="Sav
 parser.add_option("-r", "--recursive", action="store_true", dest="recursive", help="Generate metadata for all files in sub dirs too.")
 parser.add_option("-g", "--genre", dest="genre", help="Specify a directory in which to place symlinks to shows, organized by genre.")
 parser.add_option("-w", "--wait", dest="timeout", help="How many seconds to wait for a connection to theTVdb.com before giving up. (Default: 5s)")
-
-# Options below here are all deprecated... most have been automated.
-parser.add_option("-a", "--alternate", action="store_true", dest="isAltOutput", help="Deprecated.  Use templates instead: http://pytivo.krkeegan.com/pytivo-video-templates-t618.html")
-parser.add_option("-i", "--interactive", action="store_true", dest="interactive", help="Deprecated.  Interactive prompts are automatically supressed when run via cron or as a scheduled task.")
-parser.add_option("-m", "--movie", action="store_true", dest="isMovie", help="Deprecated.  Silently ignored to prevent errors.")
-parser.add_option("-p", "--path", action="count", dest="ignore", help="Deprecated.  Directories may be listed without a -p, default is '.'")
 
 (options, args) = parser.parse_args()
 
@@ -890,6 +885,45 @@ def checkInteractive():
     # On windows systems set interactive when running from a console
     elif 'PROMPT' in list(os.environ.keys()):
         options.interactive = 1
+
+def process_command_line(argv):
+    """Process command line invocation arguments and switches.
+
+    Args:
+        argv: list of arguments, or `None` from ``sys.argv[1:]``.
+
+    Returns:
+        args: Namespace with named attributes of arguments and switches
+    """
+    #script_name = argv[0]
+    argv = argv[1:]
+
+    # initialize the parser object:
+    parser = argparse.ArgumentParser(
+            description="Retrieve information from TVDB and IMDB to add "\
+                    "TiVo metadatada to all media files in the current "\
+                    "directory."
+                    )
+
+    # specifying nargs= puts outputs of parser in list (even if nargs=1)
+
+    # required arguments
+    #parser.add_argument('srcdir',
+    #        help="Source directory (recursively searched)."
+    #        )
+
+    # switches/options:
+    #parser.add_argument(
+    #    '-s', '--max_size', action='store',
+    #    help='String specifying maximum size of images.  ' \
+    #            'Larger images will be resized. (e.g. "1024x768")')
+    #parser.add_argument(
+    #    '-o', '--omit_hidden', action='store_true',
+    #    help='Do not copy picasa hidden images to destination directory.')
+
+    args = parser.parse_args(argv)
+
+    return args
 
 def main():
     global args

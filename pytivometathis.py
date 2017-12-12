@@ -107,7 +107,7 @@ def getMirrorURL():
     mirrorsURL = "http://www.thetvdb.com/api/%s/mirrors.xml" % APIKEY
     mirrorURL = ''
     # If we don't hear back after timeout seconds, give up and move on
-    timeout = OPTIONS.timeout or 5
+    timeout = OPTIONS.timeout
     try:
         mirrorsXML = parse(urllib.request.urlopen(mirrorsURL, None, timeout))
         mirrors = [Item for Item in mirrorsXML.findall('Mirror')]
@@ -914,7 +914,7 @@ def process_command_line(argv):
                     "organized by genre."
             )
     parser.add_argument(
-            "-w", "--wait", dest="timeout",
+            "-w", "--wait", dest="timeout", type=int, default=5,
             help="How many seconds to wait for a connection to theTVdb.com "\
                     "before giving up. (Default: 5s)"
             )
@@ -930,9 +930,9 @@ def main():
 
     checkInteractive()
 
-    debug(2,"\nConsole Input encoding: %s" % in_encoding)
-    debug(2,"Console Output encoding: %s" % out_encoding)
-    debug(2,"Metadata File Output encoding: %s\n" % file_encoding)
+    debug(2, "\nConsole Input encoding: %s" % in_encoding)
+    debug(2, "Console Output encoding: %s" % out_encoding)
+    debug(2, "Metadata File Output encoding: %s\n" % file_encoding)
 
     # Initalize things we'll need for looking up data
     MirrorURL = getMirrorURL()
@@ -940,15 +940,25 @@ def main():
     if OPTIONS.genre:
         # Python doesn't support making symlinks on Windows.
         if sys.platform in ['win32', 'cygwin']:
-            debug(0,"The genre feature doesn't work on Windows as symlinks aren't well supported.")
+            debug(0, "The genre feature doesn't work on Windows as symlinks " +\
+                    "aren't well supported."
+                    )
             OPTIONS.genre = ''
         else:
             if not os.path.exists(OPTIONS.genre):
                 os.makedirs(OPTIONS.genre, 0o755)
             elif not os.path.isdir(OPTIONS.genre):
-                raise OSError('Can\'t create "' + OPTIONS.genre + '" as a dir, a file already exists with that name.')
+                raise OSError(
+                        'Can\'t create "' + OPTIONS.genre + '" as a dir, a ' + \
+                                'file already exists with that name.'
+                        )
             else:
-                debug(0,"Note: If you've removed videos, there may be old symlinks in '" + OPTIONS.genre + "'.  If there's nothing else in there, you can just remove the whole thing first, then run this again (e.g. rm -rf '" + OPTIONS.genre + "'), but be careful.")
+                debug(0, "Note: If you've removed videos, there may be old " +\
+                        "symlinks in '" + OPTIONS.genre + "'.  If there's " +\
+                        "nothing else in there, you can just remove the " +\
+                        "whole thing first, then run this again (e.g. " +\
+                        "rm -rf '" + OPTIONS.genre + "'), but be careful."
+                        )
 
     for dir in OPTIONS.dir:
         processDir(dir, MirrorURL)

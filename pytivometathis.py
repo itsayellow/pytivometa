@@ -37,10 +37,7 @@ import urllib.request, urllib.parse, urllib.error
 import urllib.request, urllib.error, urllib.parse
 import sys
 import re
-import string
 import os
-import errno
-import sqlite3
 import gzip
 import io
 import argparse
@@ -56,7 +53,7 @@ try:
     import imdb
 except ImportError:
     print('IMDB module could not be loaded. Movie Lookups will be disabled.\n'
-            'See http://imdbpy.sourceforge.net')
+          'See http://imdbpy.sourceforge.net')
     IMDB = 0
 
 # Which country's release date do we want to see:
@@ -66,7 +63,7 @@ OPTIONS = None
 
 # Flag to track if TV lookups are enabled.
 TVDB = 1
-APIKEY="0403764A0DA51955"
+APIKEY = "0403764A0DA51955"
 
 GETSERIESID_URL = '/api/GetSeries.php?'
 GETEPISODEID_URL = '/GetEpisodes.php?'
@@ -79,9 +76,16 @@ SINFOCACHE = {}
 METADIR = '.meta'
 
 # Regexes that match TV shows.
-tvres = [r'(.+)[Ss](\d\d?)[Ee](\d+)', r'(.+?)(?: -)? ?(\d+)[Xx](\d+)', r'(.*).(\d\d\d\d).(\d+).(\d+).*', r'(.*).(\d+).(\d+).(\d\d\d\d).*', r'(?i)(.+)(\d?\d)(\d\d).*sitv']
+tvres = [
+        r'(.+)[Ss](\d\d?)[Ee](\d+)', r'(.+?)(?: -)? ?(\d+)[Xx](\d+)',
+        r'(.*).(\d\d\d\d).(\d+).(\d+).*', r'(.*).(\d+).(\d+).(\d\d\d\d).*',
+        r'(?i)(.+)(\d?\d)(\d\d).*sitv'
+        ]
 # Types of files we want to get metadata for
-fileExtList = [".mpg", ".avi", ".ogm", ".mkv", ".mp4", ".mov", ".wmv", ".vob", ".m4v", ".flv"]
+fileExtList = [
+        ".mpg", ".avi", ".ogm", ".mkv", ".mp4",
+        ".mov", ".wmv", ".vob", ".m4v", ".flv"
+        ]
 # string encoding for input from console
 in_encoding = sys.stdin.encoding or sys.getdefaultencoding()
 # string encoding for output to console
@@ -122,16 +126,16 @@ def get_mirror_url():
     except:
         debug(0, "Error looking information from thetvdb, no metadata will "\
                 "be retrieved for TV shows."
-                )
+             )
         TVDB = 0
     return mirrorURL
 
 def find_series_by_year(series, year):
     matchingSeries = []
     for show in series:
-        firstAired = show.findtext('FirstAired')
-        if firstAired:
-            match = re.search(r'(\d\d\d\d)-\d\d-\d\d', firstAired)
+        first_aired = show.findtext('FirstAired')
+        if first_aired:
+            match = re.search(r'(\d\d\d\d)-\d\d-\d\d', first_aired)
             if match and year == match.group(1):
                 matchingSeries.append(show)
     # Return all that matched the year (which may be an empty list)
@@ -146,21 +150,22 @@ def to_hex(s):
             hv = '0'+hv
         lst.append(hv)
 
-    return reduce(lambda x,y:x+y, lst)
+    return reduce(lambda x, y: x+y, lst)
 
 # patched function to allow parsing gzipped data
 def get_xml(url):
-    debug(3,"get_xml: Using URL " + url)
+    debug(3, "get_xml: Using URL " + url)
     try:
         rawXML = urllib.request.urlopen(url).read()
     except Exception as e:
         debug(0, "\n Exception = " + str(e))
         return None
-    
+
     xml = None
-    if ( to_hex(rawXML[0:2]) !=  "1f8b" ): #check for gzip compressed data
+    #check for gzip compressed data
+    if to_hex(rawXML[0:2]) != "1f8b":
         filestream = io.StringIO(rawXML)
-        debug(0,"Not gzip compressed data " +  to_hex(rawXML[0:2]))
+        debug(0, "Not gzip compressed data " +  to_hex(rawXML[0:2]))
     else:
         filestream = gzip.GzipFile(fileobj=io.StringIO(rawXML))
         debug(0, "gzip compressed data")
@@ -168,15 +173,15 @@ def get_xml(url):
         xml = parse(filestream).getroot()
     except Exception as e:
         debug(0, "\n Exception = " + str(e))
-        debug(3,"\nrawXML = " + rawXML + "\n\nhexXML = " + to_hex(rawXML))
+        debug(3, "\nrawXML = " + rawXML + "\n\nhexXML = " + to_hex(rawXML))
 
     return xml
 
-def get_series_id(MirrorURL, show_name, showDir):
+def get_series_id(mirror_url, show_name, show_dir):
     seriesid = ''
-    sidfiles = [os.path.join(showDir, show_name + ".seriesID")]
-    if OPTIONS.metadir or os.path.isdir(os.path.join(showDir, METADIR)):
-        sidfiles.append(os.path.join(showDir, METADIR, show_name + ".seriesID"))
+    sidfiles = [os.path.join(show_dir, show_name + ".seriesID")]
+    if OPTIONS.metadir or os.path.isdir(os.path.join(show_dir, METADIR)):
+        sidfiles.append(os.path.join(show_dir, METADIR, show_name + ".seriesID"))
 
     # See if there's a year in the name
     match = re.search(r'(.+?) *\(((?:19|20)\d\d)\)', show_name)
@@ -189,25 +194,25 @@ def get_series_id(MirrorURL, show_name, showDir):
 
     # Prepare the seriesID file
     for seriesidpath in sidfiles:
-        debug(2,"Looking for .seriesID file in " + seriesidpath)
+        debug(2, "Looking for .seriesID file in " + seriesidpath)
         # Get seriesid
         if os.path.exists(seriesidpath):
-            debug(2,'Reading seriesID from file: ' + seriesidpath)
+            debug(2, 'Reading seriesID from file: ' + seriesidpath)
             seriesidfile = open(seriesidpath, 'r')
             seriesid = seriesidfile.read()
             seriesidfile.close()
-            debug(1,'Using stored seriesID: ' + seriesid)
+            debug(1, 'Using stored seriesID: ' + seriesid)
 
     if not OPTIONS.clobber and len(seriesid) > 0:
         seriesid = re.sub("\n", "", seriesid)
     else:
-        debug(1,'Searching for: ' + bare_title)
-        url = MirrorURL + GETSERIESID_URL + urllib.parse.urlencode({"seriesname" : bare_title})
-        debug(3,'seriesXML: Using URL ' + url)
+        debug(1, 'Searching for: ' + bare_title)
+        url = mirror_url + GETSERIESID_URL + urllib.parse.urlencode({"seriesname" : bare_title})
+        debug(3, 'seriesXML: Using URL ' + url)
         # patch new
         seriesXML = get_xml(url)
-        if ( seriesXML is None):
-            debug(3,"Error getting Series Info")
+        if seriesXML is None:
+            debug(3, "Error getting Series Info")
             return None, None
         #seriesXML = parse(urllib.urlopen(url)).getroot()
         series = [Item for Item in seriesXML.findall('Series')]
@@ -220,30 +225,34 @@ def get_series_id(MirrorURL, show_name, showDir):
             debug(2, 'Series that match by year: %d.' % len(series))
 
         if len(series) == 1:
-            debug(1,"Found exact match")
+            debug(1, "Found exact match")
             seriesid = series[0].findtext('id')
         elif OPTIONS.interactive:
             # Display all the shows found
             if len(series) >= 2:
                 print("####################################\n")
                 print("Multiple TV Shows found:\n")
-                print("Found %s shows for Series Title %s" % (len(series), show_name.encode(out_encoding, 'replace')))
+                print("Found %s shows for Series Title %s"%(
+                    len(series), show_name.encode(out_encoding, 'replace')
+                    )
+                    )
                 print("------------------------------------")
-                for e in series:
-                    eSeriesName = e.findtext('SeriesName')
-                    eId = e.findtext('id')
-                    eOverview = e.findtext('Overview')
-                    firstAired = e.findtext('FirstAired')
-                    # eOverview may not exist, so default them to something so print doesn't fail
-                    if eOverview is None:
-                        eOverview = "<None>"
-                    if len(eOverview) > 240:
-                        eOverview = eOverview[0:239]
-                    print("Series Name:\t%s" % eSeriesName.encode(out_encoding, 'replace'))
-                    print("Series ID:\t%s" % eId.encode(out_encoding, 'replace'))
-                    if firstAired:
-                        print("1st Aired:\t%s" % firstAired.encode(out_encoding, 'replace'))
-                    print("Description:\t%s\n------------------------------------" % eOverview.encode(out_encoding, 'replace'))
+                for epsiode in series:
+                    ep_series_name = epsiode.findtext('SeriesName')
+                    ep_id = episode.findtext('id')
+                    ep_overview = episode.findtext('Overview')
+                    first_aired = episode.findtext('FirstAired')
+                    # ep_overview may not exist, so default them to something so
+                    #   print doesn't fail
+                    if ep_overview is None:
+                        ep_overview = "<None>"
+                    if len(ep_overview) > 240:
+                        ep_overview = ep_overview[0:239]
+                    print("Series Name:\t%s" % ep_series_name.encode(out_encoding, 'replace'))
+                    print("Series ID:\t%s" % ep_id.encode(out_encoding, 'replace'))
+                    if first_aired:
+                        print("1st Aired:\t%s" % first_aired.encode(out_encoding, 'replace'))
+                    print("Description:\t%s\n------------------------------------" % ep_overview.encode(out_encoding, 'replace'))
                 print("####################################\n\n")
                 try:
                     seriesid = input('Please choose the correct seriesid: ')
@@ -252,83 +261,83 @@ def get_series_id(MirrorURL, show_name, showDir):
                     sys.exit(1)
 
         elif len(series) > 1:
-            debug(1,"Using best match: " + series[0].findtext('SeriesName'))
+            debug(1, "Using best match: " + series[0].findtext('SeriesName'))
             seriesid = series[0].findtext('id')
 
         # Did we find any matches
         if len(series) and len(seriesid):
-            debug(1,'Found seriesID: ' + seriesid)
-            debug(2,'Writing seriesID to file: ' + seriesidpath)
+            debug(1, 'Found seriesID: ' + seriesid)
+            debug(2, 'Writing seriesID to file: ' + seriesidpath)
             seriesidfile = open(seriesidpath, 'w')
             seriesidfile.write(seriesid)
             seriesidfile.close()
         else:
-            debug(1,"Unable to find seriesid.")
+            debug(1, "Unable to find seriesid.")
 
-    seriesURLXML = None
+    series_url_xml = None
     if seriesid:
-        seriesURL = MirrorURL + "/api/" + APIKEY + "/series/" + seriesid + "/en.xml"
-        debug(3,"getSeriesInfoXML: Using URL " + seriesURL)
+        series_url = mirror_url + "/api/" + APIKEY + "/series/" + seriesid + "/en.xml"
+        debug(3, "getSeriesInfoXML: Using URL " + series_url)
         # patch new
-        seriesURLXML = get_xml(seriesURL)
-        if ( seriesURLXML is None ):
-            debug(0,"!! Error parsing series info, skipping.")
+        series_url_xml = get_xml(series_url)
+        if ( series_url_xml is None ):
+            debug(0, "!! Error parsing series info, skipping.")
         #try:
-        #    seriesURLXML = parse(urllib.urlopen(seriesURL)).getroot()
+        #    series_url_xml = parse(urllib.urlopen(series_url)).getroot()
         #except Exception, e:
-        #    debug(0,"!! Error parsing series info, skipping.")
-        #    debug(0,"!! Error description is: " + str(e))
-        #    debug(3,"!! XML content is:\n" + str(urllib.urlopen(seriesURL).read()))
-    return seriesURLXML, seriesid
+        #    debug(0, "!! Error parsing series info, skipping.")
+        #    debug(0, "!! Error description is: " + str(e))
+        #    debug(3, "!! XML content is:\n" + str(urllib.urlopen(series_url).read()))
+    return series_url_xml, seriesid
 
-def get_episode_info_xml(MirrorURL, seriesid, season, episode):
+def get_episode_info_xml(mirror_url, seriesid, season, episode):
     # Takes a seriesid, season number, episode number and return xml data`
-    url = MirrorURL + "/api/" + APIKEY + "/series/" + seriesid + "/default/" + season + "/" + episode + "/en.xml"
-    debug(3,"get_episode_info_xml: Using URL " + url)
+    url = mirror_url + "/api/" + APIKEY + "/series/" + seriesid + "/default/" + season + "/" + episode + "/en.xml"
+    debug(3, "get_episode_info_xml: Using URL " + url)
     # patch new
-    episodeInfoXML = get_xml(url)
-    
-    if ( episodeInfoXML is None):
-        debug(0,"!! Error looking up data for this episode, skipping.")
+    episode_info_xml = get_xml(url)
+
+    if ( episode_info_xml is None):
+        debug(0, "!! Error looking up data for this episode, skipping.")
     #try:
-    #    episodeInfoXML = parse(urllib.urlopen(url)).getroot()
+    #    episode_info_xml = parse(urllib.urlopen(url)).getroot()
     #except Exception, e:
-    #    debug(0,"!! Error looking up data for this episode, skipping.")
+    #    debug(0, "!! Error looking up data for this episode, skipping.")
     #    print "exception is:"
     #    print e
-    #    episodeInfoXML = None
+    #    episode_info_xml = None
 
-    return episodeInfoXML
+    return episode_info_xml
 
-def get_episode_info_xml_by_air_date(MirrorURL, seriesid, year, month, day):
+def get_episode_info_xml_by_air_date(mirror_url, seriesid, year, month, day):
     # Takes a seriesid, year number, month number, day number, and return xml data
-    url = MirrorURL + "/api/GetEpisodeByAirDate.php?apikey=" + APIKEY + "&seriesid=" + seriesid + "&airdate=" + year + "-" + month + "-" + day
+    url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + APIKEY + "&seriesid=" + seriesid + "&airdate=" + year + "-" + month + "-" + day
     debug(3, "get_episode_info_xml_by_air_date: Using URL " + url)
     # patch new
-    episodeInfoXML = get_xml(url)
-    if ( episodeInfoXML is None):
-        debug(0,"!! Error looking up data for this episode, skipping.")
+    episode_info_xml = get_xml(url)
+    if ( episode_info_xml is None):
+        debug(0, "!! Error looking up data for this episode, skipping.")
     #try:
-    #    episodeInfoXML = parse(urllib.urlopen(url)).getroot()
+    #    episode_info_xml = parse(urllib.urlopen(url)).getroot()
     #except Exception, e:
-    #    debug(0,"!! Error looking up data for this episode, skipping.")
-    #    episodeInfoXML = None
+    #    debug(0, "!! Error looking up data for this episode, skipping.")
+    #    episode_info_xml = None
 
-    return episodeInfoXML
+    return episode_info_xml
 
-def format_episode_data(e, metaDir, f):
+def format_episode_data(e, meta_dir, f):
     # Takes a dict e of XML elements, the series title, the Zap2It ID (aka
     #   the Tivo groupID), and a filename f
     # TODO : Split up multiple guest stars / writers / etc. Split on '|'.
     #   (http://trac.kurai.org/trac.cgi/ticket/2)
     # This is weak. Should just detect if EpisodeNumber exists.
-    metadataText = ''
+    metadata_text = ''
     isE = "true"
     e["isEpisode"] = isE
 
     # The following is a dictionary of pyTivo metadata attributes and how they
     #   map to thetvdb xml elements.
-    pyTivoMetadata = {
+    pytivo_metadata = {
         # As seen on http://pytivo.armooo.net/wiki/MetaData
         'time' : 'time',
         'originalAirDate' : 'FirstAired',
@@ -378,11 +387,11 @@ def format_episode_data(e, metaDir, f):
         'SeasonNumber': 'SeasonNumber'
     }
 
-    #for pyTivoTag in pyTivoMetadata.keys():
-    #    print "%s : %s" % (pyTivoTag, pyTivoMetadata[pyTivoTag])
+    #for pyTivoTag in pytivo_metadata.keys():
+    #    print "%s : %s" % (pyTivoTag, pytivo_metadata[pyTivoTag])
 
     # pyTivo Metadata tag order
-    pyTivoMetadataOrder = [
+    pytivo_metadata_order = [
         'seriesTitle',
         'title',
         'episodeTitle',
@@ -404,7 +413,7 @@ def format_episode_data(e, metaDir, f):
     ]
 
     # Metadata name fields
-    MetadataNameFields = [
+    metadata_name_fields = [
         'vActor',
         'vGuestStar',
         'vWriter',
@@ -422,24 +431,24 @@ def format_episode_data(e, metaDir, f):
         8221 : '\"'
     }
 
-    for tvTag in pyTivoMetadataOrder:
+    for tv_tag in pytivo_metadata_order:
 
-        debug(3,'Working on ' + tvTag)
-        if tvTag in pyTivoMetadata and (pyTivoMetadata[tvTag]) and pyTivoMetadata[tvTag] in e and e[pyTivoMetadata[tvTag]]:
+        debug(3, 'Working on ' + tv_tag)
+        if tv_tag in pytivo_metadata and (pytivo_metadata[tv_tag]) and pytivo_metadata[tv_tag] in e and e[pytivo_metadata[tv_tag]]:
             # got data to work with
             line = term = ""
-            text = str(e[pyTivoMetadata[tvTag]]).translate(transtable)
+            text = str(e[pytivo_metadata[tv_tag]]).translate(transtable)
 
             # for debugging character translations
-            #if tvTag == 'description':
+            #if tv_tag == 'description':
             #    print "ord -> %s" % ord(text[370])
 
-            debug(3,"%s : %s" % (tvTag, text))
+            debug(3, "%s : %s" % (tv_tag, text))
 
-            if tvTag == 'originalAirDate':
+            if tv_tag == 'originalAirDate':
                 text = datetime(*strptime(text, "%Y-%m-%d")[0:6]).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            if tvTag == 'seriesId':
+            if tv_tag == 'seriesId':
                 text = text.strip()
                 # Look for either SH or EP followed by a number
                 m = re.match(r'(?:SH|EP)(\d+)$', text)
@@ -454,46 +463,46 @@ def format_episode_data(e, metaDir, f):
 
             # Only check to see if Season is > 0, allow EpNum to be 0 for
             #   things like "1x00 - Bonus content"
-            if tvTag == 'episodeNumber' and e['EpisodeNumber'] and int(e['SeasonNumber']):
+            if tv_tag == 'episodeNumber' and e['EpisodeNumber'] and int(e['SeasonNumber']):
                 text = "%d%02d" % (int(e['SeasonNumber']), int(e['EpisodeNumber']))
 
-            if tvTag in MetadataNameFields:
+            if tv_tag in metadata_name_fields:
                 term = "|"
 
             if text is not None:
                 if '|' in text:
                     people = text.strip('|').split('|')
                     for person in people:
-                        debug(3,'Splitting ' + person.strip())
-                        line += "%s : %s\n" % (tvTag, re.sub('\n', ' ', person.strip()+term))
+                        debug(3, 'Splitting ' + person.strip())
+                        line += "%s : %s\n" % (tv_tag, re.sub('\n', ' ', person.strip()+term))
                 else:
-                    line = "%s : %s\n" %(tvTag, re.sub('\n', ' ', text+term))
-                    debug(3,'Completed -> ' + line)
-                metadataText += line
+                    line = "%s : %s\n" %(tv_tag, re.sub('\n', ' ', text+term))
+                    debug(3, 'Completed -> ' + line)
+                metadata_text += line
         else:
-            debug(3,'No data for ' + tvTag)
+            debug(3, 'No data for ' + tv_tag)
 
-    if metadataText:
-        mkdir_if_needed(metaDir)
-        outFile = open(os.path.join(metaDir, f), 'w')
-        outFile.write(metadataText.encode(file_encoding, 'replace'))
-        outFile.close()
+    if metadata_text:
+        mkdir_if_needed(meta_dir)
+        out_file = open(os.path.join(meta_dir, f), 'w')
+        out_file.write(metadata_text.encode(file_encoding, 'replace'))
+        out_file.close()
 
-def format_movie_data(title, dir, fileName, metadataFileName, tags, isTrailer):
+def format_movie_data(title, dir, file_name, metadata_file_name, tags, is_trailer):
     line = ""
 
-    debug(1,'Searching IMDb for: ' + title)
+    debug(1, 'Searching IMDb for: ' + title)
     objIA = imdb.IMDb() # create new object to access IMDB
     title = str(title, in_encoding, 'replace')
     try:
         # Do the search, and get the results (a list of Movie objects).
         results = objIA.search_movie(title)
     except imdb.IMDbError as e:
-        debug(0,'IMDb lookup error: ' + str(e))
+        debug(0, 'IMDb lookup error: ' + str(e))
         sys.exit(3)
 
     if not results:
-        debug(1,'No matches found.')
+        debug(1, 'No matches found.')
         return
 
     if OPTIONS.interactive:
@@ -505,11 +514,10 @@ def format_movie_data(title, dir, fileName, metadataFileName, tags, isTrailer):
             movie = results[0]
             report_match(movie, len(results))
         else:
-            debug(2,'Found ' + str(num_titles) + ' matches.')
+            debug(2, 'Found ' + str(num_titles) + ' matches.')
             # Show max 5 titles
             num_titles = min(num_titles, 5)
 
-            #print "Found %s matches for /'%s/'\n" % (len(results), title.encode(out_encoding, 'replace'))
             print("\nMatches for '%s'" % (title.encode(out_encoding, 'replace')))
             print("------------------------------------")
             print("Num\tTitle")
@@ -549,10 +557,10 @@ def format_movie_data(title, dir, fileName, metadataFileName, tags, isTrailer):
     # title and the year; retrieve main information:
     try:
         objIA.update(movie)
-        #debug(3,movie.summary())
+        #debug(3, movie.summary())
     except Exception as e:
-        debug(0,'Warning: unable to get extended details from IMDb for: ' + str(movie))
-        debug(0,'         You may need to update your imdbpy module.')
+        debug(0, 'Warning: unable to get extended details from IMDb for: ' + str(movie))
+        debug(0, '         You may need to update your imdbpy module.')
 
     # title
     line = "title : %s %s\n" % (movie['title'], tags)
@@ -561,12 +569,12 @@ def format_movie_data(title, dir, fileName, metadataFileName, tags, isTrailer):
     line += "movieYear : %s\n" % movie['year']
 
     reldate = ''
-    if isTrailer:
+    if is_trailer:
         try:
             # This slows down the process, so only do it for trailers
             objIA.update(movie, 'release dates')
         except Exception as e:
-            debug(1,'Warning: unable to get release date.')
+            debug(1, 'Warning: unable to get release date.')
         if 'release dates' in list(movie.keys()) and len(movie['release dates']):
             reldate += rel_date(movie['release dates']) + '. '
     # description
@@ -583,27 +591,27 @@ def format_movie_data(title, dir, fileName, metadataFileName, tags, isTrailer):
     # starRating
     if "rating" in list(movie.keys()):
         line += "starRating : x%s\n" % (int((movie['rating']-1)/1.3+1))
-    # mpaaRating
+    # mpaa_rating
     # kind of a hack for now...
     # maybe parsing certificates would work better?
     if "mpaa" in list(movie.keys()):
-        mpaaStr = movie['mpaa']
-        mpaaRating = ""
-        if "Rated G " in mpaaStr:
-            mpaaRating = "G1"
-        elif "Rated PG " in mpaaStr:
-            mpaaRating = "P2"
-        elif "Rated PG-13 " in mpaaStr:
-            mpaaRating = "P3"
-        elif "Rated R " in mpaaStr:
-            mpaaRating = "R4"
-        elif "Rated X " in mpaaStr:
-            mpaaRating = "X5"
-        elif "Rated NC-17 " in mpaaStr:
-            mpaaRating = "N6"
+        mpaa_str = movie['mpaa']
+        mpaa_rating = ""
+        if "Rated G " in mpaa_str:
+            mpaa_rating = "G1"
+        elif "Rated PG " in mpaa_str:
+            mpaa_rating = "P2"
+        elif "Rated PG-13 " in mpaa_str:
+            mpaa_rating = "P3"
+        elif "Rated R " in mpaa_str:
+            mpaa_rating = "R4"
+        elif "Rated X " in mpaa_str:
+            mpaa_rating = "X5"
+        elif "Rated NC-17 " in mpaa_str:
+            mpaa_rating = "N6"
 
-        if mpaaRating:
-            line += "mpaaRating : %s\n" % mpaaRating
+        if mpaa_rating:
+            line += "mpaa_rating : %s\n" % mpaa_rating
 
     #vProgramGenre and vSeriesGenre
     if "genres" in list(movie.keys()):
@@ -612,7 +620,7 @@ def format_movie_data(title, dir, fileName, metadataFileName, tags, isTrailer):
         for i in movie['genres']:
             line += "vSeriesGenre : %s\n" % i
         if OPTIONS.genre:
-            link_genres(dir, fileName, metadataFileName, movie['genres'])
+            link_genres(dir, file_name, metadata_file_name, movie['genres'])
 
     try:
         pass
@@ -629,7 +637,7 @@ def format_movie_data(title, dir, fileName, metadataFileName, tags, isTrailer):
             if i['name'] not in directors:
                 directors[i['name']] = 1
                 line += "vDirector : %s|\n" % i['name']
-                debug(3,'vDirector : ' + i['name'])
+                debug(3, 'vDirector : ' + i['name'])
     # vWriter (suppress repeated names)
     if "writer" in list(movie.keys()):
         writers = {}
@@ -637,7 +645,7 @@ def format_movie_data(title, dir, fileName, metadataFileName, tags, isTrailer):
             if i['name'] not in writers:
                 writers[i['name']] = 1
                 line += "vWriter : %s|\n" % i['name']
-                debug(3,'vWriter : ' + i['name'])
+                debug(3, 'vWriter : ' + i['name'])
     # vActor (suppress repeated names)
     if "cast" in list(movie.keys()):
         actors = {}
@@ -645,49 +653,49 @@ def format_movie_data(title, dir, fileName, metadataFileName, tags, isTrailer):
             if i['name'] not in actors:
                 actors[i['name']] = 1
                 line += "vActor : %s|\n" % i['name']
-                debug(3,'vActor : ' + i['name'])
+                debug(3, 'vActor : ' + i['name'])
 
-    debug(2,"Writing to %s" % metadataFileName)
-    outFile = open(metadataFileName, 'w')
-    outFile.writelines(line.encode(file_encoding, 'replace'))
-    outFile.close()
+    debug(2, "Writing to %s" % metadata_file_name)
+    out_file = open(metadata_file_name, 'w')
+    out_file.writelines(line.encode(file_encoding, 'replace'))
+    out_file.close()
 
-def link_genres(dir, fileName, metadataPath, genres):
+def link_genres(dir, file_name, metadata_path, genres):
     for genre in genres:
         genrepath = os.path.join(OPTIONS.genre, genre)
         mkdir_if_needed(genrepath)
         # Create a symlink to the video
-        link = os.path.join(genrepath, fileName)
-        filePath = os.path.join(dir, fileName)
-        mk_link(link, filePath)
+        link = os.path.join(genrepath, file_name)
+        file_path = os.path.join(dir, file_name)
+        mk_link(link, file_path)
         # Create a symlink to the metadata
-        metadataDir = os.path.basename(metadataPath)
-        link = os.path.join(genrepath, metadataDir)
-        mk_link(link, metadataPath)
+        metadata_dir = os.path.basename(metadata_path)
+        link = os.path.join(genrepath, metadata_dir)
+        mk_link(link, metadata_path)
 
-def mk_link(linkName, filePath):
-    target = os.path.relpath(filePath, os.path.dirname(linkName))
-    debug(2, "Linking " + linkName + " -> " + target)
-    if os.path.islink(linkName):
-        os.unlink(linkName)
-        os.symlink(target, linkName)
-    elif os.path.exists(linkName):
-        debug(0,"Unable to create link '" + linkName + "', a file already exists with that name.")
+def mk_link(link_name, file_path):
+    target = os.path.relpath(file_path, os.path.dirname(link_name))
+    debug(2, "Linking " + link_name + " -> " + target)
+    if os.path.islink(link_name):
+        os.unlink(link_name)
+        os.symlink(target, link_name)
+    elif os.path.exists(link_name):
+        debug(0, "Unable to create link '" + link_name + "', a file already exists with that name.")
     else:
-        os.symlink(target, linkName)
+        os.symlink(target, link_name)
 
-def report_match(movie, numResults):
+def report_match(movie, num_results):
     matchtype = 'Using best match: '
-    if numResults == 1:
+    if num_results == 1:
         matchtype = 'Found exact match: '
     if 'long imdb title' in list(movie.keys()):
-        debug(1,matchtype + movie['long imdb title'])
+        debug(1, matchtype + movie['long imdb title'])
     else:
-        debug(1,matchtype + str(movie))
+        debug(1, matchtype + str(movie))
 
 def rel_date(reldates):
     for rd in reldates:
-        if rd.encode(file_encoding,'replace').lower().startswith(COUNTRY.lower() + '::'):
+        if rd.encode(file_encoding, 'replace').lower().startswith(COUNTRY.lower() + '::'):
             return rd[len(COUNTRY)+2:]
     # Didn't find the country we want, so return the first one, but leave the
     #   country name in there.
@@ -697,18 +705,18 @@ def get_files(directory):
     """Get list of file info objects for files of particular extensions
     """
     entries = os.listdir(directory)
-    fileList = [f for f in entries if os.path.splitext(f)[1].lower() in fileExtList and len(os.path.splitext(f)[0]) and os.path.isfile(os.path.join(directory, f))]
-    fileList.sort()
-    debug(2,"fileList after cull: %s" % str(fileList))
-    dirList = []
+    file_list = [f for f in entries if os.path.splitext(f)[1].lower() in fileExtList and len(os.path.splitext(f)[0]) and os.path.isfile(os.path.join(directory, f))]
+    file_list.sort()
+    debug(2, "file_list after cull: %s" % str(file_list))
+    dir_list = []
     if OPTIONS.recursive:
         # Get a list of all sub dirs
-        dirList = [d for d in entries if os.path.isdir(os.path.join(directory, d)) and not d[0] == '.']
-        dirList.sort()
-        debug(2,"dirList after cull: %s" % str(dirList))
-    return (fileList, dirList)
+        dir_list = [d for d in entries if os.path.isdir(os.path.join(directory, d)) and not d[0] == '.']
+        dir_list.sort()
+        debug(2, "dir_list after cull: %s" % str(dir_list))
+    return (file_list, dir_list)
 
-def parse_movie(dir, filename, metadataFileName, isTrailer):
+def parse_movie(search_dir, filename, metadata_file_name, is_trailer):
     if not IMDB:
         print("No IMDB module, skipping movie: " + filename)
         return
@@ -720,29 +728,28 @@ def parse_movie(dir, filename, metadataFileName, isTrailer):
     # Using the year when searching IMDb will help, so try to find it.
     m = re.match(r'(.*?\w+.*?)(?:([[(])|(\W))(.*?)((?:19|20)\d\d)(?(2)[])]|(\3|$))(.*?)$', title)
     if m:
-        (tags, junk) = extract_tags(title)
-        (title, year, soup1, soup2) = m.group(1,5,4,7)
-        soup = "%s %s" % (soup1, soup2)
-        debug(2,"    Title: %s\n    Year: %s" % (title, year))
+        (tags, _) = extract_tags(title)
+        (title, year, _, _) = m.group(1, 5, 4, 7)
+        debug(2, "    Title: %s\n    Year: %s" % (title, year))
         title += ' (' + year + ')'
     else:
         # 2nd pass at finding the year.  Look for a series of tags in parens
         #   which may include the year.
         m = re.match(r'(.*?\w+.*?)\(.*((?:19|20)\d\d)\).*\)', title)
         if m:
-            (title, year) = m.group([1,2])
-            debug(2,"    Title: %s\n    Year: %s" % (title, year))
+            (title, year) = m.group([1, 2])
+            debug(2, "    Title: %s\n    Year: %s" % (title, year))
             title += ' (' + year + ')'
         else:
-            debug(2,"Cleaning up title the hard way.")
+            debug(2, "Cleaning up title the hard way.")
             title = clean_title(title)
-            debug(2,"    Title: %s" % title)
+            debug(2, "    Title: %s" % title)
         # Note: this also removes the tags from the title
         (tags, title) = extract_tags(title)
     debug(3, "Before fixing spaces, title is: " + title)
     title = fix_spaces(title)
     debug(3, "After fixing spaces, title is: " + title)
-    format_movie_data(title, dir, filename, metadataFileName, tags, isTrailer)
+    format_movie_data(title, search_dir, filename, metadata_file_name, tags, is_trailer)
 
 def extract_tags(title):
     # Look for tags that we want to show on the tivo, but not include in IMDb searches.
@@ -763,23 +770,23 @@ def extract_tags(title):
         if match:
             tags += match.expand(taglist[tag]) + ' '
             title = re.sub(tag, '', title)
-    debug(2,'    Tags: ' + tags)
+    debug(2, '    Tags: ' + tags)
     return (tags, title)
 
 def clean_title(title):
     # strip a variety of common junk from torrented avi filenames
-    striplist = ('crowbone','joox-dot-net','DOMiNiON','LiMiTED','aXXo','DoNE',
-            'ViTE','BaLD','COCAiNE','NoGRP','leetay','AC3','BluRay','DVD',
-            'VHS','Screener','(?i)DVD SCR','\[.*\]','(?i)swesub','(?i)dvdrip',
-            '(?i)dvdscr','(?i)xvid','(?i)divx'
+    striplist = ('crowbone', 'joox-dot-net', 'DOMiNiON', 'LiMiTED', 'aXXo',
+            'DoNE', 'ViTE', 'BaLD', 'COCAiNE', 'NoGRP', 'leetay', 'AC3',
+            'BluRay', 'DVD', 'VHS', 'Screener', '(?i)DVD SCR', '\[.*\]',
+            '(?i)swesub', '(?i)dvdrip', '(?i)dvdscr', '(?i)xvid', '(?i)divx'
             )
     for strip in striplist:
         title = re.sub(strip, '', title)
-    debug(3,"After stripping keywords, title is: " + title)
+    debug(3, "After stripping keywords, title is: " + title)
     return title
 
 def fix_spaces(title):
-    placeholders = ['[-._]','  +']
+    placeholders = ['[-._]', '  +']
     for ph in placeholders:
         title = re.sub(ph, ' ', title)
     # Remove leftover spaces before/after the year
@@ -788,7 +795,7 @@ def fix_spaces(title):
     title = re.sub('\(\)', '', title)
     return title
 
-def parse_tv(MirrorURL, match, metaDir, metaFile, showDir):
+def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir):
     series = re.sub('[._]', ' ', match.group(1)).strip()
     if match.lastindex >= 4:
         season = 0
@@ -807,23 +814,23 @@ def parse_tv(MirrorURL, match, metaDir, metaFile, showDir):
         year = 0
         month = 0
         day = 0
-    debug(2,"    Series: %s\n    Season: %s\n    Episode: %s\n    Year: %s\n    Month: %s\n    Day: %s" % (series, season, episode, year, month, day))
+    debug(2, "    Series: %s\n    Season: %s\n    Episode: %s\n    Year: %s\n    Month: %s\n    Day: %s" % (series, season, episode, year, month, day))
 
-    episodeInfo = {}
+    episode_info = {}
     if series not in SINFOCACHE:
-        SINFOCACHE[series] = get_series_id(MirrorURL, series, showDir)
-    (seriesInfoXML, seriesid) = SINFOCACHE[series]
-    if seriesid is not None and seriesInfoXML is not None:
-        for node in seriesInfoXML.getiterator():
-            episodeInfo[node.tag] = node.text
+        SINFOCACHE[series] = get_series_id(mirror_url, series, show_dir)
+    (series_info_xml, seriesid) = SINFOCACHE[series]
+    if seriesid is not None and series_info_xml is not None:
+        for node in series_info_xml.getiterator():
+            episode_info[node.tag] = node.text
         if year == 0:
-            episodeInfoXML = get_episode_info_xml(MirrorURL, seriesid, season, episode)
+            episode_info_xml = get_episode_info_xml(mirror_url, seriesid, season, episode)
         else:
-            episodeInfoXML = get_episode_info_xml_by_air_date(MirrorURL, seriesid, year, month, day)
-        if episodeInfoXML is not None:
-            for node in episodeInfoXML.getiterator():
-                episodeInfo[node.tag] = node.text
-            format_episode_data(episodeInfo, metaDir, metaFile)
+            episode_info_xml = get_episode_info_xml_by_air_date(mirror_url, seriesid, year, month, day)
+        if episode_info_xml is not None:
+            for node in episode_info_xml.getiterator():
+                episode_info[node.tag] = node.text
+            format_episode_data(episode_info, meta_dir, meta_file)
 
 def mkdir_if_needed(dirname):
     if not os.path.exists(dirname):
@@ -836,40 +843,40 @@ def mkdir_if_needed(dirname):
                         'exists with that name.'
                 )
 
-def process_dir(dir, MirrorURL):
-    debug(1,'\n## Looking for videos in: ' + dir)
-    (fileList, dirList) = get_files(dir)
+def process_dir(dir, mirror_url):
+    debug(1, '\n## Looking for videos in: ' + dir)
+    (file_list, dir_list) = get_files(dir)
 
-    isTrailer = 0
+    is_trailer = 0
     # See if we're in a "Trailer" folder.
     if 'trailer' in os.path.abspath(dir).lower():
-        isTrailer = 1
+        is_trailer = 1
 
-    metaDir = dir
+    meta_dir = dir
     if OPTIONS.metadir or os.path.isdir(os.path.join(dir, METADIR)):
-        metaDir = os.path.join(dir, METADIR)
-        mkdir_if_needed(metaDir)
-    for filename in fileList:
-        metaFile = filename + '.txt'
-        debug(1,"\n--->working on: %s" % filename)
-        debug(2,"Metadir is: " + metaDir)
-        if os.path.exists(os.path.join(metaDir, metaFile)) and not OPTIONS.clobber:
-            debug(1,"Metadata file already exists, skipping.")
+        meta_dir = os.path.join(dir, METADIR)
+        mkdir_if_needed(meta_dir)
+    for filename in file_list:
+        meta_file = filename + '.txt'
+        debug(1, "\n--->working on: %s" % filename)
+        debug(2, "Metadir is: " + meta_dir)
+        if os.path.exists(os.path.join(meta_dir, meta_file)) and not OPTIONS.clobber:
+            debug(1, "Metadata file already exists, skipping.")
         else:
             ismovie = 1;
             for tvre in tvres:
                 match = re.search(tvre, filename)
                 if match: # Looks like a TV show
                     if not TVDB:
-                        debug(1,"Metadata service for TV shows is unavailable, skipping this show.")
+                        debug(1, "Metadata service for TV shows is unavailable, skipping this show.")
                     else:
-                        parse_tv(MirrorURL, match, metaDir, metaFile, dir)
+                        parse_tv(mirror_url, match, meta_dir, meta_file, dir)
                     ismovie = 0
                     break
             if ismovie:
-                parse_movie(dir, filename, os.path.join(metaDir, metaFile), isTrailer)
-    for subdir in dirList:
-        process_dir(os.path.join(dir, subdir), MirrorURL)
+                parse_movie(dir, filename, os.path.join(meta_dir, meta_file), is_trailer)
+    for subdir in dir_list:
+        process_dir(os.path.join(dir, subdir), mirror_url)
 
 def check_interactive():
     if sys.platform not in ['win32', 'cygwin']:
@@ -952,7 +959,7 @@ def main():
     debug(2, "Metadata File Output encoding: %s\n" % file_encoding)
 
     # Initalize things we'll need for looking up data
-    MirrorURL = get_mirror_url()
+    mirror_url = get_mirror_url()
 
     if OPTIONS.genre:
         # Python doesn't support making symlinks on Windows.
@@ -977,8 +984,8 @@ def main():
                         "rm -rf '" + OPTIONS.genre + "'), but be careful."
                         )
 
-    for dir in OPTIONS.dir:
-        process_dir(dir, MirrorURL)
+    for search_dir in OPTIONS.dir:
+        process_dir(search_dir, mirror_url)
 
 if __name__ == "__main__":
     main()

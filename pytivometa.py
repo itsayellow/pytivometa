@@ -38,6 +38,7 @@ fetch their metadata, and write metadata out into format that pytivo can
 parse and use.
 """
 
+
 import argparse
 import gzip
 import io
@@ -207,7 +208,6 @@ def get_series_id(mirror_url, show_name, show_dir):
         if series_xml is None:
             debug(3, "Error getting Series Info")
             return None, None
-        #series_xml = parse(urllib.urlopen(url)).getroot()
         series = [Item for Item in series_xml.findall('Series')]
 
         if year and len(series) > 1:
@@ -273,12 +273,6 @@ def get_series_id(mirror_url, show_name, show_dir):
         series_url_xml = get_xml(series_url)
         if series_url_xml is None:
             debug(0, "!! Error parsing series info, skipping.")
-        #try:
-        #    series_url_xml = parse(urllib.urlopen(series_url)).getroot()
-        #except Exception, e:
-        #    debug(0, "!! Error parsing series info, skipping.")
-        #    debug(0, "!! Error description is: " + str(e))
-        #    debug(3, "!! XML content is:\n" + str(urllib.urlopen(series_url).read()))
     return series_url_xml, seriesid
 
 def get_episode_info_xml(mirror_url, seriesid, season, episode):
@@ -290,13 +284,6 @@ def get_episode_info_xml(mirror_url, seriesid, season, episode):
 
     if episode_info_xml is None:
         debug(0, "!! Error looking up data for this episode, skipping.")
-    #try:
-    #    episode_info_xml = parse(urllib.urlopen(url)).getroot()
-    #except Exception, e:
-    #    debug(0, "!! Error looking up data for this episode, skipping.")
-    #    print "exception is:"
-    #    print e
-    #    episode_info_xml = None
 
     return episode_info_xml
 
@@ -309,11 +296,6 @@ def get_episode_info_xml_by_air_date(mirror_url, seriesid, year, month, day):
     episode_info_xml = get_xml(url)
     if episode_info_xml is None:
         debug(0, "!! Error looking up data for this episode, skipping.")
-    #try:
-    #    episode_info_xml = parse(urllib.urlopen(url)).getroot()
-    #except Exception, e:
-    #    debug(0, "!! Error looking up data for this episode, skipping.")
-    #    episode_info_xml = None
 
     return episode_info_xml
 

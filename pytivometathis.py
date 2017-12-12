@@ -23,7 +23,9 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# Version : 0.3
+# Version : 0.3 with .meta patch
+
+# Python required: > 3.0
 
 import urllib.request, urllib.parse, urllib.error
 import urllib.request, urllib.error, urllib.parse

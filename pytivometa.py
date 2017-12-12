@@ -49,13 +49,15 @@ from datetime import datetime
 from functools import reduce
 
 # Import the IMDbPY package.
-IMDB = 1
 try:
     import imdb
 except ImportError:
     print('IMDB module could not be loaded. Movie Lookups will be disabled.\n'
           'See http://imdbpy.sourceforge.net')
-    IMDB = 0
+    HAS_IMDB = False
+else:
+    # no exceptions, so set IMDB flag
+    HAS_IMDB = True
 
 # Which country's release date do we want to see:
 COUNTRY = 'USA'
@@ -696,7 +698,7 @@ def get_files(directory):
     return (file_list, dir_list)
 
 def parse_movie(search_dir, filename, metadata_file_name, is_trailer):
-    if not IMDB:
+    if not HAS_IMDB:
         print("No IMDB module, skipping movie: " + filename)
         return
 

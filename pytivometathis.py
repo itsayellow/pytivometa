@@ -98,20 +98,7 @@ file_encoding = 'UTF-8'
 
 def debug(level, text):
     if level <= OPTIONS.debug:
-        try:
-            print(text)
-        except UnicodeDecodeError as e:
-            try:
-                # This can fail on unicode chars
-                print(text)
-            except UnicodeDecodeError as e:
-                try:
-                    # If sys.stdout.encoding is ascii (or 'ANSI_X3.4-1968')
-                    #   then the previous two attempts were the same thing, try
-                    #   something else
-                    print(text.encode('latin-1', 'replace'))
-                except UnicodeDecodeError as e:
-                    print("Unable to display debug message, error is: " + str(e))
+        print(text)
 
 def get_mirror_url():
     global TVDB
@@ -482,7 +469,7 @@ def format_episode_data(ep_data, meta_dir, meta_file):
     if metadata_text:
         mkdir_if_needed(meta_dir)
         out_file = open(os.path.join(meta_dir, meta_file), 'w')
-        out_file.write(metadata_text.encode(file_encoding, 'replace'))
+        out_file.write(metadata_text)
         out_file.close()
 
 def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trailer):

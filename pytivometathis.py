@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2008, Graham Dunn <gmd@kurai.org>
 # Copyright (c) 2009-2011, Josh Harding <theamigo@gmail.com>
 # Copyright (c) 2017, Matthew Clapp <itsayellow+dev@gmail.com>
@@ -23,12 +23,10 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# Version : 0.3
 
-# Version : $Id$
-# vim: autoindent tabstop=4 expandtab shiftwidth=4
-
-import urllib
-import urllib2
+import urllib.request, urllib.parse, urllib.error
+import urllib.request, urllib.error, urllib.parse
 import sys
 import re
 import string
@@ -36,18 +34,20 @@ import os
 import errno
 import sqlite3
 import gzip
-import StringIO
+import io
 
 from optparse import OptionParser
 from xml.etree.ElementTree import parse, Element, SubElement
 from time import gmtime, strftime, strptime
 from datetime import datetime
+from functools import reduce
+
 # Import the IMDbPY package.
 IMDB = 1
 try:
     import imdb
 except ImportError:
-    print 'IMDB module could not be loaded. Movie Lookups will be disabled. See http://imdbpy.sourceforge.net'
+    print('IMDB module could not be loaded. Movie Lookups will be disabled. See http://imdbpy.sourceforge.net')
     IMDB = 0
 
 # Which country's release date do we want to see:
@@ -104,21 +104,21 @@ def debug(level, text):
     if level<= options.debug:
         try:
             # Failes to print non-ASCII chars with the high bit set
-            print text.encode(out_encoding, 'replace')
-        except UnicodeDecodeError, e:
+            print(text.encode(out_encoding, 'replace'))
+        except UnicodeDecodeError as e:
             try:
                 # This can fail on unicode chars
-                print text
-            except UnicodeDecodeError, e:
+                print(text)
+            except UnicodeDecodeError as e:
                 try:
                     # If sys.stdout.encoding is ascii (or 'ANSI_X3.4-1968') then the
                     # previous two attempts were the same thing, try something else
-                    print text.encode('latin-1', 'replace')
-                except UnicodeDecodeError, e:
-                    print "Unable to display debug message, error is: " + str(e)
+                    print(text.encode('latin-1', 'replace'))
+                except UnicodeDecodeError as e:
+                    print("Unable to display debug message, error is: " + str(e))
 
 def alarmHandler():
-    raise 'TimeOut'
+    raise Exception('TimeOut')
 
 def getMirrorURL():
     global TVDB
@@ -129,13 +129,13 @@ def getMirrorURL():
     timeout = options.timeout or 5
     try:
         if PY26:
-            mirrorsXML = parse(urllib2.urlopen(mirrorsURL, None, timeout))
+            mirrorsXML = parse(urllib.request.urlopen(mirrorsURL, None, timeout))
         else:
             # Before python 2.6, there's no timeout value:
             signal.signal(signal.SIGALRM, alarmHandler)
             try:
                 signal.alarm(timeout)
-                mirrorsXML = parse(urllib.urlopen(mirrorsURL))
+                mirrorsXML = parse(urllib.request.urlopen(mirrorsURL))
             except 'TimeOut':
                 debug(0, "Timeout looking up mirrors for thetvdb.com, site down?  No metadata will be retrieved for TV shows.")
                 TVDB = 0
@@ -174,17 +174,17 @@ def toHex(s):
 def getXML(url):
     debug(3,"getXML: Using URL " + url)
     try:
-        rawXML = urllib.urlopen(url).read()
+        rawXML = urllib.request.urlopen(url).read()
     except Exception as e:
         debug(0, "\n Exception = " + str(e))
         return None
     
     xml = None
     if ( toHex(rawXML[0:2]) !=  "1f8b" ): #check for gzip compressed data
-        filestream = StringIO.StringIO(rawXML)
+        filestream = io.StringIO(rawXML)
         debug(0,"Not gzip compressed data " +  toHex(rawXML[0:2]))
     else:
-        filestream = gzip.GzipFile(fileobj=StringIO.StringIO(rawXML))
+        filestream = gzip.GzipFile(fileobj=io.StringIO(rawXML))
         debug(0, "gzip compressed data")
     try:
         xml = parse(filestream).getroot()
@@ -224,7 +224,7 @@ def getSeriesId(MirrorURL, show_name, showDir):
         seriesid = re.sub("\n", "", seriesid)
     else:
         debug(1,'Searching for: ' + bare_title)
-        url = MirrorURL + GETSERIESID_URL + urllib.urlencode({"seriesname" : bare_title})
+        url = MirrorURL + GETSERIESID_URL + urllib.parse.urlencode({"seriesname" : bare_title})
         debug(3,'seriesXML: Using URL ' + url)
         # patch new
         seriesXML = getXML(url)
@@ -245,10 +245,10 @@ def getSeriesId(MirrorURL, show_name, showDir):
         elif options.interactive:
             # Display all the shows found
             if len(series) >= 2:
-                print "####################################\n"
-                print "Multiple TV Shows found:\n"
-                print "Found %s shows for Series Title %s" % (len(series), show_name.encode(out_encoding, 'replace'))
-                print "------------------------------------"
+                print("####################################\n")
+                print("Multiple TV Shows found:\n")
+                print("Found %s shows for Series Title %s" % (len(series), show_name.encode(out_encoding, 'replace')))
+                print("------------------------------------")
                 for e in series:
                     eSeriesName = e.findtext('SeriesName')
                     eId = e.findtext('id')
@@ -259,16 +259,16 @@ def getSeriesId(MirrorURL, show_name, showDir):
                         eOverview = "<None>"
                     if len(eOverview) > 240:
                         eOverview = eOverview[0:239]
-                    print "Series Name:\t%s" % eSeriesName.encode(out_encoding, 'replace')
-                    print "Series ID:\t%s" % eId.encode(out_encoding, 'replace')
+                    print("Series Name:\t%s" % eSeriesName.encode(out_encoding, 'replace'))
+                    print("Series ID:\t%s" % eId.encode(out_encoding, 'replace'))
                     if firstAired:
-                        print "1st Aired:\t%s" % firstAired.encode(out_encoding, 'replace')
-                    print "Description:\t%s\n------------------------------------" % eOverview.encode(out_encoding, 'replace')
-                print "####################################\n\n"
+                        print("1st Aired:\t%s" % firstAired.encode(out_encoding, 'replace'))
+                    print("Description:\t%s\n------------------------------------" % eOverview.encode(out_encoding, 'replace'))
+                print("####################################\n\n")
                 try:
-                    seriesid = raw_input('Please choose the correct seriesid: ')
+                    seriesid = input('Please choose the correct seriesid: ')
                 except KeyboardInterrupt:
-                    print "\nCaught interrupt, exiting."
+                    print("\nCaught interrupt, exiting.")
                     sys.exit(1)
 
         elif len(series) > 1:
@@ -433,19 +433,19 @@ def formatEpisodeData(e, metaDir, f):
     ]
 
     transtable = {
-        8217 : u'\'',
-        8216 : u'\'',
-        8220 : u'\"',
-        8221 : u'\"'
+        8217 : '\'',
+        8216 : '\'',
+        8220 : '\"',
+        8221 : '\"'
     }
 
     for tvTag in pyTivoMetadataOrder:
 
         debug(3,'Working on ' + tvTag)
-        if pyTivoMetadata.has_key(tvTag) and (pyTivoMetadata[tvTag]) and e.has_key(pyTivoMetadata[tvTag]) and e[pyTivoMetadata[tvTag]]:
+        if tvTag in pyTivoMetadata and (pyTivoMetadata[tvTag]) and pyTivoMetadata[tvTag] in e and e[pyTivoMetadata[tvTag]]:
             # got data to work with
             line = term = ""
-            text = unicode(e[pyTivoMetadata[tvTag]]).translate(transtable)
+            text = str(e[pyTivoMetadata[tvTag]]).translate(transtable)
 
             # for debugging character translations
             #if tvTag == 'description':
@@ -500,11 +500,11 @@ def formatMovieData(title, dir, fileName, metadataFileName, tags, isTrailer):
 
     debug(1,'Searching IMDb for: ' + title)
     objIA = imdb.IMDb() # create new object to access IMDB
-    title = unicode(title, in_encoding, 'replace')
+    title = str(title, in_encoding, 'replace')
     try:
         # Do the search, and get the results (a list of Movie objects).
         results = objIA.search_movie(title)
-    except imdb.IMDbError, e:
+    except imdb.IMDbError as e:
         debug(0,'IMDb lookup error: ' + str(e))
         sys.exit(3)
 
@@ -526,18 +526,18 @@ def formatMovieData(title, dir, fileName, metadataFileName, tags, isTrailer):
             num_titles = min(num_titles, 5)
 
             #print "Found %s matches for /'%s/'\n" % (len(results), title.encode(out_encoding, 'replace'))
-            print "\nMatches for '%s'" % (title.encode(out_encoding, 'replace'))
-            print "------------------------------------"
-            print "Num\tTitle"
-            print "------------------------------------"
+            print("\nMatches for '%s'" % (title.encode(out_encoding, 'replace')))
+            print("------------------------------------")
+            print("Num\tTitle")
+            print("------------------------------------")
             for i in range(0, num_titles):
                 m_title = results[i]['long imdb title']
-                print "%d\t%s" % (i, m_title.encode(out_encoding, 'replace'))
-            print ""
+                print("%d\t%s" % (i, m_title.encode(out_encoding, 'replace')))
+            print("")
             try:
-                movie_num = raw_input("Please choose the correct movie, or 's' to skip [0]: ")
+                movie_num = input("Please choose the correct movie, or 's' to skip [0]: ")
             except KeyboardInterrupt:
-                print "\nCaught interrupt, exiting."
+                print("\nCaught interrupt, exiting.")
                 sys.exit(1)
 
             if not len(movie_num):
@@ -548,14 +548,14 @@ def formatMovieData(title, dir, fileName, metadataFileName, tags, isTrailer):
                 try:
                     movie_num = int(movie_num)
                 except ValueError:
-                    print "Skipping this movie."
+                    print("Skipping this movie.")
                     return
                 # Check for out-of-range input
                 if movie_num < 0 or movie_num > num_titles:
-                    print "Skipping this movie."
+                    print("Skipping this movie.")
                     return
             movie = results[movie_num]
-            print "------------------------------------"
+            print("------------------------------------")
 
     else: # automatically pick first match
         movie = results[0]
@@ -566,7 +566,7 @@ def formatMovieData(title, dir, fileName, metadataFileName, tags, isTrailer):
     try:
         objIA.update(movie)
         #debug(3,movie.summary())
-    except Exception, e:
+    except Exception as e:
         debug(0,'Warning: unable to get extended details from IMDb for: ' + str(movie))
         debug(0,'         You may need to update your imdbpy module.')
 
@@ -581,28 +581,28 @@ def formatMovieData(title, dir, fileName, metadataFileName, tags, isTrailer):
         try:
             # This slows down the process, so only do it for trailers
             objIA.update(movie, 'release dates')
-        except Exception, e:
+        except Exception as e:
             debug(1,'Warning: unable to get release date.')
-        if 'release dates' in movie.keys() and len(movie['release dates']):
+        if 'release dates' in list(movie.keys()) and len(movie['release dates']):
             reldate += relDate(movie['release dates']) + '. '
     # description
     line += 'description : ' + reldate
-    if "plot outline" in movie.keys():
+    if "plot outline" in list(movie.keys()):
         line += movie['plot outline']
     # IMDB score if available
-    if "rating" in movie.keys():
+    if "rating" in list(movie.keys()):
         line += " IMDB: %s/10" % movie['rating']
     line += "\n"
 
     # isEpisode always false for movies
     line += "isEpisode : false\n"
     # starRating
-    if "rating" in movie.keys():
+    if "rating" in list(movie.keys()):
         line += "starRating : x%s\n" % (int((movie['rating']-1)/1.3+1))
     # mpaaRating
     # kind of a hack for now...
     # maybe parsing certificates would work better?
-    if "mpaa" in movie.keys():
+    if "mpaa" in list(movie.keys()):
         mpaaStr = movie['mpaa']
         mpaaRating = ""
         if "Rated G " in mpaaStr:
@@ -622,7 +622,7 @@ def formatMovieData(title, dir, fileName, metadataFileName, tags, isTrailer):
             line += "mpaaRating : %s\n" % mpaaRating
 
     #vProgramGenre and vSeriesGenre
-    if "genres" in movie.keys():
+    if "genres" in list(movie.keys()):
         for i in movie['genres']:
             line += "vProgramGenre : %s\n" % i
         for i in movie['genres']:
@@ -638,26 +638,26 @@ def formatMovieData(title, dir, fileName, metadataFileName, tags, isTrailer):
         debug(1, "Warning: unable to retrieve full credits.")
 
     # vDirector (suppress repeated names)
-    if "director" in movie.keys():
+    if "director" in list(movie.keys()):
         directors = {}
         for i in movie['director']:
-            if not directors.has_key(i['name']):
+            if i['name'] not in directors:
                 directors[i['name']] = 1
                 line += "vDirector : %s|\n" % i['name']
                 debug(3,'vDirector : ' + i['name'])
     # vWriter (suppress repeated names)
-    if "writer" in movie.keys():
+    if "writer" in list(movie.keys()):
         writers = {}
         for i in movie['writer']:
-            if not writers.has_key(i['name']):
+            if i['name'] not in writers:
                 writers[i['name']] = 1
                 line += "vWriter : %s|\n" % i['name']
                 debug(3,'vWriter : ' + i['name'])
     # vActor (suppress repeated names)
-    if "cast" in movie.keys():
+    if "cast" in list(movie.keys()):
         actors = {}
         for i in movie['cast']:
-            if not actors.has_key(i['name']):
+            if i['name'] not in actors:
                 actors[i['name']] = 1
                 line += "vActor : %s|\n" % i['name']
                 debug(3,'vActor : ' + i['name'])
@@ -700,7 +700,7 @@ def reportMatch(movie, numResults):
     matchtype = 'Using best match: '
     if numResults == 1:
         matchtype = 'Found exact match: '
-    if 'long imdb title' in movie.keys():
+    if 'long imdb title' in list(movie.keys()):
         debug(1,matchtype + movie['long imdb title'])
     else:
         debug(1,matchtype + str(movie))
@@ -728,7 +728,7 @@ def getfiles(directory):
 
 def parseMovie(dir, filename, metadataFileName, isTrailer):
     if not IMDB:
-        print "No IMDB module, skipping movie: " + filename
+        print("No IMDB module, skipping movie: " + filename)
         return
 
     title = os.path.splitext(filename)[0]
@@ -774,7 +774,7 @@ def extractTags(title):
         '(?i)CD ?(\d)'         : r'CD\1', #CD1,CD2,cd1,cd3,etc
         '(?i)\(?Disc ?(\d)\)?' : r'CD\1', #Disc 1,Disc 2,disc 1,etc
         }
-    for tag in taglist.keys():
+    for tag in list(taglist.keys()):
         match = re.search(tag, title)
         if match:
             tags += match.expand(taglist[tag]) + ' '
@@ -840,9 +840,9 @@ def parseTV(MirrorURL, match, metaDir, metaFile, showDir):
 def mkdirIfNeeded(dirname):
     if not os.path.exists(dirname):
         # Don't use os.makedirs() because that would only matter if -p named a non-existant dir (which we don't want to create)
-        os.mkdir(dirname, 0755)
+        os.mkdir(dirname, 0o755)
     elif not os.path.isdir(dirname):
-        raise OSError, 'Can\'t create "' + dirname + '" as a dir, a file already exists with that name.'
+        raise OSError('Can\'t create "' + dirname + '" as a dir, a file already exists with that name.')
 
 def processDir(dir, MirrorURL):
     debug(1,'\n## Looking for videos in: ' + dir)
@@ -885,7 +885,7 @@ def checkInteractive():
         if os.isatty(sys.stdin.fileno()):
             options.interactive = 1
     # On windows systems set interactive when running from a console
-    elif 'PROMPT' in os.environ.keys():
+    elif 'PROMPT' in list(os.environ.keys()):
         options.interactive = 1
 
 def main():
@@ -909,9 +909,9 @@ def main():
             options.genre = ''
         else:
             if not os.path.exists(options.genre):
-                os.makedirs(options.genre, 0755)
+                os.makedirs(options.genre, 0o755)
             elif not os.path.isdir(options.genre):
-                raise OSError, 'Can\'t create "' + options.genre + '" as a dir, a file already exists with that name.'
+                raise OSError('Can\'t create "' + options.genre + '" as a dir, a file already exists with that name.')
             else:
                 debug(0,"Note: If you've removed videos, there may be old symlinks in '" + options.genre + "'.  If there's nothing else in there, you can just remove the whole thing first, then run this again (e.g. rm -rf '" + options.genre + "'), but be careful.")
 

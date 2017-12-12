@@ -232,9 +232,7 @@ def get_series_id(mirror_url, show_name, show_dir):
             if len(series) >= 2:
                 print("####################################\n")
                 print("Multiple TV Shows found:\n")
-                print("Found %s shows for Series Title %s"%(
-                    len(series), show_name.encode(out_encoding, 'replace')
-                    )
+                print("Found %s shows for Series Title %s"%(len(series), show_name)
                     )
                 print("------------------------------------")
                 for episode in series:
@@ -248,11 +246,12 @@ def get_series_id(mirror_url, show_name, show_dir):
                         ep_overview = "<None>"
                     if len(ep_overview) > 240:
                         ep_overview = ep_overview[0:239]
-                    print("Series Name:\t%s" % ep_series_name.encode(out_encoding, 'replace'))
-                    print("Series ID:\t%s" % ep_id.encode(out_encoding, 'replace'))
+                    print("Series Name:\t%s" % ep_series_name)
+                    print("Series ID:\t%s" % ep_id)
                     if first_aired:
-                        print("1st Aired:\t%s" % first_aired.encode(out_encoding, 'replace'))
-                    print("Description:\t%s\n------------------------------------" % ep_overview.encode(out_encoding, 'replace'))
+                        print("1st Aired:\t%s" % first_aired)
+                    print("Description:\t%s"%ep_overview)
+                    print("------------------------------------")
                 print("####################################\n\n")
                 try:
                     seriesid = input('Please choose the correct seriesid: ')
@@ -490,8 +489,8 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
     line = ""
 
     debug(1, 'Searching IMDb for: ' + title)
-    imdb_access = imdb.IMDb() # create new object to access IMDB
-    title = str(title, in_encoding, 'replace')
+    # IMDB access object
+    imdb_access = imdb.IMDb()
     try:
         # Do the search, and get the results (a list of Movie objects).
         results = imdb_access.search_movie(title)
@@ -516,13 +515,13 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
             # Show max 5 titles
             num_titles = min(num_titles, 5)
 
-            print("\nMatches for '%s'" % (title.encode(out_encoding, 'replace')))
+            print("\nMatches for '%s'"%title)
             print("------------------------------------")
             print("Num\tTitle")
             print("------------------------------------")
             for i in range(0, num_titles):
                 m_title = results[i]['long imdb title']
-                print("%d\t%s" % (i, m_title.encode(out_encoding, 'replace')))
+                print("%d\t%s" % (i, m_title))
             print("")
             try:
                 movie_num = input("Please choose the correct movie, or 's' to skip [0]: ")
@@ -551,7 +550,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
         movie = results[0]
         report_match(movie, len(results))
 
-    # So far the Movie object only contains basic information like the
+    # So far the movie object only contains basic information like the
     # title and the year; retrieve main information:
     try:
         imdb_access.update(movie)
@@ -655,7 +654,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
 
     debug(2, "Writing to %s" % metadata_file_name)
     out_file = open(metadata_file_name, 'w')
-    out_file.writelines(line.encode(file_encoding, 'replace'))
+    out_file.writelines(line)
     out_file.close()
 
 def link_genres(work_dir, file_name, metadata_path, genres):

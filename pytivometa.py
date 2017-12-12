@@ -65,11 +65,7 @@ COUNTRY = 'USA'
 # Flag to track if TV lookups are enabled.
 HAS_TVDB = True
 
-APIKEY = "0403764A0DA51955"
-
-GETSERIESID_URL = '/api/GetSeries.php?'
-GETEPISODEID_URL = '/GetEpisodes.php?'
-GETEPISODEINFO_URL = '/EpisodeUpdates.php?'
+TVDB_APIKEY = "0403764A0DA51955"
 
 # Cache for series info.
 SERIES_INFO_CACHE = {}
@@ -102,7 +98,7 @@ def debug(level, text):
 def get_mirror_url():
     global HAS_TVDB
     # Query tvdb for a list of mirrors
-    mirrors_url = "http://www.thetvdb.com/api/%s/mirrors.xml" % APIKEY
+    mirrors_url = "http://www.thetvdb.com/api/%s/mirrors.xml" % TVDB_APIKEY
     mirror_url = ''
     # If we don't hear back after timeout seconds, give up and move on
     timeout = OPTIONS.timeout
@@ -165,6 +161,11 @@ def get_xml(url):
     return xml
 
 def get_series_id(mirror_url, show_name, show_dir):
+    # useful URL substrings
+    getseriesid_url = '/api/GetSeries.php?'
+    #getepisodeid_url = '/GetEpisodes.php?'
+    #getepisodeinfo_url = '/EpisodeUpdates.php?'
+
     seriesid = ''
     sidfiles = [os.path.join(show_dir, show_name + ".seriesID")]
     if OPTIONS.metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
@@ -194,7 +195,7 @@ def get_series_id(mirror_url, show_name, show_dir):
         seriesid = re.sub("\n", "", seriesid)
     else:
         debug(1, "Searching for: " + bare_title)
-        url = mirror_url + GETSERIESID_URL + urllib.parse.urlencode({"seriesname" : bare_title})
+        url = mirror_url + getseriesid_url + urllib.parse.urlencode({"seriesname" : bare_title})
         debug(3, "series_xml: Using URL " + url)
         # patch new
         series_xml = get_xml(url)
@@ -261,7 +262,7 @@ def get_series_id(mirror_url, show_name, show_dir):
 
     series_url_xml = None
     if seriesid:
-        series_url = mirror_url + "/api/" + APIKEY + "/series/" + seriesid + "/en.xml"
+        series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + seriesid + "/en.xml"
         debug(3, "getSeriesInfoXML: Using URL " + series_url)
         # patch new
         series_url_xml = get_xml(series_url)
@@ -277,7 +278,7 @@ def get_series_id(mirror_url, show_name, show_dir):
 
 def get_episode_info_xml(mirror_url, seriesid, season, episode):
     # Takes a seriesid, season number, episode number and return xml data`
-    url = mirror_url + "/api/" + APIKEY + "/series/" + seriesid + "/default/" + season + "/" + episode + "/en.xml"
+    url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + seriesid + "/default/" + season + "/" + episode + "/en.xml"
     debug(3, "get_episode_info_xml: Using URL " + url)
     # patch new
     episode_info_xml = get_xml(url)
@@ -296,7 +297,7 @@ def get_episode_info_xml(mirror_url, seriesid, season, episode):
 
 def get_episode_info_xml_by_air_date(mirror_url, seriesid, year, month, day):
     # Takes a seriesid, year number, month number, day number, and return xml data
-    url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + APIKEY + \
+    url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + TVDB_APIKEY + \
             "&seriesid=" + seriesid + "&airdate=" + year + "-" + month + "-" + day
     debug(3, "get_episode_info_xml_by_air_date: Using URL " + url)
     # patch new

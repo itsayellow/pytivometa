@@ -72,10 +72,10 @@ GETEPISODEID_URL = '/GetEpisodes.php?'
 GETEPISODEINFO_URL = '/EpisodeUpdates.php?'
 
 # Cache for series info.
-SINFOCACHE = {}
+SERIES_INFO_CACHE = {}
 
 # When using a subdir for metadata files, what should it be called
-METADIR = '.meta'
+META_DIR = '.meta'
 
 # Types of files we want to get metadata for
 VIDEO_FILE_EXTS = [
@@ -163,8 +163,8 @@ def get_xml(url):
 def get_series_id(mirror_url, show_name, show_dir):
     seriesid = ''
     sidfiles = [os.path.join(show_dir, show_name + ".seriesID")]
-    if OPTIONS.metadir or os.path.isdir(os.path.join(show_dir, METADIR)):
-        sidfiles.append(os.path.join(show_dir, METADIR, show_name + ".seriesID"))
+    if OPTIONS.metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
+        sidfiles.append(os.path.join(show_dir, META_DIR, show_name + ".seriesID"))
 
     # See if there's a year in the name
     match = re.search(r'(.+?) *\(((?:19|20)\d\d)\)', show_name)
@@ -797,9 +797,9 @@ def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir):
     debug(2, "    Series: %s\n    Season: %s\n    Episode: %s\n    Year: %s\n    Month: %s\n    Day: %s" % (series, season, episode, year, month, day))
 
     episode_info = {}
-    if series not in SINFOCACHE:
-        SINFOCACHE[series] = get_series_id(mirror_url, series, show_dir)
-    (series_info_xml, seriesid) = SINFOCACHE[series]
+    if series not in SERIES_INFO_CACHE:
+        SERIES_INFO_CACHE[series] = get_series_id(mirror_url, series, show_dir)
+    (series_info_xml, seriesid) = SERIES_INFO_CACHE[series]
     if seriesid is not None and series_info_xml is not None:
         for node in series_info_xml.getiterator():
             episode_info[node.tag] = node.text
@@ -841,8 +841,8 @@ def process_dir(dir_proc, mirror_url):
         is_trailer = 1
 
     meta_dir = dir_proc
-    if OPTIONS.metadir or os.path.isdir(os.path.join(dir_proc, METADIR)):
-        meta_dir = os.path.join(dir_proc, METADIR)
+    if OPTIONS.metadir or os.path.isdir(os.path.join(dir_proc, META_DIR)):
+        meta_dir = os.path.join(dir_proc, META_DIR)
         mkdir_if_needed(meta_dir)
     for filename in file_list:
         meta_file = filename + '.txt'

@@ -79,12 +79,13 @@ fileExtList = [".mpg", ".avi", ".ogm", ".mkv", ".mp4", ".mov", ".wmv", ".vob", "
 in_encoding = sys.stdin.encoding or sys.getdefaultencoding()
 # string encoding for output to console
 out_encoding = sys.stdout.encoding or sys.getdefaultencoding()
-# string encoding for output to metadata files.  Tivo is UTF8 compatible so use that for file output
+# string encoding for output to metadata files.  Tivo is UTF8 compatible so use
+#   that for file output
 file_encoding = 'UTF-8'
 
 
 def debug(level, text):
-    if level<= OPTIONS.debug:
+    if level <= OPTIONS.debug:
         try:
             # Failes to print non-ASCII chars with the high bit set
             print(text.encode(out_encoding, 'replace'))
@@ -118,7 +119,9 @@ def getMirrorURL():
         mirrors = [Item for Item in mirrorsXML.findall('Mirror')]
         mirrorURL = mirrors[0].findtext('mirrorpath')
     except:
-        debug(0, "Error looking information from thetvdb, no metadata will be retrieved for TV shows.")
+        debug(0, "Error looking information from thetvdb, no metadata will "\
+                "be retrieved for TV shows."
+                )
         TVDB = 0
     return mirrorURL
 
@@ -443,7 +446,8 @@ def formatEpisodeData(e, metaDir, f):
                     else:
                         text = "SH%08d" % number
 
-            # Only check to see if Season is > 0, allow EpNum to be 0 for things like "1x00 - Bonus content"
+            # Only check to see if Season is > 0, allow EpNum to be 0 for
+            #   things like "1x00 - Bonus content"
             if tvTag == 'episodeNumber' and e['EpisodeNumber'] and int(e['SeasonNumber']):
                 text = "%d%02d" % (int(e['SeasonNumber']), int(e['EpisodeNumber']))
 
@@ -606,7 +610,8 @@ def formatMovieData(title, dir, fileName, metadataFileName, tags, isTrailer):
 
     try:
         pass
-        #don't enable the next line unless you want the full cast, actors + everyone else who worked on the movie
+        #don't enable the next line unless you want the full cast,
+        #   actors + everyone else who worked on the movie
         #objIA.update(movie, 'full credits')
     except:
         debug(1, "Warning: unable to retrieve full credits.")
@@ -678,7 +683,8 @@ def relDate(reldates):
     for rd in reldates:
         if rd.encode(file_encoding,'replace').lower().startswith(COUNTRY.lower() + '::'):
             return rd[len(COUNTRY)+2:]
-    # Didn't find the country we want, so return the first one, but leave the country name in there.
+    # Didn't find the country we want, so return the first one, but leave the
+    #   country name in there.
     return reldates[0]
 
 def getfiles(directory):
@@ -702,7 +708,8 @@ def parseMovie(dir, filename, metadataFileName, isTrailer):
 
     title = os.path.splitext(filename)[0]
 
-    # Most tags and group names come after the year (which is often in parens or brackets)
+    # Most tags and group names come after the year (which is often in parens
+    #   or brackets)
     # Using the year when searching IMDb will help, so try to find it.
     m = re.match(r'(.*?\w+.*?)(?:([[(])|(\W))(.*?)((?:19|20)\d\d)(?(2)[])]|(\3|$))(.*?)$', title)
     if m:
@@ -712,7 +719,8 @@ def parseMovie(dir, filename, metadataFileName, isTrailer):
         debug(2,"    Title: %s\n    Year: %s" % (title, year))
         title += ' (' + year + ')'
     else:
-        # 2nd pass at finding the year.  Look for a series of tags in parens which may include the year.
+        # 2nd pass at finding the year.  Look for a series of tags in parens
+        #   which may include the year.
         m = re.match(r'(.*?\w+.*?)\(.*((?:19|20)\d\d)\).*\)', title)
         if m:
             (title, year) = m.group([1,2])
@@ -753,7 +761,11 @@ def extractTags(title):
 
 def cleanTitle(title):
     # strip a variety of common junk from torrented avi filenames
-    striplist = ('crowbone','joox-dot-net','DOMiNiON','LiMiTED','aXXo','DoNE','ViTE','BaLD','COCAiNE','NoGRP','leetay','AC3','BluRay','DVD','VHS','Screener','(?i)DVD SCR','\[.*\]','(?i)swesub','(?i)dvdrip','(?i)dvdscr','(?i)xvid','(?i)divx')
+    striplist = ('crowbone','joox-dot-net','DOMiNiON','LiMiTED','aXXo','DoNE',
+            'ViTE','BaLD','COCAiNE','NoGRP','leetay','AC3','BluRay','DVD',
+            'VHS','Screener','(?i)DVD SCR','\[.*\]','(?i)swesub','(?i)dvdrip',
+            '(?i)dvdscr','(?i)xvid','(?i)divx'
+            )
     for strip in striplist:
         title = re.sub(strip, '', title)
     debug(3,"After stripping keywords, title is: " + title)
@@ -808,7 +820,8 @@ def parseTV(MirrorURL, match, metaDir, metaFile, showDir):
 
 def mkdirIfNeeded(dirname):
     if not os.path.exists(dirname):
-        # Don't use os.makedirs() because that would only matter if -p named a non-existant dir (which we don't want to create)
+        # Don't use os.makedirs() because that would only matter if -p named a
+        #   non-existant dir (which we don't want to create)
         os.mkdir(dirname, 0o755)
     elif not os.path.isdir(dirname):
         raise OSError('Can\'t create "' + dirname + '" as a dir, a file already exists with that name.')
@@ -942,8 +955,9 @@ def main():
             else:
                 debug(0,"Note: If you've removed videos, there may be old symlinks in '" + OPTIONS.genre + "'.  If there's nothing else in there, you can just remove the whole thing first, then run this again (e.g. rm -rf '" + OPTIONS.genre + "'), but be careful.")
 
-    # As of Python 2.6, setting default=['.'] doesn't work with action="append"... instead of
-    # using the default when no dirs are specified, it always includes the default too.
+    # As of Python 2.6, setting default=['.'] doesn't work with
+    #   action="append"... instead of using the default when no dirs are
+    #   specified, it always includes the default too.
     if not args:
         args = ['.']
     for dir in args:

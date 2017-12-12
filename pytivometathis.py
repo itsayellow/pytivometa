@@ -590,7 +590,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
             mpaa_rating = "N6"
 
         if mpaa_rating:
-            line += "mpaa_rating : %s\n" % mpaa_rating
+            line += "mpaaRating : %s\n" % mpaa_rating
 
     #vProgramGenre and vSeriesGenre
     if "genres" in list(movie.keys()):

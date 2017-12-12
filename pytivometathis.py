@@ -33,8 +33,9 @@
 
 # Python required: > 3.0
 
-import urllib.request, urllib.parse, urllib.error
-import urllib.request, urllib.error, urllib.parse
+import urllib.request
+import urllib.parse
+import urllib.error
 import sys
 import re
 import os
@@ -208,14 +209,14 @@ def get_series_id(mirror_url, show_name, show_dir):
     else:
         debug(1, 'Searching for: ' + bare_title)
         url = mirror_url + GETSERIESID_URL + urllib.parse.urlencode({"seriesname" : bare_title})
-        debug(3, 'seriesXML: Using URL ' + url)
+        debug(3, 'series_xml: Using URL ' + url)
         # patch new
-        seriesXML = get_xml(url)
-        if seriesXML is None:
+        series_xml = get_xml(url)
+        if series_xml is None:
             debug(3, "Error getting Series Info")
             return None, None
-        #seriesXML = parse(urllib.urlopen(url)).getroot()
-        series = [Item for Item in seriesXML.findall('Series')]
+        #series_xml = parse(urllib.urlopen(url)).getroot()
+        series = [Item for Item in series_xml.findall('Series')]
 
         if year and len(series) > 1:
             debug(2, 'There are %d matching series, but we know what year ' +\
@@ -237,8 +238,8 @@ def get_series_id(mirror_url, show_name, show_dir):
                     )
                     )
                 print("------------------------------------")
-                for epsiode in series:
-                    ep_series_name = epsiode.findtext('SeriesName')
+                for episode in series:
+                    ep_series_name = episode.findtext('SeriesName')
                     ep_id = episode.findtext('id')
                     ep_overview = episode.findtext('Overview')
                     first_aired = episode.findtext('FirstAired')
@@ -280,7 +281,7 @@ def get_series_id(mirror_url, show_name, show_dir):
         debug(3, "getSeriesInfoXML: Using URL " + series_url)
         # patch new
         series_url_xml = get_xml(series_url)
-        if ( series_url_xml is None ):
+        if series_url_xml is None:
             debug(0, "!! Error parsing series info, skipping.")
         #try:
         #    series_url_xml = parse(urllib.urlopen(series_url)).getroot()
@@ -297,7 +298,7 @@ def get_episode_info_xml(mirror_url, seriesid, season, episode):
     # patch new
     episode_info_xml = get_xml(url)
 
-    if ( episode_info_xml is None):
+    if episode_info_xml is None:
         debug(0, "!! Error looking up data for this episode, skipping.")
     #try:
     #    episode_info_xml = parse(urllib.urlopen(url)).getroot()
@@ -311,11 +312,12 @@ def get_episode_info_xml(mirror_url, seriesid, season, episode):
 
 def get_episode_info_xml_by_air_date(mirror_url, seriesid, year, month, day):
     # Takes a seriesid, year number, month number, day number, and return xml data
-    url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + APIKEY + "&seriesid=" + seriesid + "&airdate=" + year + "-" + month + "-" + day
+    url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + APIKEY + \
+            "&seriesid=" + seriesid + "&airdate=" + year + "-" + month + "-" + day
     debug(3, "get_episode_info_xml_by_air_date: Using URL " + url)
     # patch new
     episode_info_xml = get_xml(url)
-    if ( episode_info_xml is None):
+    if episode_info_xml is None:
         debug(0, "!! Error looking up data for this episode, skipping.")
     #try:
     #    episode_info_xml = parse(urllib.urlopen(url)).getroot()
@@ -325,15 +327,14 @@ def get_episode_info_xml_by_air_date(mirror_url, seriesid, year, month, day):
 
     return episode_info_xml
 
-def format_episode_data(e, meta_dir, f):
+def format_episode_data(ep_data, meta_dir, f):
     # Takes a dict e of XML elements, the series title, the Zap2It ID (aka
     #   the Tivo groupID), and a filename f
     # TODO : Split up multiple guest stars / writers / etc. Split on '|'.
     #   (http://trac.kurai.org/trac.cgi/ticket/2)
     # This is weak. Should just detect if EpisodeNumber exists.
     metadata_text = ''
-    isE = "true"
-    e["isEpisode"] = isE
+    ep_data["isEpisode"] = "true"
 
     # The following is a dictionary of pyTivo metadata attributes and how they
     #   map to thetvdb xml elements.
@@ -434,10 +435,10 @@ def format_episode_data(e, meta_dir, f):
     for tv_tag in pytivo_metadata_order:
 
         debug(3, 'Working on ' + tv_tag)
-        if tv_tag in pytivo_metadata and (pytivo_metadata[tv_tag]) and pytivo_metadata[tv_tag] in e and e[pytivo_metadata[tv_tag]]:
+        if tv_tag in pytivo_metadata and (pytivo_metadata[tv_tag]) and pytivo_metadata[tv_tag] in ep_data and ep_data[pytivo_metadata[tv_tag]]:
             # got data to work with
             line = term = ""
-            text = str(e[pytivo_metadata[tv_tag]]).translate(transtable)
+            text = str(ep_data[pytivo_metadata[tv_tag]]).translate(transtable)
 
             # for debugging character translations
             #if tv_tag == 'description':
@@ -463,8 +464,8 @@ def format_episode_data(e, meta_dir, f):
 
             # Only check to see if Season is > 0, allow EpNum to be 0 for
             #   things like "1x00 - Bonus content"
-            if tv_tag == 'episodeNumber' and e['EpisodeNumber'] and int(e['SeasonNumber']):
-                text = "%d%02d" % (int(e['SeasonNumber']), int(e['EpisodeNumber']))
+            if tv_tag == 'episodeNumber' and ep_data['EpisodeNumber'] and int(ep_data['SeasonNumber']):
+                text = "%d%02d" % (int(ep_data['SeasonNumber']), int(ep_data['EpisodeNumber']))
 
             if tv_tag in metadata_name_fields:
                 term = "|"
@@ -488,15 +489,15 @@ def format_episode_data(e, meta_dir, f):
         out_file.write(metadata_text.encode(file_encoding, 'replace'))
         out_file.close()
 
-def format_movie_data(title, dir, file_name, metadata_file_name, tags, is_trailer):
+def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trailer):
     line = ""
 
     debug(1, 'Searching IMDb for: ' + title)
-    objIA = imdb.IMDb() # create new object to access IMDB
+    imdb_access = imdb.IMDb() # create new object to access IMDB
     title = str(title, in_encoding, 'replace')
     try:
         # Do the search, and get the results (a list of Movie objects).
-        results = objIA.search_movie(title)
+        results = imdb_access.search_movie(title)
     except imdb.IMDbError as e:
         debug(0, 'IMDb lookup error: ' + str(e))
         sys.exit(3)
@@ -556,7 +557,7 @@ def format_movie_data(title, dir, file_name, metadata_file_name, tags, is_traile
     # So far the Movie object only contains basic information like the
     # title and the year; retrieve main information:
     try:
-        objIA.update(movie)
+        imdb_access.update(movie)
         #debug(3, movie.summary())
     except Exception as e:
         debug(0, 'Warning: unable to get extended details from IMDb for: ' + str(movie))
@@ -572,7 +573,7 @@ def format_movie_data(title, dir, file_name, metadata_file_name, tags, is_traile
     if is_trailer:
         try:
             # This slows down the process, so only do it for trailers
-            objIA.update(movie, 'release dates')
+            imdb_access.update(movie, 'release dates')
         except Exception as e:
             debug(1, 'Warning: unable to get release date.')
         if 'release dates' in list(movie.keys()) and len(movie['release dates']):
@@ -620,13 +621,13 @@ def format_movie_data(title, dir, file_name, metadata_file_name, tags, is_traile
         for i in movie['genres']:
             line += "vSeriesGenre : %s\n" % i
         if OPTIONS.genre:
-            link_genres(dir, file_name, metadata_file_name, movie['genres'])
+            link_genres(dir_, file_name, metadata_file_name, movie['genres'])
 
     try:
         pass
         #don't enable the next line unless you want the full cast,
         #   actors + everyone else who worked on the movie
-        #objIA.update(movie, 'full credits')
+        #imdb_access.update(movie, 'full credits')
     except:
         debug(1, "Warning: unable to retrieve full credits.")
 
@@ -660,13 +661,13 @@ def format_movie_data(title, dir, file_name, metadata_file_name, tags, is_traile
     out_file.writelines(line.encode(file_encoding, 'replace'))
     out_file.close()
 
-def link_genres(dir, file_name, metadata_path, genres):
+def link_genres(work_dir, file_name, metadata_path, genres):
     for genre in genres:
         genrepath = os.path.join(OPTIONS.genre, genre)
         mkdir_if_needed(genrepath)
         # Create a symlink to the video
         link = os.path.join(genrepath, file_name)
-        file_path = os.path.join(dir, file_name)
+        file_path = os.path.join(work_dir, file_name)
         mk_link(link, file_path)
         # Create a symlink to the metadata
         metadata_dir = os.path.basename(metadata_path)
@@ -756,14 +757,14 @@ def extract_tags(title):
     tags = ""
     taglist = {
         # Strip these out      : return these instead
-        '(\d{3,4})([IiPp])'    : r'\1\2', #720p,1080p,1080i,720P,etc
-        '(?i)Telecine'         : 'TC',    #Telecine,telecine
-        'TC'                   : 'TC',
-        '(?i)Telesync'         : 'TS',    #Telesync,telesync
-        'TS'                   : 'TS',
-        'CAM'                  : 'CAM',
-        '(?i)CD ?(\d)'         : r'CD\1', #CD1,CD2,cd1,cd3,etc
-        '(?i)\(?Disc ?(\d)\)?' : r'CD\1', #Disc 1,Disc 2,disc 1,etc
+        r'(\d{3,4})([IiPp])'    : r'\1\2', #720p,1080p,1080i,720P,etc
+        r'(?i)Telecine'         : r'TC',    #Telecine,telecine
+        r'TC'                   : r'TC',
+        r'(?i)Telesync'         : r'TS',    #Telesync,telesync
+        r'TS'                   : r'TS',
+        r'CAM'                  : r'CAM',
+        r'(?i)CD ?(\d)'         : r'CD\1', #CD1,CD2,cd1,cd3,etc
+        r'(?i)\(?Disc ?(\d)\)?' : r'CD\1', #Disc 1,Disc 2,disc 1,etc
         }
     for tag in list(taglist.keys()):
         match = re.search(tag, title)
@@ -775,10 +776,11 @@ def extract_tags(title):
 
 def clean_title(title):
     # strip a variety of common junk from torrented avi filenames
-    striplist = ('crowbone', 'joox-dot-net', 'DOMiNiON', 'LiMiTED', 'aXXo',
-            'DoNE', 'ViTE', 'BaLD', 'COCAiNE', 'NoGRP', 'leetay', 'AC3',
-            'BluRay', 'DVD', 'VHS', 'Screener', '(?i)DVD SCR', '\[.*\]',
-            '(?i)swesub', '(?i)dvdrip', '(?i)dvdscr', '(?i)xvid', '(?i)divx'
+    striplist = (r'crowbone', r'joox-dot-net', r'DOMiNiON', r'LiMiTED',
+            r'aXXo', r'DoNE', r'ViTE', r'BaLD', r'COCAiNE', r'NoGRP',
+            r'leetay', r'AC3', r'BluRay', r'DVD', r'VHS', r'Screener',
+            r'(?i)DVD SCR', r'\[.*\]', r'(?i)swesub', r'(?i)dvdrip',
+            r'(?i)dvdscr', r'(?i)xvid', r'(?i)divx'
             )
     for strip in striplist:
         title = re.sub(strip, '', title)
@@ -790,13 +792,13 @@ def fix_spaces(title):
     for ph in placeholders:
         title = re.sub(ph, ' ', title)
     # Remove leftover spaces before/after the year
-    title = re.sub('\( ', '(', title)
-    title = re.sub(' \)', ')', title)
-    title = re.sub('\(\)', '', title)
+    title = re.sub(r'\( ', '(', title)
+    title = re.sub(r' \)', ')', title)
+    title = re.sub(r'\(\)', '', title)
     return title
 
 def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir):
-    series = re.sub('[._]', ' ', match.group(1)).strip()
+    series = re.sub(r'[._]', ' ', match.group(1)).strip()
     if match.lastindex >= 4:
         season = 0
         episode = 0
@@ -843,18 +845,18 @@ def mkdir_if_needed(dirname):
                         'exists with that name.'
                 )
 
-def process_dir(dir, mirror_url):
-    debug(1, '\n## Looking for videos in: ' + dir)
-    (file_list, dir_list) = get_files(dir)
+def process_dir(dir_proc, mirror_url):
+    debug(1, '\n## Looking for videos in: ' + dir_proc)
+    (file_list, dir_list) = get_files(dir_proc)
 
     is_trailer = 0
     # See if we're in a "Trailer" folder.
-    if 'trailer' in os.path.abspath(dir).lower():
+    if 'trailer' in os.path.abspath(dir_proc).lower():
         is_trailer = 1
 
-    meta_dir = dir
-    if OPTIONS.metadir or os.path.isdir(os.path.join(dir, METADIR)):
-        meta_dir = os.path.join(dir, METADIR)
+    meta_dir = dir_proc
+    if OPTIONS.metadir or os.path.isdir(os.path.join(dir_proc, METADIR)):
+        meta_dir = os.path.join(dir_proc, METADIR)
         mkdir_if_needed(meta_dir)
     for filename in file_list:
         meta_file = filename + '.txt'
@@ -870,13 +872,13 @@ def process_dir(dir, mirror_url):
                     if not TVDB:
                         debug(1, "Metadata service for TV shows is unavailable, skipping this show.")
                     else:
-                        parse_tv(mirror_url, match, meta_dir, meta_file, dir)
+                        parse_tv(mirror_url, match, meta_dir, meta_file, dir_proc)
                     ismovie = 0
                     break
             if ismovie:
-                parse_movie(dir, filename, os.path.join(meta_dir, meta_file), is_trailer)
+                parse_movie(dir_proc, filename, os.path.join(meta_dir, meta_file), is_trailer)
     for subdir in dir_list:
-        process_dir(os.path.join(dir, subdir), mirror_url)
+        process_dir(os.path.join(dir_proc, subdir), mirror_url)
 
 def check_interactive():
     if sys.platform not in ['win32', 'cygwin']:

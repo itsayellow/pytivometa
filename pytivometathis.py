@@ -101,12 +101,6 @@ def debug(level, text):
                 except UnicodeDecodeError as e:
                     print("Unable to display debug message, error is: " + str(e))
 
-class TimeOutException(Exception):
-    pass
-
-def alarmHandler():
-    raise TimeOutException
-
 def getMirrorURL():
     global TVDB
     # Query tvdb for a list of mirrors

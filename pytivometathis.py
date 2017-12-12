@@ -49,7 +49,8 @@ IMDB = 1
 try:
     import imdb
 except ImportError:
-    print('IMDB module could not be loaded. Movie Lookups will be disabled. See http://imdbpy.sourceforge.net')
+    print('IMDB module could not be loaded. Movie Lookups will be disabled.\n'
+            'See http://imdbpy.sourceforge.net')
     IMDB = 0
 
 # Which country's release date do we want to see:
@@ -87,8 +88,7 @@ file_encoding = 'UTF-8'
 def debug(level, text):
     if level <= OPTIONS.debug:
         try:
-            # Failes to print non-ASCII chars with the high bit set
-            print(text.encode(out_encoding, 'replace'))
+            print(text)
         except UnicodeDecodeError as e:
             try:
                 # This can fail on unicode chars
@@ -883,11 +883,15 @@ def process_command_line(argv):
                     "directory."
                     )
 
-    # specifying nargs= puts outputs of parser in list (even if nargs=1)
+    # optional positional list of directories:
+    parser.add_argument(
+            "dir", nargs="*", default=['.'],
+            help="Specific directory(-ies) to process. (Default is current directory.)"
+            )
 
     # switches/options:
     parser.add_argument(
-            "-d", "--debug", action="count", dest="debug",
+            "-d", "--debug", action="count", dest="debug", default=0,
             help="Turn on debugging. More -d's increase debug level."
             )
     parser.add_argument(
@@ -933,9 +937,6 @@ def main():
     # Initalize things we'll need for looking up data
     MirrorURL = getMirrorURL()
 
-    if OPTIONS.isAltOutput:
-        debug(0,"Option -a is deprecated, ignoring.  Use templates instead: http://pytivo.krkeegan.com/pytivo-video-templates-t618.html")
-
     if OPTIONS.genre:
         # Python doesn't support making symlinks on Windows.
         if sys.platform in ['win32', 'cygwin']:
@@ -949,12 +950,7 @@ def main():
             else:
                 debug(0,"Note: If you've removed videos, there may be old symlinks in '" + OPTIONS.genre + "'.  If there's nothing else in there, you can just remove the whole thing first, then run this again (e.g. rm -rf '" + OPTIONS.genre + "'), but be careful.")
 
-    # As of Python 2.6, setting default=['.'] doesn't work with
-    #   action="append"... instead of using the default when no dirs are
-    #   specified, it always includes the default too.
-    if not args:
-        args = ['.']
-    for dir in args:
+    for dir in OPTIONS.dir:
         processDir(dir, MirrorURL)
 
 if __name__ == "__main__":

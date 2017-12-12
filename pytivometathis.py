@@ -5,11 +5,17 @@
 #
 # All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+# Redistribution and use in source and binary forms, with or without
+#   modification, are permitted provided that the following conditions are met:
 #
-#    * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-#    * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-#    * Neither the name of the author nor the names of the contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+#    * Redistributions of source code must retain the above copyright notice,
+#       this list of conditions and the following disclaimer.
+#    * Redistributions in binary form must reproduce the above copyright notice,
+#       this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#    * Neither the name of the author nor the names of the contributors may be
+#       used to endorse or promote products derived from this software without
+#       specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -95,8 +101,9 @@ def debug(level, text):
                 print(text)
             except UnicodeDecodeError as e:
                 try:
-                    # If sys.stdout.encoding is ascii (or 'ANSI_X3.4-1968') then the
-                    # previous two attempts were the same thing, try something else
+                    # If sys.stdout.encoding is ascii (or 'ANSI_X3.4-1968')
+                    #   then the previous two attempts were the same thing, try
+                    #   something else
                     print(text.encode('latin-1', 'replace'))
                 except UnicodeDecodeError as e:
                     print("Unable to display debug message, error is: " + str(e))
@@ -206,7 +213,9 @@ def get_series_id(MirrorURL, show_name, showDir):
         series = [Item for Item in seriesXML.findall('Series')]
 
         if year and len(series) > 1:
-            debug(2, 'There are %d matching series, but we know what year to search for (%s).' % (len(series), year))
+            debug(2, 'There are %d matching series, but we know what year ' +\
+                    'to search for (%s).' % (len(series), year)
+                    )
             series = find_series_by_year(series, year)
             debug(2, 'Series that match by year: %d.' % len(series))
 
@@ -292,7 +301,7 @@ def get_episode_info_xml(MirrorURL, seriesid, season, episode):
     return episodeInfoXML
 
 def get_episode_info_xml_by_air_date(MirrorURL, seriesid, year, month, day):
-    # Takes a seriesid, year number, month number, day number, and return xml data`
+    # Takes a seriesid, year number, month number, day number, and return xml data
     url = MirrorURL + "/api/GetEpisodeByAirDate.php?apikey=" + APIKEY + "&seriesid=" + seriesid + "&airdate=" + year + "-" + month + "-" + day
     debug(3, "get_episode_info_xml_by_air_date: Using URL " + url)
     # patch new
@@ -308,14 +317,17 @@ def get_episode_info_xml_by_air_date(MirrorURL, seriesid, year, month, day):
     return episodeInfoXML
 
 def format_episode_data(e, metaDir, f):
-    # Takes a dict e of XML elements, the series title, the Zap2It ID (aka the Tivo groupID), and a filename f
-    # TODO : Split up multiple guest stars / writers / etc. Split on '|'. (http://trac.kurai.org/trac.cgi/ticket/2)
+    # Takes a dict e of XML elements, the series title, the Zap2It ID (aka
+    #   the Tivo groupID), and a filename f
+    # TODO : Split up multiple guest stars / writers / etc. Split on '|'.
+    #   (http://trac.kurai.org/trac.cgi/ticket/2)
     # This is weak. Should just detect if EpisodeNumber exists.
     metadataText = ''
     isE = "true"
     e["isEpisode"] = isE
 
-    # The following is a dictionary of pyTivo metadata attributes and how they map to thetvdb xml elements.
+    # The following is a dictionary of pyTivo metadata attributes and how they
+    #   map to thetvdb xml elements.
     pyTivoMetadata = {
         # As seen on http://pytivo.armooo.net/wiki/MetaData
         'time' : 'time',

@@ -180,18 +180,18 @@ def get_series_id(mirror_url, show_name, show_dir):
         debug(2, "Looking for .seriesID file in " + seriesidpath)
         # Get seriesid
         if os.path.exists(seriesidpath):
-            debug(2, 'Reading seriesID from file: ' + seriesidpath)
+            debug(2, "Reading seriesID from file: " + seriesidpath)
             seriesidfile = open(seriesidpath, 'r')
             seriesid = seriesidfile.read()
             seriesidfile.close()
-            debug(1, 'Using stored seriesID: ' + seriesid)
+            debug(1, "Using stored seriesID: " + seriesid)
 
     if not OPTIONS.clobber and len(seriesid) > 0:
         seriesid = re.sub("\n", "", seriesid)
     else:
-        debug(1, 'Searching for: ' + bare_title)
+        debug(1, "Searching for: " + bare_title)
         url = mirror_url + GETSERIESID_URL + urllib.parse.urlencode({"seriesname" : bare_title})
-        debug(3, 'series_xml: Using URL ' + url)
+        debug(3, "series_xml: Using URL " + url)
         # patch new
         series_xml = get_xml(url)
         if series_xml is None:
@@ -201,10 +201,10 @@ def get_series_id(mirror_url, show_name, show_dir):
         series = [Item for Item in series_xml.findall('Series')]
 
         if year and len(series) > 1:
-            debug(2, 'There are %d matching series, but we know what year to search for (%s).' % (len(series), year)
+            debug(2, "There are %d matching series, but we know what year to search for (%s)." % (len(series), year)
                     )
             series = find_series_by_year(series, year)
-            debug(2, 'Series that match by year: %d.' % len(series))
+            debug(2, "Series that match by year: %d." % len(series))
 
         if len(series) == 1:
             debug(1, "Found exact match")
@@ -247,8 +247,8 @@ def get_series_id(mirror_url, show_name, show_dir):
 
         # Did we find any matches
         if len(series) and len(seriesid):
-            debug(1, 'Found seriesID: ' + seriesid)
-            debug(2, 'Writing seriesID to file: ' + seriesidpath)
+            debug(1, "Found seriesID: " + seriesid)
+            debug(2, "Writing seriesID to file: " + seriesidpath)
             seriesidfile = open(seriesidpath, 'w')
             seriesidfile.write(seriesid)
             seriesidfile.close()
@@ -412,7 +412,7 @@ def format_episode_data(ep_data, meta_dir, meta_file):
 
     for tv_tag in pytivo_metadata_order:
 
-        debug(3, 'Working on ' + tv_tag)
+        debug(3, "Working on " + tv_tag)
         if tv_tag in pytivo_metadata and (pytivo_metadata[tv_tag]) and pytivo_metadata[tv_tag] in ep_data and ep_data[pytivo_metadata[tv_tag]]:
             # got data to work with
             line = term = ""
@@ -452,14 +452,14 @@ def format_episode_data(ep_data, meta_dir, meta_file):
                 if '|' in text:
                     people = text.strip('|').split('|')
                     for person in people:
-                        debug(3, 'Splitting ' + person.strip())
+                        debug(3, "Splitting " + person.strip())
                         line += "%s : %s\n" % (tv_tag, re.sub('\n', ' ', person.strip()+term))
                 else:
                     line = "%s : %s\n" %(tv_tag, re.sub('\n', ' ', text+term))
-                    debug(3, 'Completed -> ' + line)
+                    debug(3, "Completed -> " + line)
                 metadata_text += line
         else:
-            debug(3, 'No data for ' + tv_tag)
+            debug(3, "No data for " + tv_tag)
 
     if metadata_text:
         mkdir_if_needed(meta_dir)
@@ -470,18 +470,18 @@ def format_episode_data(ep_data, meta_dir, meta_file):
 def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trailer):
     line = ""
 
-    debug(1, 'Searching IMDb for: ' + title)
+    debug(1, "Searching IMDb for: " + title)
     # IMDB access object
     imdb_access = imdb.IMDb()
     try:
         # Do the search, and get the results (a list of Movie objects).
         results = imdb_access.search_movie(title)
     except imdb.IMDbError as e:
-        debug(0, 'IMDb lookup error: ' + str(e))
+        debug(0, "IMDb lookup error: " + str(e))
         sys.exit(3)
 
     if not results:
-        debug(1, 'No matches found.')
+        debug(1, "No matches found.")
         return
 
     if OPTIONS.interactive:
@@ -493,7 +493,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
             movie = results[0]
             report_match(movie, len(results))
         else:
-            debug(2, 'Found ' + str(num_titles) + ' matches.')
+            debug(2, "Found " + str(num_titles) + " matches.")
             # Show max 5 titles
             num_titles = min(num_titles, 5)
 
@@ -538,8 +538,8 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
         imdb_access.update(movie)
         #debug(3, movie.summary())
     except Exception as e:
-        debug(0, 'Warning: unable to get extended details from IMDb for: ' + str(movie))
-        debug(0, '         You may need to update your imdbpy module.')
+        debug(0, "Warning: unable to get extended details from IMDb for: " + str(movie))
+        debug(0, "         You may need to update your imdbpy module.")
 
     # title
     line = "title : %s %s\n" % (movie['title'], tags)
@@ -553,7 +553,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
             # This slows down the process, so only do it for trailers
             imdb_access.update(movie, 'release dates')
         except Exception as e:
-            debug(1, 'Warning: unable to get release date.')
+            debug(1, "Warning: unable to get release date.")
         if 'release dates' in list(movie.keys()) and len(movie['release dates']):
             reldate += get_rel_date(movie['release dates']) + '. '
     # description
@@ -616,7 +616,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
             if i['name'] not in directors:
                 directors[i['name']] = 1
                 line += "vDirector : %s|\n" % i['name']
-                debug(3, 'vDirector : ' + i['name'])
+                debug(3, "vDirector : " + i['name'])
     # vWriter (suppress repeated names)
     if "writer" in list(movie.keys()):
         writers = {}
@@ -624,7 +624,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
             if i['name'] not in writers:
                 writers[i['name']] = 1
                 line += "vWriter : %s|\n" % i['name']
-                debug(3, 'vWriter : ' + i['name'])
+                debug(3, "vWriter : " + i['name'])
     # vActor (suppress repeated names)
     if "cast" in list(movie.keys()):
         actors = {}
@@ -632,7 +632,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
             if i['name'] not in actors:
                 actors[i['name']] = 1
                 line += "vActor : %s|\n" % i['name']
-                debug(3, 'vActor : ' + i['name'])
+                debug(3, "vActor : " + i['name'])
 
     debug(2, "Writing to %s" % metadata_file_name)
     out_file = open(metadata_file_name, 'w')
@@ -749,7 +749,7 @@ def extract_tags(title):
         if match:
             tags += match.expand(taglist[tag]) + ' '
             title = re.sub(tag, '', title)
-    debug(2, '    Tags: ' + tags)
+    debug(2, "    Tags: " + tags)
     return (tags, title)
 
 def clean_title(title):
@@ -824,7 +824,7 @@ def mkdir_if_needed(dirname):
                 )
 
 def process_dir(dir_proc, mirror_url):
-    debug(1, '\n## Looking for videos in: ' + dir_proc)
+    debug(1, "\n## Looking for videos in: " + dir_proc)
 
     # Regexes that match TV shows.
     tv_res = [

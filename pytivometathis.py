@@ -37,7 +37,6 @@ import gzip
 import io
 import argparse
 
-from optparse import OptionParser
 from xml.etree.ElementTree import parse, Element, SubElement
 from time import gmtime, strftime, strptime
 from datetime import datetime
@@ -54,15 +53,7 @@ except ImportError:
 # Which country's release date do we want to see:
 COUNTRY = 'USA'
 
-parser = OptionParser()
-parser.add_option("-d", "--debug", action="count", dest="debug", help="Turn on debugging. More -d's increase debug level.")
-parser.add_option("-f", "--force", action="store_true", dest="clobber", help="Force overwrite of existing metadata")
-parser.add_option("-t", "--tidy", action="store_true", dest="metadir", help="Save metadata to the .meta directory in video directory. Compatible with tlc's patch (http://pytivo.krkeegan.com/viewtopic.php?t=153)")
-parser.add_option("-r", "--recursive", action="store_true", dest="recursive", help="Generate metadata for all files in sub dirs too.")
-parser.add_option("-g", "--genre", dest="genre", help="Specify a directory in which to place symlinks to shows, organized by genre.")
-parser.add_option("-w", "--wait", dest="timeout", help="How many seconds to wait for a connection to theTVdb.com before giving up. (Default: 5s)")
-
-(options, args) = parser.parse_args()
+OPTIONS = None
 
 # Flag to track if TV lookups are enabled.
 TVDB = 1
@@ -96,7 +87,7 @@ if major > 2 or (major == 2 and minor >= 6):
     PY26 = 1
 
 def debug(level, text):
-    if level<= options.debug:
+    if level<= OPTIONS.debug:
         try:
             # Failes to print non-ASCII chars with the high bit set
             print(text.encode(out_encoding, 'replace'))
@@ -124,7 +115,7 @@ def getMirrorURL():
     mirrorsURL = "http://www.thetvdb.com/api/%s/mirrors.xml" % APIKEY
     mirrorURL = ''
     # If we don't hear back after timeout seconds, give up and move on
-    timeout = options.timeout or 5
+    timeout = OPTIONS.timeout or 5
     try:
         if PY26:
             mirrorsXML = parse(urllib.request.urlopen(mirrorsURL, None, timeout))
@@ -195,7 +186,7 @@ def getXML(url):
 def getSeriesId(MirrorURL, show_name, showDir):
     seriesid = ''
     sidfiles = [os.path.join(showDir, show_name + ".seriesID")]
-    if options.metadir or os.path.isdir(os.path.join(showDir, METADIR)):
+    if OPTIONS.metadir or os.path.isdir(os.path.join(showDir, METADIR)):
         sidfiles.append(os.path.join(showDir, METADIR, show_name + ".seriesID"))
 
     # See if there's a year in the name
@@ -218,7 +209,7 @@ def getSeriesId(MirrorURL, show_name, showDir):
             seriesidfile.close()
             debug(1,'Using stored seriesID: ' + seriesid)
 
-    if not options.clobber and len(seriesid) > 0:
+    if not OPTIONS.clobber and len(seriesid) > 0:
         seriesid = re.sub("\n", "", seriesid)
     else:
         debug(1,'Searching for: ' + bare_title)
@@ -240,7 +231,7 @@ def getSeriesId(MirrorURL, show_name, showDir):
         if len(series) == 1:
             debug(1,"Found exact match")
             seriesid = series[0].findtext('id')
-        elif options.interactive:
+        elif OPTIONS.interactive:
             # Display all the shows found
             if len(series) >= 2:
                 print("####################################\n")
@@ -510,7 +501,7 @@ def formatMovieData(title, dir, fileName, metadataFileName, tags, isTrailer):
         debug(1,'No matches found.')
         return
 
-    if options.interactive:
+    if OPTIONS.interactive:
         # Get number of movies found
         num_titles = len(results)
 
@@ -625,7 +616,7 @@ def formatMovieData(title, dir, fileName, metadataFileName, tags, isTrailer):
             line += "vProgramGenre : %s\n" % i
         for i in movie['genres']:
             line += "vSeriesGenre : %s\n" % i
-        if options.genre:
+        if OPTIONS.genre:
             linkGenres(dir, fileName, metadataFileName, movie['genres'])
 
     try:
@@ -667,7 +658,7 @@ def formatMovieData(title, dir, fileName, metadataFileName, tags, isTrailer):
 
 def linkGenres(dir, fileName, metadataPath, genres):
     for genre in genres:
-        genrepath = os.path.join(options.genre, genre)
+        genrepath = os.path.join(OPTIONS.genre, genre)
         mkdirIfNeeded(genrepath)
         # Create a symlink to the video
         link = os.path.join(genrepath, fileName)
@@ -717,7 +708,7 @@ def getfiles(directory):
     fileList.sort()
     debug(2,"fileList after cull: %s" % str(fileList))
     dirList = []
-    if options.recursive:
+    if OPTIONS.recursive:
         # Get a list of all sub dirs
         dirList = [d for d in entries if os.path.isdir(os.path.join(directory, d)) and not d[0] == '.']
         dirList.sort()
@@ -852,14 +843,14 @@ def processDir(dir, MirrorURL):
         isTrailer = 1
 
     metaDir = dir
-    if options.metadir or os.path.isdir(os.path.join(dir, METADIR)):
+    if OPTIONS.metadir or os.path.isdir(os.path.join(dir, METADIR)):
         metaDir = os.path.join(dir, METADIR)
         mkdirIfNeeded(metaDir)
     for filename in fileList:
         metaFile = filename + '.txt'
         debug(1,"\n--->working on: %s" % filename)
         debug(2,"Metadir is: " + metaDir)
-        if os.path.exists(os.path.join(metaDir, metaFile)) and not options.clobber:
+        if os.path.exists(os.path.join(metaDir, metaFile)) and not OPTIONS.clobber:
             debug(1,"Metadata file already exists, skipping.")
         else:
             ismovie = 1;
@@ -881,10 +872,10 @@ def checkInteractive():
     if sys.platform not in ['win32', 'cygwin']:
         # On unix-like platforms, set interactive mode when running from a terminal
         if os.isatty(sys.stdin.fileno()):
-            options.interactive = 1
+            OPTIONS.interactive = 1
     # On windows systems set interactive when running from a console
     elif 'PROMPT' in list(os.environ.keys()):
-        options.interactive = 1
+        OPTIONS.interactive = 1
 
 def process_command_line(argv):
     """Process command line invocation arguments and switches.
@@ -907,26 +898,45 @@ def process_command_line(argv):
 
     # specifying nargs= puts outputs of parser in list (even if nargs=1)
 
-    # required arguments
-    #parser.add_argument('srcdir',
-    #        help="Source directory (recursively searched)."
-    #        )
-
     # switches/options:
-    #parser.add_argument(
-    #    '-s', '--max_size', action='store',
-    #    help='String specifying maximum size of images.  ' \
-    #            'Larger images will be resized. (e.g. "1024x768")')
-    #parser.add_argument(
-    #    '-o', '--omit_hidden', action='store_true',
-    #    help='Do not copy picasa hidden images to destination directory.')
+    parser.add_argument(
+            "-d", "--debug", action="count", dest="debug",
+            help="Turn on debugging. More -d's increase debug level."
+            )
+    parser.add_argument(
+            "-f", "--force", action="store_true", dest="clobber",
+            help="Force overwrite of existing metadata"
+            )
+    parser.add_argument(
+            "-t", "--tidy", action="store_true", dest="metadir",
+            help="Save metadata to the .meta directory in video directory. "\
+                    "Compatible with tlc's patch "\
+                    "(http://pytivo.krkeegan.com/viewtopic.php?t=153)"
+            )
+    parser.add_argument(
+            "-r", "--recursive", action="store_true", dest="recursive",
+            help="Generate metadata for all files in sub dirs too."
+            )
+    parser.add_argument(
+            "-g", "--genre", dest="genre",
+            help="Specify a directory in which to place symlinks to shows, "\
+                    "organized by genre."
+            )
+    parser.add_argument(
+            "-w", "--wait", dest="timeout",
+            help="How many seconds to wait for a connection to theTVdb.com "\
+                    "before giving up. (Default: 5s)"
+            )
 
     args = parser.parse_args(argv)
 
     return args
 
 def main():
-    global args
+    global OPTIONS
+    args = process_command_line(sys.argv)
+    OPTIONS = args
+
     checkInteractive()
 
     debug(2,"\nConsole Input encoding: %s" % in_encoding)
@@ -936,21 +946,21 @@ def main():
     # Initalize things we'll need for looking up data
     MirrorURL = getMirrorURL()
 
-    if options.isAltOutput:
+    if OPTIONS.isAltOutput:
         debug(0,"Option -a is deprecated, ignoring.  Use templates instead: http://pytivo.krkeegan.com/pytivo-video-templates-t618.html")
 
-    if options.genre:
+    if OPTIONS.genre:
         # Python doesn't support making symlinks on Windows.
         if sys.platform in ['win32', 'cygwin']:
             debug(0,"The genre feature doesn't work on Windows as symlinks aren't well supported.")
-            options.genre = ''
+            OPTIONS.genre = ''
         else:
-            if not os.path.exists(options.genre):
-                os.makedirs(options.genre, 0o755)
-            elif not os.path.isdir(options.genre):
-                raise OSError('Can\'t create "' + options.genre + '" as a dir, a file already exists with that name.')
+            if not os.path.exists(OPTIONS.genre):
+                os.makedirs(OPTIONS.genre, 0o755)
+            elif not os.path.isdir(OPTIONS.genre):
+                raise OSError('Can\'t create "' + OPTIONS.genre + '" as a dir, a file already exists with that name.')
             else:
-                debug(0,"Note: If you've removed videos, there may be old symlinks in '" + options.genre + "'.  If there's nothing else in there, you can just remove the whole thing first, then run this again (e.g. rm -rf '" + options.genre + "'), but be careful.")
+                debug(0,"Note: If you've removed videos, there may be old symlinks in '" + OPTIONS.genre + "'.  If there's nothing else in there, you can just remove the whole thing first, then run this again (e.g. rm -rf '" + OPTIONS.genre + "'), but be careful.")
 
     # As of Python 2.6, setting default=['.'] doesn't work with action="append"... instead of
     # using the default when no dirs are specified, it always includes the default too.

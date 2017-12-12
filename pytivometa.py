@@ -62,10 +62,8 @@ else:
 # Which country's release date do we want to see:
 COUNTRY = 'USA'
 
-OPTIONS = None
-
 # Flag to track if TV lookups are enabled.
-TVDB = 1
+HAS_TVDB = True
 
 APIKEY = "0403764A0DA51955"
 
@@ -84,6 +82,7 @@ VIDEO_FILE_EXTS = [
         ".mpg", ".avi", ".ogm", ".mkv", ".mp4",
         ".mov", ".wmv", ".vob", ".m4v", ".flv"
         ]
+
 # string encoding for input from console
 IN_ENCODING = sys.stdin.encoding or sys.getdefaultencoding()
 # string encoding for output to console
@@ -92,13 +91,16 @@ OUT_ENCODING = sys.stdout.encoding or sys.getdefaultencoding()
 #   that for file output
 FILE_ENCODING = 'UTF-8'
 
+# blank global to hold arguments to script (TODO: make local)
+OPTIONS = None
+
 
 def debug(level, text):
     if level <= OPTIONS.debug:
         print(text)
 
 def get_mirror_url():
-    global TVDB
+    global HAS_TVDB
     # Query tvdb for a list of mirrors
     mirrors_url = "http://www.thetvdb.com/api/%s/mirrors.xml" % APIKEY
     mirror_url = ''
@@ -112,7 +114,7 @@ def get_mirror_url():
         debug(0, "Error looking information from thetvdb, no metadata will "\
                 "be retrieved for TV shows."
              )
-        TVDB = 0
+        HAS_TVDB = False
     return mirror_url
 
 def find_series_by_year(series, year):
@@ -857,7 +859,7 @@ def process_dir(dir_proc, mirror_url):
             for tvre in tv_res:
                 match = re.search(tvre, filename)
                 if match: # Looks like a TV show
-                    if not TVDB:
+                    if not HAS_TVDB:
                         debug(1, "Metadata service for TV shows is unavailable, skipping this show.")
                     else:
                         parse_tv(mirror_url, match, meta_dir, meta_file, dir_proc)

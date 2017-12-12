@@ -33,17 +33,17 @@
 
 # Python required: > 3.0
 
-import urllib.request
-import urllib.parse
-import urllib.error
-import sys
-import re
-import os
+import argparse
 import gzip
 import io
-import argparse
+import os
+import re
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 
-from xml.etree.ElementTree import parse, Element, SubElement
+from xml.etree.ElementTree import parse
 from time import gmtime, strftime, strptime
 from datetime import datetime
 from functools import reduce

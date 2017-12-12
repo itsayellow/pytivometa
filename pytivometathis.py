@@ -116,20 +116,20 @@ def debug(level, text):
 def get_mirror_url():
     global TVDB
     # Query tvdb for a list of mirrors
-    mirrorsURL = "http://www.thetvdb.com/api/%s/mirrors.xml" % APIKEY
-    mirrorURL = ''
+    mirrors_url = "http://www.thetvdb.com/api/%s/mirrors.xml" % APIKEY
+    mirror_url = ''
     # If we don't hear back after timeout seconds, give up and move on
     timeout = OPTIONS.timeout
     try:
-        mirrorsXML = parse(urllib.request.urlopen(mirrorsURL, None, timeout))
-        mirrors = [Item for Item in mirrorsXML.findall('Mirror')]
-        mirrorURL = mirrors[0].findtext('mirrorpath')
+        mirrors_xml = parse(urllib.request.urlopen(mirrors_url, None, timeout))
+        mirrors = [Item for Item in mirrors_xml.findall('Mirror')]
+        mirror_url = mirrors[0].findtext('mirrorpath')
     except:
         debug(0, "Error looking information from thetvdb, no metadata will "\
                 "be retrieved for TV shows."
              )
         TVDB = 0
-    return mirrorURL
+    return mirror_url
 
 def find_series_by_year(series, year):
     matchingSeries = []
@@ -143,13 +143,13 @@ def find_series_by_year(series, year):
     return matchingSeries
 
 # patched function to allow hex
-def to_hex(s):
+def to_hex(in_string):
     lst = []
-    for ch in s:
-        hv = hex(ord(ch)).replace('0x', '')
-        if len(hv) == 1:
-            hv = '0'+hv
-        lst.append(hv)
+    for char in in_string:
+        hex_val = hex(ord(char)).replace('0x', '')
+        if len(hex_val) == 1:
+            hex_val = '0' + hex_val
+        lst.append(hex_val)
 
     return reduce(lambda x, y: x+y, lst)
 
@@ -157,24 +157,24 @@ def to_hex(s):
 def get_xml(url):
     debug(3, "get_xml: Using URL " + url)
     try:
-        rawXML = urllib.request.urlopen(url).read()
+        raw_xml = urllib.request.urlopen(url).read()
     except Exception as e:
         debug(0, "\n Exception = " + str(e))
         return None
 
     xml = None
     #check for gzip compressed data
-    if to_hex(rawXML[0:2]) != "1f8b":
-        filestream = io.StringIO(rawXML)
-        debug(0, "Not gzip compressed data " +  to_hex(rawXML[0:2]))
+    if to_hex(raw_xml[0:2]) != "1f8b":
+        filestream = io.StringIO(raw_xml)
+        debug(0, "Not gzip compressed data " +  to_hex(raw_xml[0:2]))
     else:
-        filestream = gzip.GzipFile(fileobj=io.StringIO(rawXML))
+        filestream = gzip.GzipFile(fileobj=io.StringIO(raw_xml))
         debug(0, "gzip compressed data")
     try:
         xml = parse(filestream).getroot()
     except Exception as e:
         debug(0, "\n Exception = " + str(e))
-        debug(3, "\nrawXML = " + rawXML + "\n\nhexXML = " + to_hex(rawXML))
+        debug(3, "\nraw_xml = " + raw_xml + "\n\nhexXML = " + to_hex(raw_xml))
 
     return xml
 
@@ -219,8 +219,7 @@ def get_series_id(mirror_url, show_name, show_dir):
         series = [Item for Item in series_xml.findall('Series')]
 
         if year and len(series) > 1:
-            debug(2, 'There are %d matching series, but we know what year ' +\
-                    'to search for (%s).' % (len(series), year)
+            debug(2, 'There are %d matching series, but we know what year to search for (%s).' % (len(series), year)
                     )
             series = find_series_by_year(series, year)
             debug(2, 'Series that match by year: %d.' % len(series))
@@ -327,9 +326,9 @@ def get_episode_info_xml_by_air_date(mirror_url, seriesid, year, month, day):
 
     return episode_info_xml
 
-def format_episode_data(ep_data, meta_dir, f):
+def format_episode_data(ep_data, meta_dir, meta_file):
     # Takes a dict e of XML elements, the series title, the Zap2It ID (aka
-    #   the Tivo groupID), and a filename f
+    #   the Tivo groupID), and a filename meta_file
     # TODO : Split up multiple guest stars / writers / etc. Split on '|'.
     #   (http://trac.kurai.org/trac.cgi/ticket/2)
     # This is weak. Should just detect if EpisodeNumber exists.
@@ -368,28 +367,26 @@ def format_episode_data(ep_data, meta_dir, f):
         'vChoreographer' : 'Choreographer',
     }
 
-    # These are thetvdb xml elements that have no corresponding Tivo metadata attribute. Maybe someday.
-    unused = {
-        'id' : 'id',
-        'seasonid' : 'seasonid',
-        'ProductionCode' : 'ProductionCode',
-        'ShowURL' : 'ShowURL',
-        'lastupdated' : 'lastupdated',
-        'flagged' : 'flagged',
-        'DVD_discid' : 'DVD_discid',
-        'DVD_season' : 'DVD_season',
-        'DVD_episodenumber' : 'DVD_episodenumber',
-        'DVD_chapter' : 'DVD_chapter',
-        'absolute_number' : 'absolute_number',
-        'filename' : 'filename',
-        'lastupdatedby' : 'lastupdatedby',
-        'mirrorupdate' : 'mirrorupdate',
-        'lockedby' : 'lockedby',
-        'SeasonNumber': 'SeasonNumber'
-    }
-
-    #for pyTivoTag in pytivo_metadata.keys():
-    #    print "%s : %s" % (pyTivoTag, pytivo_metadata[pyTivoTag])
+    # These are thetvdb xml elements that have no corresponding Tivo metadata
+    #   attribute. Maybe someday.
+    #unused = {
+    #    'id' : 'id',
+    #    'seasonid' : 'seasonid',
+    #    'ProductionCode' : 'ProductionCode',
+    #    'ShowURL' : 'ShowURL',
+    #    'lastupdated' : 'lastupdated',
+    #    'flagged' : 'flagged',
+    #    'DVD_discid' : 'DVD_discid',
+    #    'DVD_season' : 'DVD_season',
+    #    'DVD_episodenumber' : 'DVD_episodenumber',
+    #    'DVD_chapter' : 'DVD_chapter',
+    #    'absolute_number' : 'absolute_number',
+    #    'filename' : 'filename',
+    #    'lastupdatedby' : 'lastupdatedby',
+    #    'mirrorupdate' : 'mirrorupdate',
+    #    'lockedby' : 'lockedby',
+    #    'SeasonNumber': 'SeasonNumber'
+    #}
 
     # pyTivo Metadata tag order
     pytivo_metadata_order = [
@@ -452,10 +449,10 @@ def format_episode_data(ep_data, meta_dir, f):
             if tv_tag == 'seriesId':
                 text = text.strip()
                 # Look for either SH or EP followed by a number
-                m = re.match(r'(?:SH|EP)(\d+)$', text)
+                sh_ep_match = re.match(r'(?:SH|EP)(\d+)$', text)
                 # Things like 'MV" won't match and will be left unchanged
-                if m:
-                    number = int(m.group(1))
+                if sh_ep_match:
+                    number = int(sh_ep_match.group(1))
                     # Pad to 6 or 8 digits as needed
                     if number < 1000000:
                         text = "SH%06d" % number
@@ -485,7 +482,7 @@ def format_episode_data(ep_data, meta_dir, f):
 
     if metadata_text:
         mkdir_if_needed(meta_dir)
-        out_file = open(os.path.join(meta_dir, f), 'w')
+        out_file = open(os.path.join(meta_dir, meta_file), 'w')
         out_file.write(metadata_text.encode(file_encoding, 'replace'))
         out_file.close()
 
@@ -577,7 +574,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
         except Exception as e:
             debug(1, 'Warning: unable to get release date.')
         if 'release dates' in list(movie.keys()) and len(movie['release dates']):
-            reldate += rel_date(movie['release dates']) + '. '
+            reldate += get_rel_date(movie['release dates']) + '. '
     # description
     line += 'description : ' + reldate
     if "plot outline" in list(movie.keys()):
@@ -694,10 +691,10 @@ def report_match(movie, num_results):
     else:
         debug(1, matchtype + str(movie))
 
-def rel_date(reldates):
-    for rd in reldates:
-        if rd.encode(file_encoding, 'replace').lower().startswith(COUNTRY.lower() + '::'):
-            return rd[len(COUNTRY)+2:]
+def get_rel_date(reldates):
+    for rel_date in reldates:
+        if rel_date.encode(file_encoding, 'replace').lower().startswith(COUNTRY.lower() + '::'):
+            return rel_date[len(COUNTRY)+2:]
     # Didn't find the country we want, so return the first one, but leave the
     #   country name in there.
     return reldates[0]
@@ -727,18 +724,18 @@ def parse_movie(search_dir, filename, metadata_file_name, is_trailer):
     # Most tags and group names come after the year (which is often in parens
     #   or brackets)
     # Using the year when searching IMDb will help, so try to find it.
-    m = re.match(r'(.*?\w+.*?)(?:([[(])|(\W))(.*?)((?:19|20)\d\d)(?(2)[])]|(\3|$))(.*?)$', title)
-    if m:
+    year_match1 = re.match(r'(.*?\w+.*?)(?:([[(])|(\W))(.*?)((?:19|20)\d\d)(?(2)[])]|(\3|$))(.*?)$', title)
+    if year_match1:
         (tags, _) = extract_tags(title)
-        (title, year, _, _) = m.group(1, 5, 4, 7)
+        (title, year, _, _) = year_match1.group(1, 5, 4, 7)
         debug(2, "    Title: %s\n    Year: %s" % (title, year))
         title += ' (' + year + ')'
     else:
         # 2nd pass at finding the year.  Look for a series of tags in parens
         #   which may include the year.
-        m = re.match(r'(.*?\w+.*?)\(.*((?:19|20)\d\d)\).*\)', title)
-        if m:
-            (title, year) = m.group([1, 2])
+        year_match2 = re.match(r'(.*?\w+.*?)\(.*((?:19|20)\d\d)\).*\)', title)
+        if year_match2:
+            (title, year) = year_match2.group([1, 2])
             debug(2, "    Title: %s\n    Year: %s" % (title, year))
             title += ' (' + year + ')'
         else:
@@ -789,8 +786,8 @@ def clean_title(title):
 
 def fix_spaces(title):
     placeholders = ['[-._]', '  +']
-    for ph in placeholders:
-        title = re.sub(ph, ' ', title)
+    for place_holder in placeholders:
+        title = re.sub(place_holder, ' ', title)
     # Remove leftover spaces before/after the year
     title = re.sub(r'\( ', '(', title)
     title = re.sub(r' \)', ')', title)

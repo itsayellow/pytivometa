@@ -82,11 +82,6 @@ out_encoding = sys.stdout.encoding or sys.getdefaultencoding()
 # string encoding for output to metadata files.  Tivo is UTF8 compatible so use that for file output
 file_encoding = 'UTF-8'
 
-# We do a couple things differently if we're running python 2.6+ so check the version
-PY26 = 0
-(major, minor) = sys.version_info[0:2]
-if major > 2 or (major == 2 and minor >= 6):
-    PY26 = 1
 
 def debug(level, text):
     if level<= OPTIONS.debug:
@@ -119,19 +114,7 @@ def getMirrorURL():
     # If we don't hear back after timeout seconds, give up and move on
     timeout = OPTIONS.timeout or 5
     try:
-        if PY26:
-            mirrorsXML = parse(urllib.request.urlopen(mirrorsURL, None, timeout))
-        else:
-            # Before python 2.6, there's no timeout value:
-            signal.signal(signal.SIGALRM, alarmHandler)
-            try:
-                signal.alarm(timeout)
-                mirrorsXML = parse(urllib.request.urlopen(mirrorsURL))
-            except TimeOutException:
-                debug(0, "Timeout looking up mirrors for thetvdb.com, site down?  No metadata will be retrieved for TV shows.")
-                TVDB = 0
-            signal.alarm(0)
-
+        mirrorsXML = parse(urllib.request.urlopen(mirrorsURL, None, timeout))
         mirrors = [Item for Item in mirrorsXML.findall('Mirror')]
         mirrorURL = mirrors[0].findtext('mirrorpath')
     except:
@@ -672,12 +655,7 @@ def linkGenres(dir, fileName, metadataPath, genres):
         mkLink(link, metadataPath)
 
 def mkLink(linkName, filePath):
-    if PY26:
-        # Needs python 2.6+ for relpath()
-        target = os.path.relpath(filePath, os.path.dirname(linkName))
-    else:
-        # Older pythons will have to point links to absolute paths
-        target = os.path.realpath(filePath)
+    target = os.path.relpath(filePath, os.path.dirname(linkName))
     debug(2, "Linking " + linkName + " -> " + target)
     if os.path.islink(linkName):
         os.unlink(linkName)

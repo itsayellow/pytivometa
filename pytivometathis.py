@@ -44,7 +44,7 @@ import urllib.parse
 import urllib.request
 
 from xml.etree.ElementTree import parse
-from time import gmtime, strftime, strptime
+from time import strptime
 from datetime import datetime
 from functools import reduce
 
@@ -64,6 +64,7 @@ OPTIONS = None
 
 # Flag to track if TV lookups are enabled.
 TVDB = 1
+
 APIKEY = "0403764A0DA51955"
 
 GETSERIESID_URL = '/api/GetSeries.php?'
@@ -76,24 +77,18 @@ SINFOCACHE = {}
 # When using a subdir for metadata files, what should it be called
 METADIR = '.meta'
 
-# Regexes that match TV shows.
-tvres = [
-        r'(.+)[Ss](\d\d?)[Ee](\d+)', r'(.+?)(?: -)? ?(\d+)[Xx](\d+)',
-        r'(.*).(\d\d\d\d).(\d+).(\d+).*', r'(.*).(\d+).(\d+).(\d\d\d\d).*',
-        r'(?i)(.+)(\d?\d)(\d\d).*sitv'
-        ]
 # Types of files we want to get metadata for
-fileExtList = [
+VIDEO_FILE_EXTS = [
         ".mpg", ".avi", ".ogm", ".mkv", ".mp4",
         ".mov", ".wmv", ".vob", ".m4v", ".flv"
         ]
 # string encoding for input from console
-in_encoding = sys.stdin.encoding or sys.getdefaultencoding()
+IN_ENCODING = sys.stdin.encoding or sys.getdefaultencoding()
 # string encoding for output to console
-out_encoding = sys.stdout.encoding or sys.getdefaultencoding()
+OUT_ENCODING = sys.stdout.encoding or sys.getdefaultencoding()
 # string encoding for output to metadata files.  Tivo is UTF8 compatible so use
 #   that for file output
-file_encoding = 'UTF-8'
+FILE_ENCODING = 'UTF-8'
 
 
 def debug(level, text):
@@ -119,15 +114,15 @@ def get_mirror_url():
     return mirror_url
 
 def find_series_by_year(series, year):
-    matchingSeries = []
+    matching_series = []
     for show in series:
         first_aired = show.findtext('FirstAired')
         if first_aired:
             match = re.search(r'(\d\d\d\d)-\d\d-\d\d', first_aired)
             if match and year == match.group(1):
-                matchingSeries.append(show)
+                matching_series.append(show)
     # Return all that matched the year (which may be an empty list)
-    return matchingSeries
+    return matching_series
 
 # patched function to allow hex
 def to_hex(in_string):
@@ -679,7 +674,7 @@ def report_match(movie, num_results):
 
 def get_rel_date(reldates):
     for rel_date in reldates:
-        if rel_date.encode(file_encoding, 'replace').lower().startswith(COUNTRY.lower() + '::'):
+        if rel_date.encode(FILE_ENCODING, 'replace').lower().startswith(COUNTRY.lower() + '::'):
             return rel_date[len(COUNTRY)+2:]
     # Didn't find the country we want, so return the first one, but leave the
     #   country name in there.
@@ -689,7 +684,7 @@ def get_files(directory):
     """Get list of file info objects for files of particular extensions
     """
     entries = os.listdir(directory)
-    file_list = [f for f in entries if os.path.splitext(f)[1].lower() in fileExtList and len(os.path.splitext(f)[0]) and os.path.isfile(os.path.join(directory, f))]
+    file_list = [f for f in entries if os.path.splitext(f)[1].lower() in VIDEO_FILE_EXTS and len(os.path.splitext(f)[0]) and os.path.isfile(os.path.join(directory, f))]
     file_list.sort()
     debug(2, "file_list after cull: %s" % str(file_list))
     dir_list = []
@@ -830,6 +825,14 @@ def mkdir_if_needed(dirname):
 
 def process_dir(dir_proc, mirror_url):
     debug(1, '\n## Looking for videos in: ' + dir_proc)
+
+    # Regexes that match TV shows.
+    tv_res = [
+            r'(.+)[Ss](\d\d?)[Ee](\d+)', r'(.+?)(?: -)? ?(\d+)[Xx](\d+)',
+            r'(.*).(\d\d\d\d).(\d+).(\d+).*', r'(.*).(\d+).(\d+).(\d\d\d\d).*',
+            r'(?i)(.+)(\d?\d)(\d\d).*sitv'
+            ]
+
     (file_list, dir_list) = get_files(dir_proc)
 
     is_trailer = 0
@@ -849,7 +852,7 @@ def process_dir(dir_proc, mirror_url):
             debug(1, "Metadata file already exists, skipping.")
         else:
             ismovie = 1;
-            for tvre in tvres:
+            for tvre in tv_res:
                 match = re.search(tvre, filename)
                 if match: # Looks like a TV show
                     if not TVDB:
@@ -939,9 +942,9 @@ def main():
 
     OPTIONS.interactive = check_interactive()
 
-    debug(2, "\nConsole Input encoding: %s" % in_encoding)
-    debug(2, "Console Output encoding: %s" % out_encoding)
-    debug(2, "Metadata File Output encoding: %s\n" % file_encoding)
+    debug(2, "\nConsole Input encoding: %s" % IN_ENCODING)
+    debug(2, "Console Output encoding: %s" % OUT_ENCODING)
+    debug(2, "Metadata File Output encoding: %s\n" % FILE_ENCODING)
 
     # Initalize things we'll need for looking up data
     mirror_url = get_mirror_url()

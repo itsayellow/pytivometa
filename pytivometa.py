@@ -690,11 +690,11 @@ def get_video_files(dirname, dir_files):
     """
     # get list of video files
     video_files = []
-    for entry in dir_files:
-        full_path = os.path.join(dirname, entry)
-        (entry_base, entry_ext) = os.path.splitext(entry)
+    for dir_file in dir_files:
+        full_path = os.path.join(dirname, dir_file)
+        (entry_base, entry_ext) = os.path.splitext(dir_file)
         if entry_ext in VIDEO_FILE_EXTS and entry_base and os.path.isfile(full_path):
-            video_files.append(entry)
+            video_files.append(dir_file)
     video_files.sort()
 
     debug(2, "video_files after cull: %s" % str(video_files))

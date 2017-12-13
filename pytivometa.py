@@ -781,6 +781,7 @@ def fix_spaces(title):
     return title
 
 def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir, use_metadir=False, clobber=False):
+    # TODO: thetvdb.com is switching to json, and abandoning xml!
     series = re.sub(r'[._]', ' ', match.group(1)).strip()
     if match.lastindex >= 4:
         season = 0
@@ -842,10 +843,10 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False, recursiv
 
     (file_list, dir_list) = get_files(dir_proc, recursive=recursive)
 
-    is_trailer = 0
+    is_trailer = False
     # See if we're in a "Trailer" folder.
     if 'trailer' in os.path.abspath(dir_proc).lower():
-        is_trailer = 1
+        is_trailer = True
 
     meta_dir = dir_proc
     if use_metadir or os.path.isdir(os.path.join(dir_proc, META_DIR)):

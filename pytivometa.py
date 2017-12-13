@@ -911,13 +911,14 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False,
                         os.path.join(meta_dir, meta_file),
                         is_trailer, genre_dir=genre_dir
                         )
-    for subdir in dir_list:
-        process_dir(os.path.join(dir_proc, subdir), mirror_url,
-                use_metadir=use_metadir,
-                clobber=clobber,
-                recursive=recursive,
-                genre_dir=genre_dir
-                )
+    if recursive:
+        for subdir in dir_list:
+            process_dir(os.path.join(dir_proc, subdir), mirror_url,
+                    use_metadir=use_metadir,
+                    clobber=clobber,
+                    recursive=recursive,
+                    genre_dir=genre_dir
+                    )
 
 def check_interactive():
     if sys.platform not in ['win32', 'cygwin']:

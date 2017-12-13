@@ -107,7 +107,7 @@ def debug(level, text):
     if level <= DEBUG_LEVEL:
         print(text)
 
-def get_mirror_url(timeout):
+def get_tvdb_mirror(timeout):
     global HAS_TVDB
     # Query tvdb for a list of mirrors
     mirrors_url = "http://www.thetvdb.com/api/%s/mirrors.xml" % TVDB_APIKEY
@@ -1015,7 +1015,7 @@ def main():
     debug(2, "Metadata File Output encoding: %s\n" % FILE_ENCODING)
 
     # Initalize things we'll need for looking up data
-    mirror_url = get_mirror_url(args.timeout)
+    tvdb_mirror = get_tvdb_mirror(args.timeout)
 
     # create/set genre dir if specified and possible
     if args.genre:
@@ -1025,7 +1025,7 @@ def main():
 
     # process all dirs
     for search_dir in args.dir:
-        process_dir(search_dir, mirror_url,
+        process_dir(search_dir, tvdb_mirror,
                 use_metadir=args.metadir,
                 clobber=args.clobber,
                 recursive=args.recursive,

@@ -96,9 +96,6 @@ FILE_ENCODING = 'UTF-8'
 # debug level for messages of entire file
 DEBUG_LEVEL = 0
 
-# specified if user indicates use of a genre directory
-GENRE_DIR = None
-
 # True if interactive shell detected
 INTERACTIVE = True
 
@@ -171,7 +168,8 @@ def get_xml(url):
 
     return xml
 
-def get_series_id(mirror_url, show_name, show_dir, use_metadir=False, clobber=False):
+def get_series_id(mirror_url, show_name, show_dir,
+        use_metadir=False, clobber=False):
     # useful URL substrings
     getseriesid_url = '/api/GetSeries.php?'
     #getepisodeid_url = '/GetEpisodes.php?'
@@ -448,7 +446,7 @@ def format_episode_data(ep_data, meta_dir, meta_file):
             # Only check to see if Season is > 0, allow EpNum to be 0 for
             #   things like "1x00 - Bonus content"
             if tv_tag == 'episodeNumber' and ep_data['EpisodeNumber'] and int(ep_data['SeasonNumber']):
-                text = "%d%02d" % (int(ep_data['SeasonNumber']), int(ep_data['EpisodeNumber']))
+                text = "%d%02d"%(int(ep_data['SeasonNumber']), int(ep_data['EpisodeNumber']))
 
             if tv_tag in metadata_name_fields:
                 term = "|"
@@ -472,7 +470,8 @@ def format_episode_data(ep_data, meta_dir, meta_file):
         out_file.write(metadata_text)
         out_file.close()
 
-def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trailer):
+def format_movie_data(title, dir_, file_name, metadata_file_name, tags,
+        is_trailer, genre_dir=None):
     line = ""
 
     debug(1, "Searching IMDb for: " + title)
@@ -603,8 +602,10 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
             line += "vProgramGenre : %s\n" % i
         for i in movie['genres']:
             line += "vSeriesGenre : %s\n" % i
-        if GENRE_DIR:
-            link_genres(dir_, file_name, metadata_file_name, movie['genres'])
+        if genre_dir:
+            link_genres(dir_, genre_dir, file_name, metadata_file_name,
+                    movie['genres']
+                    )
 
     try:
         pass
@@ -644,9 +645,9 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
     out_file.writelines(line)
     out_file.close()
 
-def link_genres(work_dir, file_name, metadata_path, genres):
+def link_genres(work_dir, genre_dir, file_name, metadata_path, genres):
     for this_genre in genres:
-        genrepath = os.path.join(GENRE_DIR, this_genre)
+        genrepath = os.path.join(genre_dir, this_genre)
         mkdir_if_needed(genrepath)
         # Create a symlink to the video
         link = os.path.join(genrepath, file_name)
@@ -700,7 +701,7 @@ def get_files(directory, recursive=False):
         debug(2, "dir_list after cull: %s" % str(dir_list))
     return (file_list, dir_list)
 
-def parse_movie(search_dir, filename, metadata_file_name, is_trailer):
+def parse_movie(search_dir, filename, metadata_file_name, is_trailer, genre_dir=None):
     if not HAS_IMDB:
         print("No IMDB module, skipping movie: " + filename)
         return
@@ -710,7 +711,10 @@ def parse_movie(search_dir, filename, metadata_file_name, is_trailer):
     # Most tags and group names come after the year (which is often in parens
     #   or brackets)
     # Using the year when searching IMDb will help, so try to find it.
-    year_match1 = re.match(r'(.*?\w+.*?)(?:([[(])|(\W))(.*?)((?:19|20)\d\d)(?(2)[])]|(\3|$))(.*?)$', title)
+    year_match1 = re.match(
+            r'(.*?\w+.*?)(?:([[(])|(\W))(.*?)((?:19|20)\d\d)(?(2)[])]|(\3|$))(.*?)$',
+            title
+            )
     if year_match1:
         (tags, _) = extract_tags(title)
         (title, year, _, _) = year_match1.group(1, 5, 4, 7)
@@ -733,10 +737,14 @@ def parse_movie(search_dir, filename, metadata_file_name, is_trailer):
     debug(3, "Before fixing spaces, title is: " + title)
     title = fix_spaces(title)
     debug(3, "After fixing spaces, title is: " + title)
-    format_movie_data(title, search_dir, filename, metadata_file_name, tags, is_trailer)
+    format_movie_data(
+            title, search_dir, filename, metadata_file_name, tags,
+            is_trailer, genre_dir=genre_dir
+            )
 
 def extract_tags(title):
-    # Look for tags that we want to show on the tivo, but not include in IMDb searches.
+    # Look for tags that we want to show on the tivo, but not include in
+    #   IMDb searches.
     tags = ""
     taglist = {
         # Strip these out      : return these instead
@@ -759,7 +767,8 @@ def extract_tags(title):
 
 def clean_title(title):
     # strip a variety of common junk from torrented avi filenames
-    striplist = (r'crowbone', r'joox-dot-net', r'DOMiNiON', r'LiMiTED',
+    striplist = (
+            r'crowbone', r'joox-dot-net', r'DOMiNiON', r'LiMiTED',
             r'aXXo', r'DoNE', r'ViTE', r'BaLD', r'COCAiNE', r'NoGRP',
             r'leetay', r'AC3', r'BluRay', r'DVD', r'VHS', r'Screener',
             r'(?i)DVD SCR', r'\[.*\]', r'(?i)swesub', r'(?i)dvdrip',
@@ -800,7 +809,10 @@ def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir, use_metadir=False
         year = 0
         month = 0
         day = 0
-    debug(2, "    Series: %s\n    Season: %s\n    Episode: %s\n    Year: %s\n    Month: %s\n    Day: %s" % (series, season, episode, year, month, day))
+    debug(2, "    Series: %s\n    Season: %s\n"%(series, season) + \
+            "Episode: %s\n"%episode + \
+            "Year: %s\n    Month: %s\n    Day: %s"%(year, month, day)
+            )
 
     episode_info = {}
     if series not in SERIES_INFO_CACHE:
@@ -812,9 +824,13 @@ def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir, use_metadir=False
         for node in series_info_xml.getiterator():
             episode_info[node.tag] = node.text
         if year == 0:
-            episode_info_xml = get_episode_info_xml(mirror_url, seriesid, season, episode)
+            episode_info_xml = get_episode_info_xml(
+                    mirror_url, seriesid, season, episode
+                    )
         else:
-            episode_info_xml = get_episode_info_xml_by_air_date(mirror_url, seriesid, year, month, day)
+            episode_info_xml = get_episode_info_xml_by_air_date(
+                    mirror_url, seriesid, year, month, day
+                    )
         if episode_info_xml is not None:
             for node in episode_info_xml.getiterator():
                 episode_info[node.tag] = node.text
@@ -831,7 +847,8 @@ def mkdir_if_needed(dirname):
                         'exists with that name.'
                 )
 
-def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False, recursive=False):
+def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False,
+        recursive=False, genre_dir=None):
     debug(1, "\n## Looking for videos in: " + dir_proc)
 
     # Regexes that match TV shows.
@@ -864,15 +881,21 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False, recursiv
                 match = re.search(tvre, filename)
                 if match: # Looks like a TV show
                     if not HAS_TVDB:
-                        debug(1, "Metadata service for TV shows is unavailable, skipping this show.")
+                        debug(1, "Metadata service for TV shows is " + \
+                                "unavailable, skipping this show.")
                     else:
-                        parse_tv(mirror_url, match, meta_dir, meta_file, dir_proc,
+                        parse_tv(mirror_url, match, meta_dir, meta_file,
+                                dir_proc,
                                 use_metadir=use_metadir, clobber=clobber
                                 )
                     is_movie = False
                     break
             if is_movie:
-                parse_movie(dir_proc, filename, os.path.join(meta_dir, meta_file), is_trailer)
+                parse_movie(
+                        dir_proc, filename,
+                        os.path.join(meta_dir, meta_file),
+                        is_trailer, genre_dir=genre_dir
+                        )
     for subdir in dir_list:
         process_dir(os.path.join(dir_proc, subdir), mirror_url,
                 use_metadir=use_metadir,
@@ -882,13 +905,38 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False, recursiv
 
 def check_interactive():
     if sys.platform not in ['win32', 'cygwin']:
-        # On unix-like platforms, set interactive mode when running from a terminal
+        # On unix-like platforms, set interactive mode when running from a
+        #   terminal
         if os.isatty(sys.stdin.fileno()):
             return True
     # On windows systems set interactive when running from a console
     elif 'PROMPT' in list(os.environ.keys()):
         return True
     return False
+
+def create_genre_dir(genre_dir):
+    # Python doesn't support making symlinks on Windows.
+    if sys.platform in ['win32', 'cygwin']:
+        debug(0, "The genre feature doesn't work on Windows as symlinks " +\
+                "aren't well supported."
+                )
+        genre_dir = None
+    else:
+        if not os.path.exists(genre_dir):
+            os.makedirs(genre_dir, 0o755)
+        elif not os.path.isdir(genre_dir):
+            raise OSError(
+                    'Can\'t create "' + genre_dir + '" as a dir, a ' + \
+                            'file already exists with that name.'
+                    )
+        else:
+            debug(0, "Note: If you've removed videos, there may be old " +\
+                    "symlinks in '" + genre_dir + "'.  If there's " +\
+                    "nothing else in there, you can just remove the " +\
+                    "whole thing first, then run this again (e.g. " +\
+                    "rm -rf '" + genre_dir + "'), but be careful."
+                    )
+    return genre_dir
 
 def process_command_line(argv):
     """Process command line invocation arguments and switches.
@@ -948,7 +996,6 @@ def process_command_line(argv):
     return args
 
 def main():
-    global GENRE_DIR
     global INTERACTIVE
     global DEBUG_LEVEL
 
@@ -956,9 +1003,6 @@ def main():
 
     # set master debug message level
     DEBUG_LEVEL = args.debug
-
-    # set genre dir if specified
-    GENRE_DIR = args.genre
 
     # set interactive if we are in an interactive shell
     INTERACTIVE = check_interactive()
@@ -970,34 +1014,19 @@ def main():
     # Initalize things we'll need for looking up data
     mirror_url = get_mirror_url(args.timeout)
 
-    if GENRE_DIR:
-        # Python doesn't support making symlinks on Windows.
-        if sys.platform in ['win32', 'cygwin']:
-            debug(0, "The genre feature doesn't work on Windows as symlinks " +\
-                    "aren't well supported."
-                    )
-            GENRE_DIR = None
-        else:
-            if not os.path.exists(GENRE_DIR):
-                os.makedirs(GENRE_DIR, 0o755)
-            elif not os.path.isdir(GENRE_DIR):
-                raise OSError(
-                        'Can\'t create "' + GENRE_DIR + '" as a dir, a ' + \
-                                'file already exists with that name.'
-                        )
-            else:
-                debug(0, "Note: If you've removed videos, there may be old " +\
-                        "symlinks in '" + GENRE_DIR + "'.  If there's " +\
-                        "nothing else in there, you can just remove the " +\
-                        "whole thing first, then run this again (e.g. " +\
-                        "rm -rf '" + GENRE_DIR + "'), but be careful."
-                        )
+    # create/set genre dir if specified and possible
+    if args.genre:
+        genre_dir = creat_genre_dir(args.genre)
+    else:
+        genre_dir = None
 
+    # process all dirs
     for search_dir in args.dir:
         process_dir(search_dir, mirror_url,
                 use_metadir=args.metadir,
                 clobber=args.clobber,
                 recursive=args.recursive
+                genre_dir=genre_dir
                 )
 
 if __name__ == "__main__":

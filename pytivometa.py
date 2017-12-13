@@ -312,8 +312,6 @@ def get_episode_info_xml_by_air_date(mirror_url, seriesid, year, month, day):
 def format_episode_data(ep_data, meta_dir, meta_file):
     # Takes a dict e of XML elements, the series title, the Zap2It ID (aka
     #   the Tivo groupID), and a filename meta_file
-    # TODO : Split up multiple guest stars / writers / etc. Split on '|'.
-    #   (http://trac.kurai.org/trac.cgi/ticket/2)
     # This is weak. Should just detect if EpisodeNumber exists.
     metadata_text = ''
     ep_data["isEpisode"] = "true"

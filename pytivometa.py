@@ -45,7 +45,7 @@ import io
 import os
 import re
 import sys
-import urllib.error
+#import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -130,39 +130,37 @@ def find_series_by_year(series, year):
     # Return all that matched the year (which may be an empty list)
     return matching_series
 
-# patched function to allow hex
-def to_hex(in_string):
-    lst = []
-    for char in in_string:
-        hex_val = hex(ord(char)).replace('0x', '')
-        if len(hex_val) == 1:
-            hex_val = '0' + hex_val
-        lst.append(hex_val)
-
-    return reduce(lambda x, y: x+y, lst)
-
 # patched function to allow parsing gzipped data
 def get_xml(url):
+    """Fetch entire xml file from url
+
+    Returns:
+        bytes: byte-string of entirel xml document
+    """
     debug(3, "get_xml: Using URL " + url)
     try:
+        # HTTPResponse.read() always returns bytes b''
         raw_xml = urllib.request.urlopen(url).read()
     except Exception as e:
         debug(0, "\n Exception = " + str(e))
         return None
 
     xml = None
-    #check for gzip compressed data
-    if to_hex(raw_xml[0:2]) != "1f8b":
-        filestream = io.StringIO(raw_xml)
-        debug(0, "Not gzip compressed data " +  to_hex(raw_xml[0:2]))
+    # check for gzip compressed data (first two bytes of gzip file: 0x1f, 0x8b)
+    if raw_xml[0:2] != b'\x1f\x8b':
+        # StringIO needs string, so decode raw_xml bytes
+        # TODO: assuming utf-8 for now, need to check this from data
+        filestream = io.StringIO(raw_xml.decode('utf-8'))
+        debug(1, "Not gzip compressed data " +  repr(raw_xml[0:2]))
     else:
-        filestream = gzip.GzipFile(fileobj=io.StringIO(raw_xml))
-        debug(0, "gzip compressed data")
+        filestream = gzip.GzipFile(fileobj=io.BytesIO(raw_xml))
+        debug(1, "gzip compressed data")
+
     try:
         xml = parse(filestream).getroot()
     except Exception as e:
         debug(0, "\n Exception = " + str(e))
-        debug(3, "\nraw_xml = " + raw_xml + "\n\nhexXML = " + to_hex(raw_xml))
+        debug(3, "\nraw_xml = " + raw_xml + "\n\nhexXML = " + repr(raw_xml))
 
     return xml
 

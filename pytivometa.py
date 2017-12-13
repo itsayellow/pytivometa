@@ -263,7 +263,8 @@ def get_series_id(mirror_url, show_name, show_dir,
         if series and seriesid:
             # creating series ID file from scratch, so pick best path
             if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
-                seriesidpath = os.path.join(show_dir, META_DIR, show_name + ".seriesID")
+                seriesidpath = os.path.join(
+                        show_dir, META_DIR, show_name + ".seriesID")
             else:
                 seriesidpath = os.path.join(show_dir, show_name + ".seriesID")
             debug(1, "Found seriesID: " + seriesid)
@@ -701,7 +702,8 @@ def get_files(directory, recursive=False):
         debug(2, "dir_list after cull: %s" % str(dir_list))
     return (file_list, dir_list)
 
-def parse_movie(search_dir, filename, metadata_file_name, is_trailer, genre_dir=None):
+def parse_movie(search_dir, filename, metadata_file_name,
+        is_trailer, genre_dir=None):
     if not HAS_IMDB:
         print("No IMDB module, skipping movie: " + filename)
         return
@@ -789,7 +791,8 @@ def fix_spaces(title):
     title = re.sub(r'\(\)', '', title)
     return title
 
-def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir, use_metadir=False, clobber=False):
+def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir,
+        use_metadir=False, clobber=False):
     # TODO: thetvdb.com is switching to json, and abandoning xml!
     series = re.sub(r'[._]', ' ', match.group(1)).strip()
     if match.lastindex >= 4:
@@ -963,7 +966,8 @@ def process_command_line(argv):
     # optional positional list of directories:
     parser.add_argument(
             "dir", nargs="*", default=['.'],
-            help="Specific directory(-ies) to process. (Default is current directory.)"
+            help="Specific directory(-ies) to process. (Default is current "\
+                    "directory.)"
             )
 
     # switches/options:

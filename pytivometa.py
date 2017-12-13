@@ -906,7 +906,8 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False,
         process_dir(os.path.join(dir_proc, subdir), mirror_url,
                 use_metadir=use_metadir,
                 clobber=clobber,
-                recursive=recursive
+                recursive=recursive,
+                genre_dir=genre_dir
                 )
 
 def check_interactive():

@@ -137,7 +137,7 @@ def find_series_by_year(series, year):
     # Return all that matched the year (which may be an empty list)
     return matching_series
 
-# patched function to allow parsing gzipped data
+# fetch plaintext or gzipped xml data from url
 def get_xml(url):
     """Fetch entire xml file from url
 
@@ -177,7 +177,7 @@ def get_series_id(mirror_url, show_name, show_dir, use_metadir=False, clobber=Fa
     #getepisodeid_url = '/GetEpisodes.php?'
     #getepisodeinfo_url = '/EpisodeUpdates.php?'
 
-    seriesid = ''
+    seriesid = None
     sidfiles = [os.path.join(show_dir, show_name + ".seriesID")]
     if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
         sidfiles.append(os.path.join(show_dir, META_DIR, show_name + ".seriesID"))
@@ -208,7 +208,7 @@ def get_series_id(mirror_url, show_name, show_dir, use_metadir=False, clobber=Fa
         debug(1, "Searching for: " + bare_title)
         url = mirror_url + getseriesid_url + urllib.parse.urlencode({"seriesname" : bare_title})
         debug(3, "series_xml: Using URL " + url)
-        # patch new
+
         series_xml = get_xml(url)
         if series_xml is None:
             debug(3, "Error getting Series Info")
@@ -262,7 +262,12 @@ def get_series_id(mirror_url, show_name, show_dir, use_metadir=False, clobber=Fa
             seriesid = series[0].findtext('id')
 
         # Did we find any matches
-        if len(series) and len(seriesid):
+        if series and seriesid:
+            # creating series ID file from scratch, so pick best path
+            if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
+                seriesidpath = os.path.join(show_dir, META_DIR, show_name + ".seriesID")
+            else:
+                seriesidpath = os.path.join(show_dir, show_name + ".seriesID")
             debug(1, "Found seriesID: " + seriesid)
             debug(2, "Writing seriesID to file: " + seriesidpath)
             seriesidfile = open(seriesidpath, 'w')
@@ -275,7 +280,7 @@ def get_series_id(mirror_url, show_name, show_dir, use_metadir=False, clobber=Fa
     if seriesid:
         series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + seriesid + "/en.xml"
         debug(3, "getSeriesInfoXML: Using URL " + series_url)
-        # patch new
+
         series_url_xml = get_xml(series_url)
         if series_url_xml is None:
             debug(0, "!! Error parsing series info, skipping.")
@@ -283,9 +288,10 @@ def get_series_id(mirror_url, show_name, show_dir, use_metadir=False, clobber=Fa
 
 def get_episode_info_xml(mirror_url, seriesid, season, episode):
     # Takes a seriesid, season number, episode number and return xml data`
-    url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + seriesid + "/default/" + season + "/" + episode + "/en.xml"
+    url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + seriesid + \
+            "/default/" + season + "/" + episode + "/en.xml"
     debug(3, "get_episode_info_xml: Using URL " + url)
-    # patch new
+
     episode_info_xml = get_xml(url)
 
     if episode_info_xml is None:
@@ -298,7 +304,7 @@ def get_episode_info_xml_by_air_date(mirror_url, seriesid, year, month, day):
     url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + TVDB_APIKEY + \
             "&seriesid=" + seriesid + "&airdate=" + year + "-" + month + "-" + day
     debug(3, "get_episode_info_xml_by_air_date: Using URL " + url)
-    # patch new
+
     episode_info_xml = get_xml(url)
     if episode_info_xml is None:
         debug(0, "!! Error looking up data for this episode, skipping.")
@@ -411,7 +417,8 @@ def format_episode_data(ep_data, meta_dir, meta_file):
     for tv_tag in pytivo_metadata_order:
 
         debug(3, "Working on " + tv_tag)
-        if tv_tag in pytivo_metadata and (pytivo_metadata[tv_tag]) and pytivo_metadata[tv_tag] in ep_data and ep_data[pytivo_metadata[tv_tag]]:
+        if ( tv_tag in pytivo_metadata and (pytivo_metadata[tv_tag]) and
+                pytivo_metadata[tv_tag] in ep_data and ep_data[pytivo_metadata[tv_tag]]):
             # got data to work with
             line = term = ""
             text = str(ep_data[pytivo_metadata[tv_tag]]).translate(transtable)
@@ -851,7 +858,7 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False, recursiv
         if os.path.exists(os.path.join(meta_dir, meta_file)) and not clobber:
             debug(1, "Metadata file already exists, skipping.")
         else:
-            ismovie = 1;
+            is_movie = True
             for tvre in tv_res:
                 match = re.search(tvre, filename)
                 if match: # Looks like a TV show
@@ -861,9 +868,9 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False, recursiv
                         parse_tv(mirror_url, match, meta_dir, meta_file, dir_proc,
                                 use_metadir=use_metadir, clobber=clobber
                                 )
-                    ismovie = 0
+                    is_movie = False
                     break
-            if ismovie:
+            if is_movie:
                 parse_movie(dir_proc, filename, os.path.join(meta_dir, meta_file), is_trailer)
     for subdir in dir_list:
         process_dir(os.path.join(dir_proc, subdir), mirror_url,
@@ -918,9 +925,7 @@ def process_command_line(argv):
             )
     parser.add_argument(
             "-t", "--tidy", action="store_true", dest="metadir",
-            help="Save metadata to the .meta directory in video directory. "\
-                    "Compatible with tlc's patch "\
-                    "(http://pytivo.krkeegan.com/viewtopic.php?t=153)"
+            help="Save metadata to the .meta directory in video directory. "
             )
     parser.add_argument(
             "-r", "--recursive", action="store_true", dest="recursive",
@@ -981,7 +986,7 @@ def main():
                         )
             else:
                 debug(0, "Note: If you've removed videos, there may be old " +\
-                        "symlinks in '" + GENR_DIR + "'.  If there's " +\
+                        "symlinks in '" + GENRE_DIR + "'.  If there's " +\
                         "nothing else in there, you can just remove the " +\
                         "whole thing first, then run this again (e.g. " +\
                         "rm -rf '" + GENRE_DIR + "'), but be careful."

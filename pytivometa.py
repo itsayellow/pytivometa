@@ -687,35 +687,28 @@ def get_rel_date(reldates):
     #   country name in there.
     return reldates[0]
 
-def get_files(directory, recursive=False):
-    """Get list of file info objects for files of particular extensions
+def get_files(directory):
+    """Get list of file info objects for files of particular extensions, and
+    subdirectories for recursive search
     """
     entries = os.listdir(directory)
-    file_list = [f for f in entries if os.path.splitext(f)[1].lower() in VIDEO_FILE_EXTS and len(os.path.splitext(f)[0]) and os.path.isfile(os.path.join(directory, f))]
 
-    # DEBUG DELETEME
-    print("file_list")
-    print(file_list)
-
-    # get list of video files
+    # get list of video files and also dirs
     file_list = []
+    dir_list = []
     for entry in entries:
         full_path = os.path.join(directory, entry)
         (entry_base, entry_ext) = os.path.splitext(entry)
         if entry_ext in VIDEO_FILE_EXTS and entry_base and os.path.isfile(full_path):
             file_list.append(entry)
-    
-    # DEBUG DELETEME
-    print(file_list)
-
+        if os.path.isdir(full_path) and not entry[0] == '.':
+            dir_list.append(full_path)
     file_list.sort()
+    dir_list.sort()
+
     debug(2, "file_list after cull: %s" % str(file_list))
-    dir_list = []
-    if recursive:
-        # Get a list of all sub dirs
-        dir_list = [d for d in entries if os.path.isdir(os.path.join(directory, d)) and not d[0] == '.']
-        dir_list.sort()
-        debug(2, "dir_list after cull: %s" % str(dir_list))
+    debug(2, "dir_list: %s" % str(dir_list))
+
     return (file_list, dir_list)
 
 def parse_movie(search_dir, filename, metadata_file_name,
@@ -877,7 +870,7 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False,
             r'(?i)(.+)(\d?\d)(\d\d).*sitv'
             ]
 
-    (file_list, dir_list) = get_files(dir_proc, recursive=recursive)
+    (file_list, dir_list) = get_files(dir_proc)
 
     is_trailer = False
     # See if we're in a "Trailer" folder.

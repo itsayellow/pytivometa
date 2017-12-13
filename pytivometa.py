@@ -684,24 +684,22 @@ def get_rel_date(reldates):
     #   country name in there.
     return reldates[0]
 
-def get_files(directory):
+def get_video_files(dirname, dir_files):
     """Get list of file info objects for files of particular extensions, and
     subdirectories for recursive search
     """
-    entries = os.listdir(directory)
-
-    # get list of video files and also dirs
-    file_list = []
-    for entry in entries:
-        full_path = os.path.join(directory, entry)
+    # get list of video files
+    video_files = []
+    for entry in dir_files:
+        full_path = os.path.join(dirname, entry)
         (entry_base, entry_ext) = os.path.splitext(entry)
         if entry_ext in VIDEO_FILE_EXTS and entry_base and os.path.isfile(full_path):
-            file_list.append(entry)
-    file_list.sort()
+            video_files.append(entry)
+    video_files.sort()
 
-    debug(2, "file_list after cull: %s" % str(file_list))
+    debug(2, "video_files after cull: %s" % str(video_files))
 
-    return file_list
+    return video_files
 
 def parse_movie(search_dir, filename, metadata_file_name,
         is_trailer, genre_dir=None):
@@ -851,8 +849,8 @@ def mkdir_if_needed(dirname):
                         'exists with that name.'
                 )
 
-def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False,
-        genre_dir=None):
+def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,
+        clobber=False, genre_dir=None):
     debug(1, "\n## Looking for videos in: " + dir_proc)
 
     # Regexes for filenames that match TV shows.
@@ -864,7 +862,7 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False,
             r'(?i)(.+)(\d?\d)(\d\d).*sitv'
             ]
 
-    file_list = get_files(dir_proc)
+    video_files = get_video_files(dir_proc, dir_files)
 
     is_trailer = False
     # See if we're in a "Trailer" folder.
@@ -878,7 +876,7 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False,
     else:
         meta_dir = dir_proc
 
-    for filename in file_list:
+    for filename in video_files:
         meta_file = filename + '.txt'
         debug(1, "\n--->working on: %s" % filename)
         debug(2, "Metadir is: " + meta_dir)
@@ -1028,18 +1026,19 @@ def main():
     # process all dirs
     for search_dir in args.dir:
         if args.recursive:
-            for (dirpath, _, _) in os.walk(search_dir):
+            for (dirpath, _, dir_files) in os.walk(search_dir):
                 dirname = os.path.basename(dirpath)
                 # only non-hidden dirs (no dirs starting with .)
                 #   but '.' dir is OK
                 if not re.search(r'\..+', dirname):
-                    process_dir(dirpath, tvdb_mirror,
+                    process_dir(dirpath, dir_files, tvdb_mirror,
                             use_metadir=args.metadir,
                             clobber=args.clobber,
                             genre_dir=genre_dir
                             )
         else:
-            process_dir(search_dir, tvdb_mirror,
+            dir_files = os.listdir(search_dir)
+            process_dir(search_dir, dir_files, tvdb_mirror,
                     use_metadir=args.metadir,
                     clobber=args.clobber,
                     genre_dir=genre_dir

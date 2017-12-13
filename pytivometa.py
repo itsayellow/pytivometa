@@ -916,7 +916,7 @@ def process_command_line(argv):
 
     # switches/options:
     parser.add_argument(
-            "-d", "--debug", action="count", dest="debug", default=0,
+            "-d", "--debug", action="count", default=0,
             help="Turn on debugging. More -d's increase debug level."
             )
     parser.add_argument(
@@ -928,17 +928,17 @@ def process_command_line(argv):
             help="Save metadata to the .meta directory in video directory. "
             )
     parser.add_argument(
-            "-r", "--recursive", action="store_true", dest="recursive",
+            "-r", "--recursive", action="store_true",
             help="Generate metadata for all files in sub dirs too."
             )
     parser.add_argument(
-            "-g", "--genre", dest="genre",
+            "-g", "--genre",
             help="Specify a directory in which to place symlinks to shows, "\
                     "organized by genre."
             )
     parser.add_argument(
             "-w", "--wait", dest="timeout", type=int, default=5,
-            help="How many seconds to wait for a connection to theTVdb.com "\
+            help="How many seconds to wait for a connection to thetvdb.com "\
                     "before giving up. (Default: 5s)"
             )
 

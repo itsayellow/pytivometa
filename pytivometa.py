@@ -1025,7 +1025,7 @@ def main():
         process_dir(search_dir, mirror_url,
                 use_metadir=args.metadir,
                 clobber=args.clobber,
-                recursive=args.recursive
+                recursive=args.recursive,
                 genre_dir=genre_dir
                 )
 

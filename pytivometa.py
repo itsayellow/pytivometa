@@ -858,10 +858,12 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False,
         genre_dir=None):
     debug(1, "\n## Looking for videos in: " + dir_proc)
 
-    # Regexes that match TV shows.
+    # Regexes for filenames that match TV shows.
     tv_res = [
-            r'(.+)[Ss](\d\d?)[Ee](\d+)', r'(.+?)(?: -)? ?(\d+)[Xx](\d+)',
-            r'(.*).(\d\d\d\d).(\d+).(\d+).*', r'(.*).(\d+).(\d+).(\d\d\d\d).*',
+            r'(.+)[Ss](\d\d?)[Ee](\d+)',
+            r'(.+?)(?: -)? ?(\d+)[Xx](\d+)',
+            r'(.*).(\d\d\d\d).(\d+).(\d+).*',
+            r'(.*).(\d+).(\d+).(\d\d\d\d).*',
             r'(?i)(.+)(\d?\d)(\d\d).*sitv'
             ]
 
@@ -883,6 +885,7 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False,
         meta_file = filename + '.txt'
         debug(1, "\n--->working on: %s" % filename)
         debug(2, "Metadir is: " + meta_dir)
+
         if os.path.exists(os.path.join(meta_dir, meta_file)) and not clobber:
             debug(1, "Metadata file already exists, skipping.")
         else:

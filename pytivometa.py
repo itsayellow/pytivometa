@@ -692,6 +692,22 @@ def get_files(directory, recursive=False):
     """
     entries = os.listdir(directory)
     file_list = [f for f in entries if os.path.splitext(f)[1].lower() in VIDEO_FILE_EXTS and len(os.path.splitext(f)[0]) and os.path.isfile(os.path.join(directory, f))]
+
+    # DEBUG DELETEME
+    print("file_list")
+    print(file_list)
+
+    # get list of video files
+    file_list = []
+    for entry in entries:
+        full_path = os.path.join(directory, entry)
+        (entry_base, entry_ext) = os.path.splitext(entry)
+        if entry_ext in VIDEO_FILE_EXTS and entry_base and os.path.isfile(full_path):
+            file_list.append(entry)
+    
+    # DEBUG DELETEME
+    print(file_list)
+
     file_list.sort()
     debug(2, "file_list after cull: %s" % str(file_list))
     dir_list = []

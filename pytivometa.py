@@ -695,21 +695,16 @@ def get_files(directory):
 
     # get list of video files and also dirs
     file_list = []
-    dir_list = []
     for entry in entries:
         full_path = os.path.join(directory, entry)
         (entry_base, entry_ext) = os.path.splitext(entry)
         if entry_ext in VIDEO_FILE_EXTS and entry_base and os.path.isfile(full_path):
             file_list.append(entry)
-        if os.path.isdir(full_path) and not entry[0] == '.':
-            dir_list.append(full_path)
     file_list.sort()
-    dir_list.sort()
 
     debug(2, "file_list after cull: %s" % str(file_list))
-    debug(2, "dir_list: %s" % str(dir_list))
 
-    return (file_list, dir_list)
+    return file_list
 
 def parse_movie(search_dir, filename, metadata_file_name,
         is_trailer, genre_dir=None):
@@ -860,7 +855,7 @@ def mkdir_if_needed(dirname):
                 )
 
 def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False,
-        recursive=False, genre_dir=None):
+        genre_dir=None):
     debug(1, "\n## Looking for videos in: " + dir_proc)
 
     # Regexes that match TV shows.
@@ -870,7 +865,7 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False,
             r'(?i)(.+)(\d?\d)(\d\d).*sitv'
             ]
 
-    (file_list, dir_list) = get_files(dir_proc)
+    file_list = get_files(dir_proc)
 
     is_trailer = False
     # See if we're in a "Trailer" folder.
@@ -911,14 +906,6 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False,
                         os.path.join(meta_dir, meta_file),
                         is_trailer, genre_dir=genre_dir
                         )
-    if recursive:
-        for subdir in dir_list:
-            process_dir(os.path.join(dir_proc, subdir), mirror_url,
-                    use_metadir=use_metadir,
-                    clobber=clobber,
-                    recursive=recursive,
-                    genre_dir=genre_dir
-                    )
 
 def check_interactive():
     if sys.platform not in ['win32', 'cygwin']:
@@ -1040,12 +1027,23 @@ def main():
 
     # process all dirs
     for search_dir in args.dir:
-        process_dir(search_dir, tvdb_mirror,
-                use_metadir=args.metadir,
-                clobber=args.clobber,
-                recursive=args.recursive,
-                genre_dir=genre_dir
-                )
+        if args.recursive:
+            for (dirpath, dirs, files) in os.walk(search_dir):
+                dirname = os.path.basename(dirpath)
+                # only non-hidden dirs (no dirs starting with .)
+                #   but '.' dir is OK
+                if not re.search(r'\..+', dirname):
+                    process_dir(dirpath, tvdb_mirror,
+                            use_metadir=args.metadir,
+                            clobber=args.clobber,
+                            genre_dir=genre_dir
+                            )
+        else:
+            process_dir(search_dir, tvdb_mirror,
+                    use_metadir=args.metadir,
+                    clobber=args.clobber,
+                    genre_dir=genre_dir
+                    )
 
 if __name__ == "__main__":
     main()

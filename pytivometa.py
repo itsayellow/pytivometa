@@ -202,7 +202,7 @@ def get_series_id(mirror_url, show_name, show_dir, use_metadir=False, clobber=Fa
             seriesidfile.close()
             debug(1, "Using stored seriesID: " + seriesid)
 
-    if not clobber and len(seriesid) > 0:
+    if not clobber and seriesid:
         seriesid = re.sub("\n", "", seriesid)
     else:
         debug(1, "Searching for: " + bare_title)

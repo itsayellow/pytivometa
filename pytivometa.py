@@ -1016,7 +1016,7 @@ def main():
 
     # create/set genre dir if specified and possible
     if args.genre:
-        genre_dir = creat_genre_dir(args.genre)
+        genre_dir = create_genre_dir(args.genre)
     else:
         genre_dir = None
 

@@ -865,10 +865,13 @@ def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False,
     if 'trailer' in os.path.abspath(dir_proc).lower():
         is_trailer = True
 
-    meta_dir = dir_proc
+    # dir to put metadata in is either dir_proc or dir_proc/META_DIR
     if use_metadir or os.path.isdir(os.path.join(dir_proc, META_DIR)):
         meta_dir = os.path.join(dir_proc, META_DIR)
         mkdir_if_needed(meta_dir)
+    else:
+        meta_dir = dir_proc
+
     for filename in file_list:
         meta_file = filename + '.txt'
         debug(1, "\n--->working on: %s" % filename)

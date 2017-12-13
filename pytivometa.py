@@ -36,6 +36,9 @@
 """Look in current directory, or specified directory, find all video files,
 fetch their metadata, and write metadata out into format that pytivo can
 parse and use.
+
+If file names have a year in parentheses (e.g. "Old Movie (1934)"), then it will
+aid in the search for the proper work.
 """
 
 
@@ -73,9 +76,6 @@ HAS_TVDB = True
 
 TVDB_APIKEY = "0403764A0DA51955"
 
-# Cache for series info.
-SERIES_INFO_CACHE = {}
-
 # When using a subdir for metadata files, what should it be called
 META_DIR = '.meta'
 
@@ -93,21 +93,28 @@ OUT_ENCODING = sys.stdout.encoding or sys.getdefaultencoding()
 #   that for file output
 FILE_ENCODING = 'UTF-8'
 
-# blank global to hold arguments to script (TODO: make local)
-OPTIONS = None
+# debug level for messages of entire file
+DEBUG_LEVEL = 0
+
+# specified if user indicates use of a genre directory
+GENRE_DIR = None
+
+# True if interactive shell detected
+INTERACTIVE = True
+
+# Cache for series info.
+SERIES_INFO_CACHE = {}
 
 
 def debug(level, text):
-    if level <= OPTIONS.debug:
+    if level <= DEBUG_LEVEL:
         print(text)
 
-def get_mirror_url():
+def get_mirror_url(timeout):
     global HAS_TVDB
     # Query tvdb for a list of mirrors
     mirrors_url = "http://www.thetvdb.com/api/%s/mirrors.xml" % TVDB_APIKEY
     mirror_url = ''
-    # If we don't hear back after timeout seconds, give up and move on
-    timeout = OPTIONS.timeout
     try:
         mirrors_xml = parse(urllib.request.urlopen(mirrors_url, None, timeout))
         mirrors = [Item for Item in mirrors_xml.findall('Mirror')]
@@ -164,7 +171,7 @@ def get_xml(url):
 
     return xml
 
-def get_series_id(mirror_url, show_name, show_dir):
+def get_series_id(mirror_url, show_name, show_dir, use_metadir=False, clobber=False):
     # useful URL substrings
     getseriesid_url = '/api/GetSeries.php?'
     #getepisodeid_url = '/GetEpisodes.php?'
@@ -172,7 +179,7 @@ def get_series_id(mirror_url, show_name, show_dir):
 
     seriesid = ''
     sidfiles = [os.path.join(show_dir, show_name + ".seriesID")]
-    if OPTIONS.metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
+    if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
         sidfiles.append(os.path.join(show_dir, META_DIR, show_name + ".seriesID"))
 
     # See if there's a year in the name
@@ -195,7 +202,7 @@ def get_series_id(mirror_url, show_name, show_dir):
             seriesidfile.close()
             debug(1, "Using stored seriesID: " + seriesid)
 
-    if not OPTIONS.clobber and len(seriesid) > 0:
+    if not clobber and len(seriesid) > 0:
         seriesid = re.sub("\n", "", seriesid)
     else:
         debug(1, "Searching for: " + bare_title)
@@ -209,7 +216,8 @@ def get_series_id(mirror_url, show_name, show_dir):
         series = [Item for Item in series_xml.findall('Series')]
 
         if year and len(series) > 1:
-            debug(2, "There are %d matching series, but we know what year to search for (%s)." % (len(series), year)
+            debug(2, "There are %d matching series, "%(len(series)) + \
+                    "but we know what year to search for (%s)."%year
                     )
             series = find_series_by_year(series, year)
             debug(2, "Series that match by year: %d." % len(series))
@@ -217,7 +225,7 @@ def get_series_id(mirror_url, show_name, show_dir):
         if len(series) == 1:
             debug(1, "Found exact match")
             seriesid = series[0].findtext('id')
-        elif OPTIONS.interactive:
+        elif INTERACTIVE:
             # Display all the shows found
             if len(series) >= 2:
                 print("####################################\n")
@@ -474,7 +482,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
         debug(1, "No matches found.")
         return
 
-    if OPTIONS.interactive:
+    if INTERACTIVE:
         # Get number of movies found
         num_titles = len(results)
 
@@ -588,7 +596,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
             line += "vProgramGenre : %s\n" % i
         for i in movie['genres']:
             line += "vSeriesGenre : %s\n" % i
-        if OPTIONS.genre:
+        if GENRE_DIR:
             link_genres(dir_, file_name, metadata_file_name, movie['genres'])
 
     try:
@@ -630,8 +638,8 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags, is_trail
     out_file.close()
 
 def link_genres(work_dir, file_name, metadata_path, genres):
-    for genre in genres:
-        genrepath = os.path.join(OPTIONS.genre, genre)
+    for this_genre in genres:
+        genrepath = os.path.join(GENRE_DIR, this_genre)
         mkdir_if_needed(genrepath)
         # Create a symlink to the video
         link = os.path.join(genrepath, file_name)
@@ -670,7 +678,7 @@ def get_rel_date(reldates):
     #   country name in there.
     return reldates[0]
 
-def get_files(directory):
+def get_files(directory, recursive=False):
     """Get list of file info objects for files of particular extensions
     """
     entries = os.listdir(directory)
@@ -678,7 +686,7 @@ def get_files(directory):
     file_list.sort()
     debug(2, "file_list after cull: %s" % str(file_list))
     dir_list = []
-    if OPTIONS.recursive:
+    if recursive:
         # Get a list of all sub dirs
         dir_list = [d for d in entries if os.path.isdir(os.path.join(directory, d)) and not d[0] == '.']
         dir_list.sort()
@@ -765,7 +773,7 @@ def fix_spaces(title):
     title = re.sub(r'\(\)', '', title)
     return title
 
-def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir):
+def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir, use_metadir=False, clobber=False):
     series = re.sub(r'[._]', ' ', match.group(1)).strip()
     if match.lastindex >= 4:
         season = 0
@@ -788,7 +796,9 @@ def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir):
 
     episode_info = {}
     if series not in SERIES_INFO_CACHE:
-        SERIES_INFO_CACHE[series] = get_series_id(mirror_url, series, show_dir)
+        SERIES_INFO_CACHE[series] = get_series_id(mirror_url, series, show_dir,
+                use_metadir=use_metadir, clobber=clobber
+                )
     (series_info_xml, seriesid) = SERIES_INFO_CACHE[series]
     if seriesid is not None and series_info_xml is not None:
         for node in series_info_xml.getiterator():
@@ -813,7 +823,7 @@ def mkdir_if_needed(dirname):
                         'exists with that name.'
                 )
 
-def process_dir(dir_proc, mirror_url):
+def process_dir(dir_proc, mirror_url, use_metadir=False, clobber=False, recursive=False):
     debug(1, "\n## Looking for videos in: " + dir_proc)
 
     # Regexes that match TV shows.
@@ -823,7 +833,7 @@ def process_dir(dir_proc, mirror_url):
             r'(?i)(.+)(\d?\d)(\d\d).*sitv'
             ]
 
-    (file_list, dir_list) = get_files(dir_proc)
+    (file_list, dir_list) = get_files(dir_proc, recursive=recursive)
 
     is_trailer = 0
     # See if we're in a "Trailer" folder.
@@ -831,14 +841,14 @@ def process_dir(dir_proc, mirror_url):
         is_trailer = 1
 
     meta_dir = dir_proc
-    if OPTIONS.metadir or os.path.isdir(os.path.join(dir_proc, META_DIR)):
+    if use_metadir or os.path.isdir(os.path.join(dir_proc, META_DIR)):
         meta_dir = os.path.join(dir_proc, META_DIR)
         mkdir_if_needed(meta_dir)
     for filename in file_list:
         meta_file = filename + '.txt'
         debug(1, "\n--->working on: %s" % filename)
         debug(2, "Metadir is: " + meta_dir)
-        if os.path.exists(os.path.join(meta_dir, meta_file)) and not OPTIONS.clobber:
+        if os.path.exists(os.path.join(meta_dir, meta_file)) and not clobber:
             debug(1, "Metadata file already exists, skipping.")
         else:
             ismovie = 1;
@@ -848,13 +858,19 @@ def process_dir(dir_proc, mirror_url):
                     if not HAS_TVDB:
                         debug(1, "Metadata service for TV shows is unavailable, skipping this show.")
                     else:
-                        parse_tv(mirror_url, match, meta_dir, meta_file, dir_proc)
+                        parse_tv(mirror_url, match, meta_dir, meta_file, dir_proc,
+                                use_metadir=use_metadir, clobber=clobber
+                                )
                     ismovie = 0
                     break
             if ismovie:
                 parse_movie(dir_proc, filename, os.path.join(meta_dir, meta_file), is_trailer)
     for subdir in dir_list:
-        process_dir(os.path.join(dir_proc, subdir), mirror_url)
+        process_dir(os.path.join(dir_proc, subdir), mirror_url,
+                use_metadir=use_metadir,
+                clobber=clobber,
+                recursive=recursive
+                )
 
 def check_interactive():
     if sys.platform not in ['win32', 'cygwin']:
@@ -926,44 +942,57 @@ def process_command_line(argv):
     return args
 
 def main():
-    global OPTIONS
-    args = process_command_line(sys.argv)
-    OPTIONS = args
+    global GENRE_DIR
+    global INTERACTIVE
+    global DEBUG_LEVEL
 
-    OPTIONS.interactive = check_interactive()
+    args = process_command_line(sys.argv)
+
+    # set master debug message level
+    DEBUG_LEVEL = args.debug
+
+    # set genre dir if specified
+    GENRE_DIR = args.genre
+
+    # set interactive if we are in an interactive shell
+    INTERACTIVE = check_interactive()
 
     debug(2, "\nConsole Input encoding: %s" % IN_ENCODING)
     debug(2, "Console Output encoding: %s" % OUT_ENCODING)
     debug(2, "Metadata File Output encoding: %s\n" % FILE_ENCODING)
 
     # Initalize things we'll need for looking up data
-    mirror_url = get_mirror_url()
+    mirror_url = get_mirror_url(args.timeout)
 
-    if OPTIONS.genre:
+    if GENRE_DIR:
         # Python doesn't support making symlinks on Windows.
         if sys.platform in ['win32', 'cygwin']:
             debug(0, "The genre feature doesn't work on Windows as symlinks " +\
                     "aren't well supported."
                     )
-            OPTIONS.genre = ''
+            GENRE_DIR = None
         else:
-            if not os.path.exists(OPTIONS.genre):
-                os.makedirs(OPTIONS.genre, 0o755)
-            elif not os.path.isdir(OPTIONS.genre):
+            if not os.path.exists(GENRE_DIR):
+                os.makedirs(GENRE_DIR, 0o755)
+            elif not os.path.isdir(GENRE_DIR):
                 raise OSError(
-                        'Can\'t create "' + OPTIONS.genre + '" as a dir, a ' + \
+                        'Can\'t create "' + GENRE_DIR + '" as a dir, a ' + \
                                 'file already exists with that name.'
                         )
             else:
                 debug(0, "Note: If you've removed videos, there may be old " +\
-                        "symlinks in '" + OPTIONS.genre + "'.  If there's " +\
+                        "symlinks in '" + GENR_DIR + "'.  If there's " +\
                         "nothing else in there, you can just remove the " +\
                         "whole thing first, then run this again (e.g. " +\
-                        "rm -rf '" + OPTIONS.genre + "'), but be careful."
+                        "rm -rf '" + GENRE_DIR + "'), but be careful."
                         )
 
-    for search_dir in OPTIONS.dir:
-        process_dir(search_dir, mirror_url)
+    for search_dir in args.dir:
+        process_dir(search_dir, mirror_url,
+                use_metadir=args.metadir,
+                clobber=args.clobber,
+                recursive=args.recursive
+                )
 
 if __name__ == "__main__":
     main()

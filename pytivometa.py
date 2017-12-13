@@ -55,7 +55,6 @@ import urllib.request
 from xml.etree.ElementTree import parse
 from time import strptime
 from datetime import datetime
-from functools import reduce
 
 # Import the IMDbPY package.
 try:
@@ -1031,7 +1030,7 @@ def main():
     # process all dirs
     for search_dir in args.dir:
         if args.recursive:
-            for (dirpath, dirs, files) in os.walk(search_dir):
+            for (dirpath, _, _) in os.walk(search_dir):
                 dirname = os.path.basename(dirpath)
                 # only non-hidden dirs (no dirs starting with .)
                 #   but '.' dir is OK

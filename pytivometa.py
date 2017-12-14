@@ -78,7 +78,7 @@ COUNTRY = 'USA'
 # Flag to track if TV lookups are enabled.
 HAS_TVDB = True
 
-TVDB_APIKEY = "0403764A0DA51955"
+TVDB_APIKEY = "22FF0E9C529331C6"
 
 # When using a subdir for metadata files, what should it be called
 META_DIR = '.meta'

@@ -48,6 +48,7 @@ import io
 import os
 import re
 import sys
+import textwrap
 #import urllib.error
 import urllib.parse
 import urllib.request
@@ -245,7 +246,7 @@ def get_series_id(mirror_url, show_name, show_dir,
                     print("Series ID:\t%s" % ep_id)
                     if first_aired:
                         print("1st Aired:\t%s" % first_aired)
-                    print("Description:\t%s"%ep_overview)
+                    print(textwrap.fill("Description:\t%s"%ep_overview, width=78))
                     print("------------------------------------")
                 print("####################################\n\n")
                 try:
@@ -310,7 +311,7 @@ def get_episode_info_xml_by_air_date(mirror_url, seriesid, year, month, day):
     return episode_info_xml
 
 def format_episode_data(ep_data, meta_dir, meta_file):
-    # Takes a dict e of XML elements, the series title, the Zap2It ID (aka
+    # Takes a dict ep_data of XML elements, the series title, the Zap2It ID (aka
     #   the Tivo groupID), and a filename meta_file
     # This is weak. Should just detect if EpisodeNumber exists.
     metadata_text = ''
@@ -884,21 +885,24 @@ def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,
         if os.path.exists(os.path.join(meta_dir, meta_file)) and not clobber:
             debug(1, "Metadata file already exists, skipping.")
         else:
-            is_movie = True
-            for tvre in tv_res:
-                match = re.search(tvre, filename)
-                if match: # Looks like a TV show
-                    if not HAS_TVDB:
-                        debug(1, "Metadata service for TV shows is " + \
-                                "unavailable, skipping this show.")
-                    else:
-                        parse_tv(mirror_url, match, meta_dir, meta_file,
-                                dir_proc,
-                                use_metadir=use_metadir, clobber=clobber
-                                )
-                    is_movie = False
+            is_tv = False
+            for tv_re in tv_res:
+                match = re.search(tv_re, filename)
+                if match:
+                    # Looks like a TV show
+                    is_tv = True
                     break
-            if is_movie:
+
+            if is_tv:
+                if HAS_TVDB:
+                    parse_tv(mirror_url, match, meta_dir, meta_file, dir_proc,
+                            use_metadir=use_metadir, clobber=clobber
+                            )
+                else:
+                    debug(1, "Metadata service for TV shows is " + \
+                            "unavailable, skipping this show.")
+            else:
+                # assume movie if not matching tv regex
                 parse_movie(
                         dir_proc, filename,
                         os.path.join(meta_dir, meta_file),

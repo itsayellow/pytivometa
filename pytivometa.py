@@ -111,6 +111,38 @@ def debug(level, text):
     if level <= DEBUG_LEVEL:
         print(text)
 
+
+# Experimental TVDB new API v2 support ----------------------------------------
+import json
+
+def get_tvdb_session_token():
+    tvdb_api_login_url = "https://api.thetvdb.com/login"
+    post_fields = {'apikey': TVDB_APIKEY}
+    headers = {
+            'Content-type': 'application/json',
+            'Accept': 'application/json'
+            }
+
+    request = urllib.request.Request(
+            tvdb_api_login_url,
+            data=json.dumps(post_fields).encode('ascii'),
+            headers=headers
+            )
+    try:
+        json_reply_raw = urllib.request.urlopen(request)
+    except urllib.error.HTTPError as http_error:
+        print(http_error)
+        # TODO: do something better than re-raise
+        raise
+
+    json_reply = json_reply_raw.read().decode()
+    json_data = json.loads(json_reply)
+    tvdb_session_token = json_data['token']
+    return tvdb_session_token
+
+# -----------------------------------------------------------------------------
+
+
 def get_tvdb_mirror(timeout):
     global HAS_TVDB
     # Query tvdb for a list of mirrors

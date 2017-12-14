@@ -114,8 +114,15 @@ def debug(level, text):
 
 # Experimental TVDB new API v2 support ----------------------------------------
 import json
+TVDB_SESSION_TOKEN = ''
 
-def get_tvdb_session_token():
+def tvdb_v2_get_session_token():
+    """Get a current session token for thetvdb.com, necessary for any
+    future requests of data.
+    """
+    global TVDB_SESSION_TOKEN
+
+    # execute POST: send apikey, receive session token
     tvdb_api_login_url = "https://api.thetvdb.com/login"
     post_fields = {'apikey': TVDB_APIKEY}
     headers = {
@@ -137,8 +144,50 @@ def get_tvdb_session_token():
 
     json_reply = json_reply_raw.read().decode()
     json_data = json.loads(json_reply)
-    tvdb_session_token = json_data['token']
-    return tvdb_session_token
+    tvdb_sess_token = json_data['token']
+
+    TVDB_SESSION_TOKEN = tvdb_sess_token 
+    
+    return tvdb_sess_token
+
+def tvdb_v2_search_series(search_string):
+    """Given a search string, return a list from thetvdb.com of all possible
+    television series matches.
+
+    Args:
+        search_string (str): string to search for tvdb series info
+
+    Returns:
+        list: list of dicts, each dict contains data of a possibly-matching
+            show
+    """
+
+    if TVDB_SESSION_TOKEN == '':
+        print("ERROR - No Session Token")
+        return
+
+    tvdb_search_series_url = "https://api.thetvdb.com/search/series"
+    headers = {
+            'Authorization': 'Bearer '+TVDB_SESSION_TOKEN,
+            'Accept': 'application/json'
+            }
+
+    request = urllib.request.Request(
+            tvdb_search_series_url + "?name=" + search_string,
+            headers=headers
+            )
+
+    try:
+        json_reply_raw = urllib.request.urlopen(request)
+    except urllib.error.HTTPError as http_error:
+        print(http_error)
+        # TODO: do something better than re-raise
+        raise
+
+    json_reply = json_reply_raw.read().decode()
+    json_data = json.loads(json_reply)
+
+    return json_data['data']
 
 # -----------------------------------------------------------------------------
 

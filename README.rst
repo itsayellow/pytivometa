@@ -9,4 +9,4 @@ the associated video files) for pytivo to find them.
 
 Based on the original pytivometathis by Graham Dunn and later Josh Harding
 (https://sourceforge.net/projects/pytivometathis/).  This version has been
-ported to python3 and otherwised revised.
+ported to python3 and otherwise revised.

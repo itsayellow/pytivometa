@@ -168,7 +168,7 @@ def tvdb_v2_search_series(search_string):
 
     tvdb_search_series_url = "https://api.thetvdb.com/search/series"
     headers = {
-            'Authorization': 'Bearer '+TVDB_SESSION_TOKEN,
+            'Authorization': 'Bearer '+ TVDB_SESSION_TOKEN,
             'Accept': 'application/json'
             }
 
@@ -190,9 +190,9 @@ def tvdb_v2_search_series(search_string):
     return json_data['data']
 
 # -----------------------------------------------------------------------------
+# Current TVDB API v1 (XML) support -------------------------------------------
 
-
-def get_tvdb_mirror(timeout):
+def tvdb_v1_get_mirror(timeout):
     global HAS_TVDB
     # Query tvdb for a list of mirrors
     mirrors_url = "http://www.thetvdb.com/api/%s/mirrors.xml" % TVDB_APIKEY
@@ -208,7 +208,20 @@ def get_tvdb_mirror(timeout):
         HAS_TVDB = False
     return mirror_url
 
-def find_series_by_year(series, year):
+def tvdb_v1_get_episode_info(mirror_url, seriesid, season, episode):
+    # Takes a seriesid, season number, episode number and return xml data`
+    url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + seriesid + \
+            "/default/" + season + "/" + episode + "/en.xml"
+    debug(3, "tvdb_v1_get_episode_info: Using URL " + url)
+
+    episode_info_xml = get_xml(url)
+
+    if episode_info_xml is None:
+        debug(0, "!! Error looking up data for this episode, skipping.")
+
+    return episode_info_xml
+
+def tvdb_v1_find_series_by_year(series, year):
     matching_series = []
     for show in series:
         first_aired = show.findtext('FirstAired')
@@ -218,6 +231,20 @@ def find_series_by_year(series, year):
                 matching_series.append(show)
     # Return all that matched the year (which may be an empty list)
     return matching_series
+
+def tvdb_v1_get_episode_info_air_date(mirror_url, seriesid, year, month, day):
+    # Takes a seriesid, year number, month number, day number, and return xml data
+    url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + TVDB_APIKEY + \
+            "&seriesid=" + seriesid + "&airdate=" + year + "-" + month + "-" + day
+    debug(3, "tvdb_v1_get_episode_info_air_date: Using URL " + url)
+
+    episode_info_xml = get_xml(url)
+    if episode_info_xml is None:
+        debug(0, "!! Error looking up data for this episode, skipping.")
+
+    return episode_info_xml
+
+# -----------------------------------------------------------------------------
 
 # fetch plaintext or gzipped xml data from url
 def get_xml(url):
@@ -302,7 +329,7 @@ def get_series_id(mirror_url, show_name, show_dir,
             debug(2, "There are %d matching series, "%(len(series)) + \
                     "but we know what year to search for (%s)."%year
                     )
-            series = find_series_by_year(series, year)
+            series = tvdb_v1_find_series_by_year(series, year)
             debug(2, "Series that match by year: %d." % len(series))
 
         if len(series) == 1:
@@ -369,31 +396,6 @@ def get_series_id(mirror_url, show_name, show_dir,
         if series_url_xml is None:
             debug(0, "!! Error parsing series info, skipping.")
     return series_url_xml, seriesid
-
-def get_episode_info_xml(mirror_url, seriesid, season, episode):
-    # Takes a seriesid, season number, episode number and return xml data`
-    url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + seriesid + \
-            "/default/" + season + "/" + episode + "/en.xml"
-    debug(3, "get_episode_info_xml: Using URL " + url)
-
-    episode_info_xml = get_xml(url)
-
-    if episode_info_xml is None:
-        debug(0, "!! Error looking up data for this episode, skipping.")
-
-    return episode_info_xml
-
-def get_episode_info_xml_by_air_date(mirror_url, seriesid, year, month, day):
-    # Takes a seriesid, year number, month number, day number, and return xml data
-    url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + TVDB_APIKEY + \
-            "&seriesid=" + seriesid + "&airdate=" + year + "-" + month + "-" + day
-    debug(3, "get_episode_info_xml_by_air_date: Using URL " + url)
-
-    episode_info_xml = get_xml(url)
-    if episode_info_xml is None:
-        debug(0, "!! Error looking up data for this episode, skipping.")
-
-    return episode_info_xml
 
 def format_episode_data(ep_data, meta_dir, meta_file):
     # Takes a dict ep_data of XML elements, the series title, the Zap2It ID (aka
@@ -912,11 +914,11 @@ def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir,
         for node in series_info_xml.getiterator():
             episode_info[node.tag] = node.text
         if year == 0:
-            episode_info_xml = get_episode_info_xml(
+            episode_info_xml = tvdb_v1_get_episode_info(
                     mirror_url, seriesid, season, episode
                     )
         else:
-            episode_info_xml = get_episode_info_xml_by_air_date(
+            episode_info_xml = tvdb_v1_get_episode_info_air_date(
                     mirror_url, seriesid, year, month, day
                     )
         if episode_info_xml is not None:
@@ -1104,7 +1106,7 @@ def main():
     debug(2, "Metadata File Output encoding: %s\n" % FILE_ENCODING)
 
     # Initalize things we'll need for looking up data
-    tvdb_mirror = get_tvdb_mirror(args.timeout)
+    tvdb_mirror = tvdb_v1_get_mirror(args.timeout)
 
     # create/set genre dir if specified and possible
     if args.genre:

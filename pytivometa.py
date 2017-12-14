@@ -198,6 +198,8 @@ def tvdb_v1_get_mirror(timeout):
     mirrors_url = "http://www.thetvdb.com/api/%s/mirrors.xml" % TVDB_APIKEY
     mirror_url = ''
     try:
+        # from xml.etree.ElementTree import parse, returns
+        #   xml.etree.ElementTree.ElemenTree
         mirrors_xml = parse(urllib.request.urlopen(mirrors_url, None, timeout))
         mirrors = [Item for Item in mirrors_xml.findall('Mirror')]
         mirror_url = mirrors[0].findtext('mirrorpath')
@@ -273,6 +275,8 @@ def get_xml(url):
         debug(1, "gzip compressed data")
 
     try:
+        # from xml.etree.ElementTree import parse, returns
+        #   xml.etree.ElementTree.ElemenTree
         xml = parse(filestream).getroot()
     except Exception as e:
         debug(0, "\n Exception = " + str(e))
@@ -789,6 +793,64 @@ def get_video_files(dirname, dir_files):
 
     return video_files
 
+def fix_spaces(title):
+    placeholders = ['[-._]', '  +']
+    for place_holder in placeholders:
+        title = re.sub(place_holder, ' ', title)
+    # Remove leftover spaces before/after the year
+    title = re.sub(r'\( ', '(', title)
+    title = re.sub(r' \)', ')', title)
+    title = re.sub(r'\(\)', '', title)
+    return title
+
+def clean_title(title):
+    # strip a variety of common junk from torrented avi filenames
+    striplist = (
+            r'crowbone', r'joox-dot-net', r'DOMiNiON', r'LiMiTED',
+            r'aXXo', r'DoNE', r'ViTE', r'BaLD', r'COCAiNE', r'NoGRP',
+            r'leetay', r'AC3', r'BluRay', r'DVD', r'VHS', r'Screener',
+            r'(?i)DVD SCR', r'\[.*\]', r'(?i)swesub', r'(?i)dvdrip',
+            r'(?i)dvdscr', r'(?i)xvid', r'(?i)divx'
+            )
+    for strip in striplist:
+        title = re.sub(strip, '', title)
+    debug(3, "After stripping keywords, title is: " + title)
+    return title
+
+def extract_tags(title):
+    # Look for tags that we want to show on the tivo, but not include in
+    #   IMDb searches.
+    tags = ""
+    taglist = {
+        # Strip these out      : return these instead
+        r'(\d{3,4})([IiPp])'    : r'\1\2', #720p,1080p,1080i,720P,etc
+        r'(?i)Telecine'         : r'TC',    #Telecine,telecine
+        r'TC'                   : r'TC',
+        r'(?i)Telesync'         : r'TS',    #Telesync,telesync
+        r'TS'                   : r'TS',
+        r'CAM'                  : r'CAM',
+        r'(?i)CD ?(\d)'         : r'CD\1', #CD1,CD2,cd1,cd3,etc
+        r'(?i)\(?Disc ?(\d)\)?' : r'CD\1', #Disc 1,Disc 2,disc 1,etc
+        }
+    for tag in list(taglist.keys()):
+        match = re.search(tag, title)
+        if match:
+            tags += match.expand(taglist[tag]) + ' '
+            title = re.sub(tag, '', title)
+    debug(2, "    Tags: " + tags)
+    return (tags, title)
+
+def mkdir_if_needed(dirname):
+    if not os.path.exists(dirname):
+        # Don't use os.makedirs() because that would only matter if -p named a
+        #   non-existant dir (which we don't want to create)
+        os.mkdir(dirname, 0o755)
+    elif not os.path.isdir(dirname):
+        raise OSError(
+                'Can\'t create "' + dirname + '" as a dir, a file already ' +\
+                        'exists with that name.'
+                )
+
 def parse_movie(search_dir, filename, metadata_file_name,
         is_trailer, genre_dir=None):
     if not HAS_IMDB:
@@ -831,53 +893,6 @@ def parse_movie(search_dir, filename, metadata_file_name,
             is_trailer, genre_dir=genre_dir
             )
 
-def extract_tags(title):
-    # Look for tags that we want to show on the tivo, but not include in
-    #   IMDb searches.
-    tags = ""
-    taglist = {
-        # Strip these out      : return these instead
-        r'(\d{3,4})([IiPp])'    : r'\1\2', #720p,1080p,1080i,720P,etc
-        r'(?i)Telecine'         : r'TC',    #Telecine,telecine
-        r'TC'                   : r'TC',
-        r'(?i)Telesync'         : r'TS',    #Telesync,telesync
-        r'TS'                   : r'TS',
-        r'CAM'                  : r'CAM',
-        r'(?i)CD ?(\d)'         : r'CD\1', #CD1,CD2,cd1,cd3,etc
-        r'(?i)\(?Disc ?(\d)\)?' : r'CD\1', #Disc 1,Disc 2,disc 1,etc
-        }
-    for tag in list(taglist.keys()):
-        match = re.search(tag, title)
-        if match:
-            tags += match.expand(taglist[tag]) + ' '
-            title = re.sub(tag, '', title)
-    debug(2, "    Tags: " + tags)
-    return (tags, title)
-
-def clean_title(title):
-    # strip a variety of common junk from torrented avi filenames
-    striplist = (
-            r'crowbone', r'joox-dot-net', r'DOMiNiON', r'LiMiTED',
-            r'aXXo', r'DoNE', r'ViTE', r'BaLD', r'COCAiNE', r'NoGRP',
-            r'leetay', r'AC3', r'BluRay', r'DVD', r'VHS', r'Screener',
-            r'(?i)DVD SCR', r'\[.*\]', r'(?i)swesub', r'(?i)dvdrip',
-            r'(?i)dvdscr', r'(?i)xvid', r'(?i)divx'
-            )
-    for strip in striplist:
-        title = re.sub(strip, '', title)
-    debug(3, "After stripping keywords, title is: " + title)
-    return title
-
-def fix_spaces(title):
-    placeholders = ['[-._]', '  +']
-    for place_holder in placeholders:
-        title = re.sub(place_holder, ' ', title)
-    # Remove leftover spaces before/after the year
-    title = re.sub(r'\( ', '(', title)
-    title = re.sub(r' \)', ')', title)
-    title = re.sub(r'\(\)', '', title)
-    return title
-
 def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir,
         use_metadir=False, clobber=False):
     # TODO: thetvdb.com is switching to json, and abandoning xml!
@@ -911,7 +926,7 @@ def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir,
                 )
     (series_info_xml, seriesid) = SERIES_INFO_CACHE[series]
     if seriesid is not None and series_info_xml is not None:
-        for node in series_info_xml.getiterator():
+        for node in series_info_xml.iter():
             episode_info[node.tag] = node.text
         if year == 0:
             episode_info_xml = tvdb_v1_get_episode_info(
@@ -922,20 +937,9 @@ def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir,
                     mirror_url, seriesid, year, month, day
                     )
         if episode_info_xml is not None:
-            for node in episode_info_xml.getiterator():
+            for node in episode_info_xml.iter():
                 episode_info[node.tag] = node.text
             format_episode_data(episode_info, meta_dir, meta_file)
-
-def mkdir_if_needed(dirname):
-    if not os.path.exists(dirname):
-        # Don't use os.makedirs() because that would only matter if -p named a
-        #   non-existant dir (which we don't want to create)
-        os.mkdir(dirname, 0o755)
-    elif not os.path.isdir(dirname):
-        raise OSError(
-                'Can\'t create "' + dirname + '" as a dir, a file already ' +\
-                        'exists with that name.'
-                )
 
 def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,
         clobber=False, genre_dir=None):

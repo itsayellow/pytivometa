@@ -146,8 +146,8 @@ def tvdb_v2_get_session_token():
     json_data = json.loads(json_reply)
     tvdb_sess_token = json_data['token']
 
-    TVDB_SESSION_TOKEN = tvdb_sess_token 
-    
+    TVDB_SESSION_TOKEN = tvdb_sess_token
+
     return tvdb_sess_token
 
 def tvdb_v2_search_series(search_string):
@@ -479,7 +479,7 @@ def format_episode_data(ep_data, meta_dir, meta_file):
         'vDirector',
         'vProducer',
         'vExecProducer',
-        'vHost' ,
+        'vHost',
         'vChoreographer'
     ]
 
@@ -491,7 +491,7 @@ def format_episode_data(ep_data, meta_dir, meta_file):
         'vDirector',
         'vProducer',
         'vExecProducer',
-        'vHost' ,
+        'vHost',
         'vChoreographer'
     ]
 
@@ -505,7 +505,7 @@ def format_episode_data(ep_data, meta_dir, meta_file):
     for tv_tag in pytivo_metadata_order:
 
         debug(3, "Working on " + tv_tag)
-        if ( tv_tag in pytivo_metadata and (pytivo_metadata[tv_tag]) and
+        if (tv_tag in pytivo_metadata and (pytivo_metadata[tv_tag]) and
                 pytivo_metadata[tv_tag] in ep_data and ep_data[pytivo_metadata[tv_tag]]):
             # got data to work with
             line = term = ""
@@ -535,7 +535,8 @@ def format_episode_data(ep_data, meta_dir, meta_file):
 
             # Only check to see if Season is > 0, allow EpNum to be 0 for
             #   things like "1x00 - Bonus content"
-            if tv_tag == 'episodeNumber' and ep_data['EpisodeNumber'] and int(ep_data['SeasonNumber']):
+            if (tv_tag == 'episodeNumber' and ep_data['EpisodeNumber'] and
+                    int(ep_data['SeasonNumber'])):
                 text = "%d%02d"%(int(ep_data['SeasonNumber']), int(ep_data['EpisodeNumber']))
 
             if tv_tag in metadata_name_fields:
@@ -605,7 +606,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags,
                 print("\nCaught interrupt, exiting.")
                 sys.exit(1)
 
-            if not len(movie_num):
+            if not movie_num:
                 # Empty string, default to the top choice
                 movie_num = 0
             else:
@@ -648,7 +649,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags,
             imdb_access.update(movie, 'release dates')
         except Exception as e:
             debug(1, "Warning: unable to get release date.")
-        if 'release dates' in list(movie.keys()) and len(movie['release dates']):
+        if movie.get('release dates', None):
             reldate += get_rel_date(movie['release dates']) + '. '
     # description
     line += 'description : ' + reldate

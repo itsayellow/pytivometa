@@ -963,7 +963,8 @@ def process_command_line(argv):
     parser = argparse.ArgumentParser(
             description="Retrieve information from TVDB and IMDB to add "\
                     "TiVo metadatada to all media files in the current "\
-                    "directory."
+                    "directory.  TV info from http://www.thetvdb.com/ ."\
+                    "They welcome user contributions of show data."
                     )
 
     # optional positional list of directories:
@@ -984,7 +985,7 @@ def process_command_line(argv):
             )
     parser.add_argument(
             "-t", "--tidy", action="store_true", dest="metadir",
-            help="Save metadata to the .meta directory in video directory. "
+            help="Save metadata files in .meta subdirectory. "
             )
     parser.add_argument(
             "-r", "--recursive", action="store_true",

@@ -37,8 +37,12 @@
 fetch their metadata, and write metadata out into format that pytivo can
 parse and use.
 
-If file names have a year in parentheses (e.g. "Old Movie (1934)"), then it will
-aid in the search for the proper work.
+If the file name of a movie has a year in parentheses
+(e.g. "Old Movie (1934)"), then it will aid in the search for the proper movie.
+
+A filename will be considered a TV show if it has part of it with something
+like a season and episode specification as part of it.
+(e.g. "S01E02", or "s01e02", etc.)
 """
 
 
@@ -953,7 +957,6 @@ def process_command_line(argv):
     Returns:
         args: Namespace with named attributes of arguments and switches
     """
-    #script_name = argv[0]
     argv = argv[1:]
 
     # initialize the parser object:

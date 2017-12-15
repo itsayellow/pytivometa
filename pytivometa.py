@@ -441,7 +441,7 @@ def get_series_id(mirror_url, show_name, show_dir,
 
 def format_episode_data(ep_data, meta_filepath):
     # Takes a dict ep_data of XML elements, the series title, the Zap2It ID (aka
-    #   the Tivo groupID), and a filename meta_file
+    #   the Tivo groupID), and a filepath meta_filepath
     # This is weak. Should just detect if EpisodeNumber exists.
     metadata_text = ''
     ep_data["isEpisode"] = "true"
@@ -1023,8 +1023,7 @@ def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,
         meta_dir = dir_proc
 
     for filename in video_files:
-        meta_file = filename + '.txt'
-        meta_filepath = os.path.join(meta_dir, meta_file)
+        meta_filepath = os.path.join(meta_dir, filename + '.txt')
 
         debug(1, "\n--->working on: %s" % filename)
         debug(2, "Metafile is: " + meta_filepath)

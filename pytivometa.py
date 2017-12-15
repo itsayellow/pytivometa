@@ -936,12 +936,13 @@ def parse_movie(search_dir, filename, metadata_file_name,
 def tvinfo_from_filename(filename):
     # Regexes for filenames that match TV shows.
     #   group 1: series search string (i.e. series name)
+    # ?P<name> at the beginning of a group calls the group 'name'
     tv_res = [
-            r'(.+)[Ss](\d\d?)[Ee](\d+)',     # groups 2,3: season,episode
-            r'(.+?)(?: -)? ?(\d+)[Xx](\d+)', # groups 2,3: season,episode
-            r'(.*).(\d\d\d\d).(\d+).(\d+).*', # groups 2,3,4: year,mo,day
-            r'(.*).(\d+).(\d+).(\d\d\d\d).*', # groups 2,3,4: mo,day,year
-            r'(?i)(.+)(\d?\d)(\d\d).*sitv' # re.I, groups 2,3: season,episode
+            r'(.+)[Ss](?P<season>\d\d?)[Ee](?P<episode>\d+)',
+            r'(.+?)(?: -)? ?(?P<season>\d+)[Xx](?P<episode>\d+)',
+            r'(.*).(?P<year>\d\d\d\d).(?P<month>\d+).(?P<day>\d+).*',
+            r'(.*).(?P<month>\d+).(?P<day>\d+).(?P<year>\d\d\d\d).*',
+            r'(?i)(.+)(?P<season>\d?\d)(?P<episode>\d\d).*sitv' # (?i) == re.I
             ]
 
     for tv_re in tv_res:
@@ -955,17 +956,14 @@ def tvinfo_from_filename(filename):
         # fill in tv_info if we matched this filename to a regex
         tv_info['series'] = re.sub(r'[._]', ' ', match.group(1)).strip()
         if match.lastindex >= 4:
-            if int(match.group(2)) >= 1000:
-                tv_info['year'] = str(int(match.group(2)))
-                tv_info['month'] = str(int(match.group(3)))
-                tv_info['day'] = str(int(match.group(4)))
-            else:
-                tv_info['year'] = str(int(match.group(4)))
-                tv_info['month'] = str(int(match.group(2)))
-                tv_info['day'] = str(int(match.group(3)))
+            # str(int()) strips out leading zeroes
+            tv_info['year'] = str(int(match.group('year')))
+            tv_info['month'] = str(int(match.group('month')))
+            tv_info['day'] = str(int(match.group('day')))
         else:
-            tv_info['season'] = str(int(match.group(2))) # strip out leading zeroes
-            tv_info['episode'] = str(int(match.group(3)))
+            tv_info['season'] = str(int(match.group('season')))
+            tv_info['episode'] = str(int(match.group('episode')))
+
         debug(2, "    Series: %s\n"%tv_info['series'] + \
                 "    Season: %s\n"%tv_info.get('season', '') + \
                 "    Episode: %s\n"%tv_info.get('episode', '') + \

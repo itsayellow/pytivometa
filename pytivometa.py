@@ -47,17 +47,13 @@ like a season and episode specification as part of it.
 
 
 import argparse
-import gzip
-import io
 import os
 import re
 import sys
 import textwrap
 #import urllib.error
-import urllib.parse
 import urllib.request
 
-from xml.etree.ElementTree import parse
 from time import strptime
 from datetime import datetime
 
@@ -117,6 +113,7 @@ def debug(level, text):
 
 # Experimental TVDB new API v2 support ----------------------------------------
 import json
+
 TVDB_SESSION_TOKEN = ''
 
 def tvdb_v2_get_session_token():
@@ -194,6 +191,11 @@ def tvdb_v2_search_series(search_string):
 
 # -----------------------------------------------------------------------------
 # Current TVDB API v1 (XML) support -------------------------------------------
+
+import gzip
+import io
+import urllib.parse
+from xml.etree.ElementTree import parse
 
 def tvdb_v1_get_mirror(timeout):
     global HAS_TVDB

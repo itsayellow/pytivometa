@@ -47,15 +47,14 @@ like a season and episode specification as part of it.
 
 
 import argparse
+from datetime import datetime
 import os
 import re
 import sys
 import textwrap
+from time import strptime
 #import urllib.error
 import urllib.request
-
-from time import strptime
-from datetime import datetime
 
 # Import the IMDbPY package.
 try:

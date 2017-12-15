@@ -272,18 +272,20 @@ def tvdb_v1_search_series(mirror_url, bare_title):
     # return list of xml.etree.ElementTree.Element
     return series
 
-# -----------------------------------------------------------------------------
+def tvdb_v1_get_series_info(mirror_url, seriesid):
+    series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + seriesid + "/en.xml"
+    debug(3, "getSeriesInfoXML: Using URL " + series_url)
 
-def find_series_by_year(series, year):
-    matching_series = []
-    for show in series:
-        first_aired = show.findtext('FirstAired')
-        if first_aired:
-            match = re.search(r'(\d\d\d\d)-\d\d-\d\d', first_aired)
-            if match and year == match.group(1):
-                matching_series.append(show)
-    # Return all that matched the year (which may be an empty list)
-    return matching_series
+    series_info_xml = get_xml(series_url)
+
+    series_info = {}
+    if series_info_xml is not None:
+        for node in series_info_xml.iter():
+            series_info[node.tag] = node.text
+    else:
+        debug(0, "!! Error parsing series info, skipping.")
+
+    return series_info
 
 # fetch plaintext or gzipped xml data from url
 def get_xml(url):
@@ -320,6 +322,19 @@ def get_xml(url):
         debug(3, "\nraw_xml = " + raw_xml + "\n\nhexXML = " + repr(raw_xml))
 
     return xml
+
+# -----------------------------------------------------------------------------
+
+def find_series_by_year(series, year):
+    matching_series = []
+    for show in series:
+        first_aired = show.findtext('FirstAired')
+        if first_aired:
+            match = re.search(r'(\d\d\d\d)-\d\d-\d\d', first_aired)
+            if match and year == match.group(1):
+                matching_series.append(show)
+    # Return all that matched the year (which may be an empty list)
+    return matching_series
 
 def get_series_id(mirror_url, show_name, show_dir,
         use_metadir=False, clobber=False):
@@ -417,15 +432,12 @@ def get_series_id(mirror_url, show_name, show_dir,
         else:
             debug(1, "Unable to find seriesid.")
 
-    series_url_xml = None
     if seriesid:
-        series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + seriesid + "/en.xml"
-        debug(3, "getSeriesInfoXML: Using URL " + series_url)
+        series_info = tvdb_v1_get_series_info(mirror_url, seriesid)
+    else:
+        series_info = {}
 
-        series_url_xml = get_xml(series_url)
-        if series_url_xml is None:
-            debug(0, "!! Error parsing series info, skipping.")
-    return series_url_xml, seriesid
+    return series_info, seriesid
 
 def format_episode_data(ep_data, meta_dir, meta_file):
     # Takes a dict ep_data of XML elements, the series title, the Zap2It ID (aka
@@ -940,6 +952,7 @@ def tvinfo_from_filename(filename):
 
     tv_info = {}
     if match:
+        # fill in tv_info if we matched this filename to a regex
         tv_info['series'] = re.sub(r'[._]', ' ', match.group(1)).strip()
         if match.lastindex >= 4:
             if int(match.group(2)) >= 1000:
@@ -973,10 +986,9 @@ def parse_tv(mirror_url, tv_info, meta_dir, meta_file, show_dir,
                 mirror_url, tv_info['series'], show_dir,
                 use_metadir=use_metadir, clobber=clobber
                 )
-    (series_info_xml, seriesid) = SERIES_INFO_CACHE[tv_info['series']]
-    if seriesid is not None and series_info_xml is not None:
-        for node in series_info_xml.iter():
-            episode_info[node.tag] = node.text
+    (series_info, seriesid) = SERIES_INFO_CACHE[tv_info['series']]
+    if seriesid and series_info:
+        episode_info.update(series_info)
         if tv_info.get('season', None) and tv_info.get('episode', None):
             episode_info.update(
                     tvdb_v1_get_episode_info(

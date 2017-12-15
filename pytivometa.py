@@ -364,9 +364,8 @@ def get_series_id(mirror_url, show_name, show_dir,
         # Get seriesid
         if os.path.exists(seriesidpath):
             debug(2, "Reading seriesID from file: " + seriesidpath)
-            seriesidfile = open(seriesidpath, 'r')
-            seriesid = seriesidfile.read()
-            seriesidfile.close()
+            with open(seriesidpath, 'r') as seriesidfile:
+                seriesid = seriesidfile.read()
             debug(1, "Using stored seriesID: " + seriesid)
 
     if not clobber and seriesid:
@@ -432,9 +431,8 @@ def get_series_id(mirror_url, show_name, show_dir,
                 seriesidpath = os.path.join(show_dir, show_name + ".seriesID")
             debug(1, "Found seriesID: " + seriesid)
             debug(2, "Writing seriesID to file: " + seriesidpath)
-            seriesidfile = open(seriesidpath, 'w')
-            seriesidfile.write(seriesid)
-            seriesidfile.close()
+            with open(seriesidpath, 'w') as seriesidfile 
+                seriesidfile.write(seriesid)
         else:
             debug(1, "Unable to find seriesid.")
 
@@ -598,9 +596,8 @@ def format_episode_data(ep_data, meta_filepath):
             debug(3, "No data for " + tv_tag)
 
     if metadata_text:
-        out_file = open(meta_filepath, 'w')
-        out_file.write(metadata_text)
-        out_file.close()
+        with open(meta_filepath, 'w') as out_file:
+            out_file.write(metadata_text)
 
 def get_movie_info(title, is_trailer=False):
     line = ""
@@ -797,9 +794,8 @@ def format_movie_data(movie_info, dir_, file_name, metadata_file_name, tags,
                 debug(3, "vActor : " + i['name'])
 
     debug(2, "Writing to %s" % metadata_file_name)
-    out_file = open(metadata_file_name, 'w')
-    out_file.writelines(line)
-    out_file.close()
+    with open(metadata_file_name, 'w') as out_file:
+        out_file.writelines(line)
 
 def link_genres(work_dir, genre_dir, file_name, metadata_path, genres):
     for this_genre in genres:

@@ -921,51 +921,74 @@ def parse_movie(search_dir, filename, metadata_file_name,
             is_trailer, genre_dir=genre_dir
             )
 
-def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir,
+def tvinfo_from_filename(filename):
+    # Regexes for filenames that match TV shows.
+    #   group 1: series search string (i.e. series name)
+    tv_res = [
+            r'(.+)[Ss](\d\d?)[Ee](\d+)',     # groups 2,3: season,episode
+            r'(.+?)(?: -)? ?(\d+)[Xx](\d+)', # groups 2,3: season,episode
+            r'(.*).(\d\d\d\d).(\d+).(\d+).*', # groups 2,3,4: year,mo,day
+            r'(.*).(\d+).(\d+).(\d\d\d\d).*', # groups 2,3,4: mo,day,year
+            r'(?i)(.+)(\d?\d)(\d\d).*sitv' # re.I, groups 2,3: season,episode
+            ]
+
+    for tv_re in tv_res:
+        match = re.search(tv_re, filename)
+        if match:
+            # Looks like a TV show
+            break
+
+    tv_info = {}
+    if match:
+        tv_info['series'] = re.sub(r'[._]', ' ', match.group(1)).strip()
+        if match.lastindex >= 4:
+            if int(match.group(2)) >= 1000:
+                tv_info['year'] = str(int(match.group(2)))
+                tv_info['month'] = str(int(match.group(3)))
+                tv_info['day'] = str(int(match.group(4)))
+            else:
+                tv_info['year'] = str(int(match.group(4)))
+                tv_info['month'] = str(int(match.group(2)))
+                tv_info['day'] = str(int(match.group(3)))
+        else:
+            tv_info['season'] = str(int(match.group(2))) # strip out leading zeroes
+            tv_info['episode'] = str(int(match.group(3)))
+        debug(2, "    Series: %s\n"%tv_info['series'] + \
+                "    Season: %s\n"%tv_info.get('season', '') + \
+                "    Episode: %s\n"%tv_info.get('episode', '') + \
+                "    Year: %s\n"%tv_info.get('year', '') + \
+                "    Month: %s\n"%tv_info.get('month', '') + \
+                "    Day: %s"%tv_info.get('day', '')
+                )
+
+    return tv_info
+
+def parse_tv(mirror_url, tv_info, meta_dir, meta_file, show_dir,
         use_metadir=False, clobber=False):
     # TODO: thetvdb.com is switching to json, and abandoning xml!
-    series = re.sub(r'[._]', ' ', match.group(1)).strip()
-    if match.lastindex >= 4:
-        season = 0
-        episode = 0
-        if int(match.group(2)) >= 1000:
-            year = str(int(match.group(2)))
-            month = str(int(match.group(3)))
-            day = str(int(match.group(4)))
-        else:
-            year = str(int(match.group(4)))
-            month = str(int(match.group(2)))
-            day = str(int(match.group(3)))
-    else:
-        season = str(int(match.group(2))) # strip out leading zeroes
-        episode = str(int(match.group(3)))
-        year = 0
-        month = 0
-        day = 0
-    debug(2, "    Series: %s\n    Season: %s\n"%(series, season) + \
-            "Episode: %s\n"%episode + \
-            "Year: %s\n    Month: %s\n    Day: %s"%(year, month, day)
-            )
 
     episode_info = {}
-    if series not in SERIES_INFO_CACHE:
-        SERIES_INFO_CACHE[series] = get_series_id(mirror_url, series, show_dir,
+    if tv_info['series'] not in SERIES_INFO_CACHE:
+        SERIES_INFO_CACHE[tv_info['series']] = get_series_id(
+                mirror_url, tv_info['series'], show_dir,
                 use_metadir=use_metadir, clobber=clobber
                 )
-    (series_info_xml, seriesid) = SERIES_INFO_CACHE[series]
+    (series_info_xml, seriesid) = SERIES_INFO_CACHE[tv_info['series']]
     if seriesid is not None and series_info_xml is not None:
         for node in series_info_xml.iter():
             episode_info[node.tag] = node.text
-        if year == 0:
+        if tv_info.get('season', None) and tv_info.get('episode', None):
             episode_info.update(
                     tvdb_v1_get_episode_info(
-                        mirror_url, seriesid, season, episode
+                        mirror_url, seriesid,
+                        tv_info['season'], tv_info['episode']
                         )
                     )
         else:
             episode_info.update(
                     tvdb_v1_get_episode_info_air_date(
-                        mirror_url, seriesid, year, month, day
+                        mirror_url, seriesid,
+                        tv_info['year'], tv_info['month'], tv_info['day']
                         )
                     )
 
@@ -975,17 +998,6 @@ def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir,
 def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,
         clobber=False, genre_dir=None):
     debug(1, "\n## Looking for videos in: " + dir_proc)
-
-    # Regexes for filenames that match TV shows.
-    #   group 1: series search string (i.e. series name)
-
-    tv_res = [
-            r'(.+)[Ss](\d\d?)[Ee](\d+)',     # groups 2,3: season,episode
-            r'(.+?)(?: -)? ?(\d+)[Xx](\d+)', # groups 2,3: season,episode
-            r'(.*).(\d\d\d\d).(\d+).(\d+).*', # groups 2,3,4: year,mo,day
-            r'(.*).(\d+).(\d+).(\d\d\d\d).*', # groups 2,3,4: mo,day,year
-            r'(?i)(.+)(\d?\d)(\d\d).*sitv' # re.I, groups 2,3: season,episode
-            ]
 
     video_files = get_video_files(dir_proc, dir_files)
 
@@ -1009,24 +1021,19 @@ def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,
         if os.path.exists(os.path.join(meta_dir, meta_file)) and not clobber:
             debug(1, "Metadata file already exists, skipping.")
         else:
-            is_tv = False
-            for tv_re in tv_res:
-                match = re.search(tv_re, filename)
-                if match:
-                    # Looks like a TV show
-                    is_tv = True
-                    break
+            # get info in dict if filename looks like tv episode, {} otherwise
+            tv_info = tvinfo_from_filename(filename)
 
-            if is_tv:
+            if tv_info:
                 if HAS_TVDB:
-                    parse_tv(mirror_url, match, meta_dir, meta_file, dir_proc,
+                    parse_tv(mirror_url, tv_info, meta_dir, meta_file, dir_proc,
                             use_metadir=use_metadir, clobber=clobber
                             )
                 else:
                     debug(1, "Metadata service for TV shows is " + \
                             "unavailable, skipping this show.")
             else:
-                # assume movie if not matching tv regex
+                # assume movie if filename not matching tv
                 parse_movie(
                         dir_proc, filename,
                         os.path.join(meta_dir, meta_file),

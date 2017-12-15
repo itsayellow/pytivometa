@@ -625,8 +625,8 @@ def get_movie_info(title, is_trailer=False):
 
         # If only one found, select and go on
         if num_titles == 1:
-            movie = results[0]
-            report_match(movie, len(results))
+            movie_info = results[0]
+            report_match(movie_info, len(results))
         else:
             debug(2, "Found " + str(num_titles) + " matches.")
             # Show max 5 titles
@@ -660,38 +660,46 @@ def get_movie_info(title, is_trailer=False):
                 if movie_num < 0 or movie_num > num_titles:
                     print("Skipping this movie.")
                     return
-            movie = results[movie_num]
+            movie_info = results[movie_num]
             print("------------------------------------")
 
     else: # automatically pick first match
-        movie = results[0]
-        report_match(movie, len(results))
+        movie_info = results[0]
+        report_match(movie_info, len(results))
 
-    # So far the movie object only contains basic information like the
+    # So far the movie_info object only contains basic information like the
     # title and the year; retrieve main information:
     try:
-        imdb_access.update(movie)
-        #debug(3, movie.summary())
+        imdb_access.update(movie_info)
+        #debug(3, movie_info.summary())
     except Exception as e:
-        debug(0, "Warning: unable to get extended details from IMDb for: " + str(movie))
+        debug(0, "Warning: unable to get extended details from IMDb for: " + str(movie_info))
         debug(0, "         You may need to update your imdbpy module.")
+
+    try:
+        pass
+        #don't enable the next line unless you want the full cast,
+        #   actors + everyone else who worked on the movie
+        #imdb_access.update(movie_info, 'full credits')
+    except:
+        debug(1, "Warning: unable to retrieve full credits.")
 
     if is_trailer:
         try:
             # This slows down the process, so only do it for trailers
-            imdb_access.update(movie, 'release dates')
+            imdb_access.update(movie_info, 'release dates')
         except Exception as e:
             debug(1, "Warning: unable to get release date.")
 
-    return movie
+    return movie_info
 
-def format_movie_data(movie, dir_, file_name, metadata_file_name, tags,
+def format_movie_data(movie_info, dir_, file_name, metadata_file_name, tags,
         genre_dir=None):
     line = ""
 
     # search for user language or country version of title if present
     title_aka = ''
-    for aka in movie.get('akas', []):
+    for aka in movie_info.get('akas', []):
         (title_aka, info_aka) = aka.split('::')
         # Note: maybe safer to search for '(imdb display title)' ?
         #   see: Volver, which finds "To Return" with USA, English?
@@ -702,39 +710,39 @@ def format_movie_data(movie, dir_, file_name, metadata_file_name, tags,
             title_aka = ''
 
     # title
-    if title_aka and movie['title'] != title_aka:
-        line = "title : %s (%s) %s\n" % (movie['title'], title_aka, tags)
+    if title_aka and movie_info['title'] != title_aka:
+        line = "title : %s (%s) %s\n" % (movie_info['title'], title_aka, tags)
     else:
-        line = "title : %s %s\n" % (movie['title'], tags)
+        line = "title : %s %s\n" % (movie_info['title'], tags)
 
     # movieYear
-    line += "movieYear : %s\n" % movie['year']
+    line += "movieYear : %s\n" % movie_info['year']
 
-    if movie.get('release dates', None):
-        # movie has key 'release dates' and it is not empty string
-        reldate = get_rel_date(movie['release dates']) + '. '
+    if movie_info.get('release dates', None):
+        # movie_info has key 'release dates' and it is not empty string
+        reldate = get_rel_date(movie_info['release dates']) + '. '
     else:
         reldate = ''
 
     # description
     line += 'description : ' + reldate
-    if "plot outline" in list(movie.keys()):
-        line += movie['plot outline']
+    if "plot outline" in list(movie_info.keys()):
+        line += movie_info['plot outline']
     # IMDB score if available
-    if "rating" in list(movie.keys()):
-        line += " IMDB: %s/10" % movie['rating']
+    if "rating" in list(movie_info.keys()):
+        line += " IMDB: %s/10" % movie_info['rating']
     line += "\n"
 
     # isEpisode always false for movies
     line += "isEpisode : false\n"
     # starRating
-    if "rating" in list(movie.keys()):
-        line += "starRating : x%s\n" % (int((movie['rating']-1)/1.3+1))
+    if "rating" in list(movie_info.keys()):
+        line += "starRating : x%s\n" % (int((movie_info['rating']-1)/1.3+1))
     # mpaa_rating
     # kind of a hack for now...
     # maybe parsing certificates would work better?
-    if "mpaa" in list(movie.keys()):
-        mpaa_str = movie['mpaa']
+    if "mpaa" in list(movie_info.keys()):
+        mpaa_str = movie_info['mpaa']
         mpaa_rating = ""
         if "Rated G " in mpaa_str:
             mpaa_rating = "G1"
@@ -753,44 +761,36 @@ def format_movie_data(movie, dir_, file_name, metadata_file_name, tags,
             line += "mpaaRating : %s\n" % mpaa_rating
 
     #vProgramGenre and vSeriesGenre
-    if "genres" in list(movie.keys()):
-        for i in movie['genres']:
+    if "genres" in list(movie_info.keys()):
+        for i in movie_info['genres']:
             line += "vProgramGenre : %s\n" % i
-        for i in movie['genres']:
+        for i in movie_info['genres']:
             line += "vSeriesGenre : %s\n" % i
         if genre_dir:
             link_genres(dir_, genre_dir, file_name, metadata_file_name,
-                    movie['genres']
+                    movie_info['genres']
                     )
 
-    try:
-        pass
-        #don't enable the next line unless you want the full cast,
-        #   actors + everyone else who worked on the movie
-        #imdb_access.update(movie, 'full credits')
-    except:
-        debug(1, "Warning: unable to retrieve full credits.")
-
     # vDirector (suppress repeated names)
-    if "director" in list(movie.keys()):
+    if "director" in list(movie_info.keys()):
         directors = {}
-        for i in movie['director']:
+        for i in movie_info['director']:
             if i['name'] not in directors:
                 directors[i['name']] = 1
                 line += "vDirector : %s|\n" % i['name']
                 debug(3, "vDirector : " + i['name'])
     # vWriter (suppress repeated names)
-    if "writer" in list(movie.keys()):
+    if "writer" in list(movie_info.keys()):
         writers = {}
-        for i in movie['writer']:
+        for i in movie_info['writer']:
             if i['name'] not in writers:
                 writers[i['name']] = 1
                 line += "vWriter : %s|\n" % i['name']
                 debug(3, "vWriter : " + i['name'])
     # vActor (suppress repeated names)
-    if "cast" in list(movie.keys()):
+    if "cast" in list(movie_info.keys()):
         actors = {}
-        for i in movie['cast']:
+        for i in movie_info['cast']:
             if i['name'] not in actors:
                 actors[i['name']] = 1
                 line += "vActor : %s|\n" % i['name']
@@ -825,14 +825,14 @@ def mk_link(link_name, file_path):
     else:
         os.symlink(target, link_name)
 
-def report_match(movie, num_results):
+def report_match(movie_info, num_results):
     matchtype = 'Using best match: '
     if num_results == 1:
         matchtype = 'Found exact match: '
-    if 'long imdb title' in list(movie.keys()):
-        debug(1, matchtype + movie['long imdb title'])
+    if 'long imdb title' in list(movie_info.keys()):
+        debug(1, matchtype + movie_info['long imdb title'])
     else:
-        debug(1, matchtype + str(movie))
+        debug(1, matchtype + str(movie_info))
 
 def get_rel_date(reldates):
     for rel_date in reldates:

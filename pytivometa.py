@@ -439,7 +439,7 @@ def get_series_id(mirror_url, show_name, show_dir,
 
     return series_info, seriesid
 
-def format_episode_data(ep_data, meta_dir, meta_file):
+def format_episode_data(ep_data, meta_filepath):
     # Takes a dict ep_data of XML elements, the series title, the Zap2It ID (aka
     #   the Tivo groupID), and a filename meta_file
     # This is weak. Should just detect if EpisodeNumber exists.
@@ -594,8 +594,7 @@ def format_episode_data(ep_data, meta_dir, meta_file):
             debug(3, "No data for " + tv_tag)
 
     if metadata_text:
-        mkdir_if_needed(meta_dir)
-        out_file = open(os.path.join(meta_dir, meta_file), 'w')
+        out_file = open(meta_filepath, 'w')
         out_file.write(metadata_text)
         out_file.close()
 
@@ -974,7 +973,7 @@ def tvinfo_from_filename(filename):
 
     return tv_info
 
-def parse_tv(mirror_url, tv_info, meta_dir, meta_file, show_dir,
+def parse_tv(mirror_url, tv_info, meta_filepath, show_dir,
         use_metadir=False, clobber=False):
     # TODO: thetvdb.com is switching to json, and abandoning xml!
 
@@ -1003,7 +1002,7 @@ def parse_tv(mirror_url, tv_info, meta_dir, meta_file, show_dir,
                     )
 
         if episode_info is not None:
-            format_episode_data(episode_info, meta_dir, meta_file)
+            format_episode_data(episode_info, meta_filepath)
 
 def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,
         clobber=False, genre_dir=None):
@@ -1025,10 +1024,12 @@ def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,
 
     for filename in video_files:
         meta_file = filename + '.txt'
-        debug(1, "\n--->working on: %s" % filename)
-        debug(2, "Metadir is: " + meta_dir)
+        meta_filepath = os.path.join(meta_dir, meta_file)
 
-        if os.path.exists(os.path.join(meta_dir, meta_file)) and not clobber:
+        debug(1, "\n--->working on: %s" % filename)
+        debug(2, "Metafile is: " + meta_filepath)
+
+        if os.path.exists(meta_filepath) and not clobber:
             debug(1, "Metadata file already exists, skipping.")
         else:
             # get info in dict if filename looks like tv episode, {} otherwise
@@ -1036,7 +1037,7 @@ def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,
 
             if tv_info:
                 if HAS_TVDB:
-                    parse_tv(mirror_url, tv_info, meta_dir, meta_file, dir_proc,
+                    parse_tv(mirror_url, tv_info, meta_filepath, dir_proc,
                             use_metadir=use_metadir, clobber=clobber
                             )
                 else:
@@ -1044,9 +1045,7 @@ def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,
                             "unavailable, skipping this show.")
             else:
                 # assume movie if filename not matching tv
-                parse_movie(
-                        dir_proc, filename,
-                        os.path.join(meta_dir, meta_file),
+                parse_movie(dir_proc, filename, meta_filepath,
                         is_trailer, genre_dir=genre_dir
                         )
 

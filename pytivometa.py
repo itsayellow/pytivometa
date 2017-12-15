@@ -977,12 +977,14 @@ def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,
     debug(1, "\n## Looking for videos in: " + dir_proc)
 
     # Regexes for filenames that match TV shows.
+    #   group 1: series search string (i.e. series name)
+
     tv_res = [
-            r'(.+)[Ss](\d\d?)[Ee](\d+)',
-            r'(.+?)(?: -)? ?(\d+)[Xx](\d+)',
-            r'(.*).(\d\d\d\d).(\d+).(\d+).*',
-            r'(.*).(\d+).(\d+).(\d\d\d\d).*',
-            r'(?i)(.+)(\d?\d)(\d\d).*sitv'
+            r'(.+)[Ss](\d\d?)[Ee](\d+)',     # groups 2,3: season,episode
+            r'(.+?)(?: -)? ?(\d+)[Xx](\d+)', # groups 2,3: season,episode
+            r'(.*).(\d\d\d\d).(\d+).(\d+).*', # groups 2,3,4: year,mo,day
+            r'(.*).(\d+).(\d+).(\d\d\d\d).*', # groups 2,3,4: mo,day,year
+            r'(?i)(.+)(\d?\d)(\d\d).*sitv' # re.I, groups 2,3: season,episode
             ]
 
     video_files = get_video_files(dir_proc, dir_files)

@@ -211,17 +211,50 @@ def tvdb_v1_get_mirror(timeout):
     return mirror_url
 
 def tvdb_v1_get_episode_info(mirror_url, seriesid, season, episode):
-    # Takes a seriesid, season number, episode number and return xml data`
+    """Take a well-specified tv episode and return data
+
+    Args:
+        mirror_url (str): url of thetvdb.com mirror we are using
+        seriesid (str): string of series ID number
+        season (str): string of season number
+        episode (str): string of episode number
+
+    Returns:
+        dict: data from xml file from thetvdb.com
+    """
     url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + seriesid + \
             "/default/" + season + "/" + episode + "/en.xml"
     debug(3, "tvdb_v1_get_episode_info: Using URL " + url)
 
     episode_info_xml = get_xml(url)
 
-    if episode_info_xml is None:
+    episode_info = {}
+    if episode_info_xml is not None:
+        for node in episode_info_xml.iter():
+            episode_info[node.tag] = node.text
+    else:
         debug(0, "!! Error looking up data for this episode, skipping.")
+        episode_info = None
 
-    return episode_info_xml
+    return episode_info
+
+def tvdb_v1_get_episode_info_air_date(mirror_url, seriesid, year, month, day):
+    # Takes a seriesid, year number, month number, day number, and return xml data
+    url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + TVDB_APIKEY + \
+            "&seriesid=" + seriesid + "&airdate=" + year + "-" + month + "-" + day
+    debug(3, "tvdb_v1_get_episode_info_air_date: Using URL " + url)
+
+    episode_info_xml = get_xml(url)
+
+    episode_info = {}
+    if episode_info_xml is not None:
+        for node in episode_info_xml.iter():
+            episode_info[node.tag] = node.text
+    else:
+        debug(0, "!! Error looking up data for this episode, skipping.")
+        episode_info = None
+
+    return episode_info
 
 def tvdb_v1_find_series_by_year(series, year):
     matching_series = []
@@ -233,18 +266,6 @@ def tvdb_v1_find_series_by_year(series, year):
                 matching_series.append(show)
     # Return all that matched the year (which may be an empty list)
     return matching_series
-
-def tvdb_v1_get_episode_info_air_date(mirror_url, seriesid, year, month, day):
-    # Takes a seriesid, year number, month number, day number, and return xml data
-    url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + TVDB_APIKEY + \
-            "&seriesid=" + seriesid + "&airdate=" + year + "-" + month + "-" + day
-    debug(3, "tvdb_v1_get_episode_info_air_date: Using URL " + url)
-
-    episode_info_xml = get_xml(url)
-    if episode_info_xml is None:
-        debug(0, "!! Error looking up data for this episode, skipping.")
-
-    return episode_info_xml
 
 # -----------------------------------------------------------------------------
 
@@ -650,6 +671,7 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags,
         except Exception as e:
             debug(1, "Warning: unable to get release date.")
         if movie.get('release dates', None):
+            # movie has key 'release dates' and it is not empty string
             reldate += get_rel_date(movie['release dates']) + '. '
     # description
     line += 'description : ' + reldate
@@ -930,16 +952,19 @@ def parse_tv(mirror_url, match, meta_dir, meta_file, show_dir,
         for node in series_info_xml.iter():
             episode_info[node.tag] = node.text
         if year == 0:
-            episode_info_xml = tvdb_v1_get_episode_info(
-                    mirror_url, seriesid, season, episode
+            episode_info.update(
+                    tvdb_v1_get_episode_info(
+                        mirror_url, seriesid, season, episode
+                        )
                     )
         else:
-            episode_info_xml = tvdb_v1_get_episode_info_air_date(
-                    mirror_url, seriesid, year, month, day
+            episode_info.update(
+                    tvdb_v1_get_episode_info_air_date(
+                        mirror_url, seriesid, year, month, day
+                        )
                     )
-        if episode_info_xml is not None:
-            for node in episode_info_xml.iter():
-                episode_info[node.tag] = node.text
+
+        if episode_info is not None:
             format_episode_data(episode_info, meta_dir, meta_file)
 
 def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,

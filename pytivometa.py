@@ -69,6 +69,7 @@ else:
     HAS_IMDB = True
 
 # Which country's release date do we want to see:
+#   Also as another way to search for an "Also Known As" title
 COUNTRY = 'USA'
 
 # What language to use for "Also Known As" title?

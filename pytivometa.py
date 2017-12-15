@@ -373,8 +373,6 @@ def get_series_id(mirror_url, show_name, show_dir,
     else:
         series = tvdb_v1_search_series(mirror_url, bare_title)
 
-        print(series)
-
         if year and len(series) > 1:
             debug(2, "There are %d matching series, "%(len(series)) + \
                     "but we know what year to search for (%s)."%year

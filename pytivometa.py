@@ -75,6 +75,9 @@ else:
 # Which country's release date do we want to see:
 COUNTRY = 'USA'
 
+# What language to use for "Also Known As" title?
+LANG = 'English'
+
 # Flag to track if TV lookups are enabled.
 HAS_TVDB = True
 
@@ -449,7 +452,7 @@ def format_episode_data(ep_data, meta_filepath):
     # The following is a dictionary of pyTivo metadata attributes and how they
     #   map to thetvdb xml elements.
     pytivo_metadata = {
-        # As seen on http://pytivo.armooo.net/wiki/MetaData
+        # https://pytivo.sourceforge.io/wiki/index.php/Metadata
         'time' : 'time',
         'originalAirDate' : 'FirstAired',
         'seriesTitle' : 'SeriesName',
@@ -534,17 +537,15 @@ def format_episode_data(ep_data, meta_filepath):
     ]
 
     transtable = {
-        8217 : '\'',
-        8216 : '\'',
-        8220 : '\"',
-        8221 : '\"'
+        8217 : '\'', # Unicode RIGHT SINGLE QUOTATION MARK (U+2019)
+        8216 : '\'', # Unicode LEFT SINGLE QUOTATION MARK (U+2018)
+        8220 : '\"', # Unicode LEFT DOUBLE QUOTATION MARK (U+201C)
+        8221 : '\"'  # Unicode RIGHT DOUBLE QUOTATION MARK (U+201D)
     }
 
     for tv_tag in pytivo_metadata_order:
-
         debug(3, "Working on " + tv_tag)
-        if (tv_tag in pytivo_metadata and (pytivo_metadata[tv_tag]) and
-                pytivo_metadata[tv_tag] in ep_data and ep_data[pytivo_metadata[tv_tag]]):
+        if pytivo_metadata.get(tv_tag, '') and ep_data.get(pytivo_metadata[tv_tag], ''):
             # got data to work with
             line = term = ""
             text = str(ep_data[pytivo_metadata[tv_tag]]).translate(transtable)
@@ -598,8 +599,7 @@ def format_episode_data(ep_data, meta_filepath):
         out_file.write(metadata_text)
         out_file.close()
 
-def format_movie_data(title, dir_, file_name, metadata_file_name, tags,
-        is_trailer, genre_dir=None):
+def get_movie_info(title, is_trailer=False):
     line = ""
 
     debug(1, "Searching IMDb for: " + title)
@@ -673,22 +673,46 @@ def format_movie_data(title, dir_, file_name, metadata_file_name, tags,
         debug(0, "Warning: unable to get extended details from IMDb for: " + str(movie))
         debug(0, "         You may need to update your imdbpy module.")
 
-    # title
-    line = "title : %s %s\n" % (movie['title'], tags)
-
-    # movieYear
-    line += "movieYear : %s\n" % movie['year']
-
-    reldate = ''
     if is_trailer:
         try:
             # This slows down the process, so only do it for trailers
             imdb_access.update(movie, 'release dates')
         except Exception as e:
             debug(1, "Warning: unable to get release date.")
-        if movie.get('release dates', None):
-            # movie has key 'release dates' and it is not empty string
-            reldate += get_rel_date(movie['release dates']) + '. '
+
+    return movie
+
+def format_movie_data(movie, dir_, file_name, metadata_file_name, tags,
+        genre_dir=None):
+    line = ""
+
+    # search for user language or country version of title if present
+    title_aka = ''
+    for aka in movie.get('akas',[]):
+        (title_aka, info_aka) = aka.split('::')
+        # Note: maybe safer to search for '(imdb display title)' ?
+        #   see: Volver, which finds "To Return" with USA, English?
+        if COUNTRY in info_aka or '(' + LANG + ' title)' in info_aka:
+            debug(3, "AKA: " + title_aka + "::" + info_aka)
+            break
+        else:
+            title_aka = ''
+
+    # title
+    if title_aka and movie['title'] != title_aka:
+        line = "title : %s (%s) %s\n" % (movie['title'], title_aka, tags)
+    else:
+        line = "title : %s %s\n" % (movie['title'], tags)
+
+    # movieYear
+    line += "movieYear : %s\n" % movie['year']
+
+    if movie.get('release dates', None):
+        # movie has key 'release dates' and it is not empty string
+        reldate += get_rel_date(movie['release dates']) + '. '
+    else:
+        reldate = ''
+
     # description
     line += 'description : ' + reldate
     if "plot outline" in list(movie.keys()):
@@ -927,10 +951,13 @@ def parse_movie(search_dir, filename, metadata_file_name,
     debug(3, "Before fixing spaces, title is: " + title)
     title = fix_spaces(title)
     debug(3, "After fixing spaces, title is: " + title)
-    format_movie_data(
-            title, search_dir, filename, metadata_file_name, tags,
-            is_trailer, genre_dir=genre_dir
-            )
+
+    movie_info = get_movie_info(title, is_trailer)
+
+    if movie_info is not None:
+        format_movie_data(movie_info, search_dir, filename, metadata_file_name,
+                tags, genre_dir=genre_dir
+                )
 
 def tvinfo_from_filename(filename):
     # Regexes for filenames that match TV shows.

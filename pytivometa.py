@@ -216,19 +216,19 @@ def tvdb_v1_get_mirror(timeout):
         HAS_TVDB = False
     return mirror_url
 
-def tvdb_v1_get_episode_info(mirror_url, seriesid, season, episode):
+def tvdb_v1_get_episode_info(mirror_url, series_id, season, episode):
     """Take a well-specified tv episode and return data
 
     Args:
         mirror_url (str): url of thetvdb.com mirror we are using
-        seriesid (str): string of series ID number
+        series_id (str): string of series ID number
         season (str): string of season number
         episode (str): string of episode number
 
     Returns:
         dict: data from xml file from thetvdb.com
     """
-    url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + seriesid + \
+    url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + series_id + \
             "/default/" + season + "/" + episode + "/en.xml"
     debug(3, "tvdb_v1_get_episode_info: Using URL " + url)
 
@@ -244,10 +244,10 @@ def tvdb_v1_get_episode_info(mirror_url, seriesid, season, episode):
 
     return episode_info
 
-def tvdb_v1_get_episode_info_air_date(mirror_url, seriesid, year, month, day):
-    # Takes a seriesid, year number, month number, day number, and return xml data
+def tvdb_v1_get_episode_info_air_date(mirror_url, series_id, year, month, day):
+    # Takes a series_id, year number, month number, day number, and return xml data
     url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + TVDB_APIKEY + \
-            "&seriesid=" + seriesid + "&airdate=" + year + "-" + month + "-" + day
+            "&seriesid=" + series_id + "&airdate=" + year + "-" + month + "-" + day
     debug(3, "tvdb_v1_get_episode_info_air_date: Using URL " + url)
 
     episode_info_xml = get_xml(url)
@@ -278,8 +278,8 @@ def tvdb_v1_search_series(mirror_url, bare_title):
     # return list of xml.etree.ElementTree.Element
     return series
 
-def tvdb_v1_get_series_info(mirror_url, seriesid):
-    series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + seriesid + "/en.xml"
+def tvdb_v1_get_series_info(mirror_url, series_id):
+    series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + series_id + "/en.xml"
     debug(3, "getSeriesInfoXML: Using URL " + series_url)
 
     series_info_xml = get_xml(series_url)
@@ -344,7 +344,7 @@ def find_series_by_year(series, year):
 
 def get_series_id(mirror_url, show_name, show_dir,
         use_metadir=False, clobber=False):
-    seriesid = None
+    series_id = None
     sidfiles = [os.path.join(show_dir, show_name + ".seriesID")]
     if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
         sidfiles.append(os.path.join(show_dir, META_DIR, show_name + ".seriesID"))
@@ -361,15 +361,15 @@ def get_series_id(mirror_url, show_name, show_dir,
     # Prepare the seriesID file
     for seriesidpath in sidfiles:
         debug(2, "Looking for .seriesID file in " + seriesidpath)
-        # Get seriesid
+        # Get series_id
         if os.path.exists(seriesidpath):
             debug(2, "Reading seriesID from file: " + seriesidpath)
             with open(seriesidpath, 'r') as seriesidfile:
-                seriesid = seriesidfile.read()
-            debug(1, "Using stored seriesID: " + seriesid)
+                series_id = seriesidfile.read()
+            debug(1, "Using stored seriesID: " + series_id)
 
-    if not clobber and seriesid:
-        seriesid = re.sub("\n", "", seriesid)
+    if not clobber and series_id:
+        series_id = re.sub("\n", "", series_id)
     else:
         series = tvdb_v1_search_series(mirror_url, bare_title)
 
@@ -384,7 +384,7 @@ def get_series_id(mirror_url, show_name, show_dir,
 
         if len(series) == 1:
             debug(1, "Found exact match")
-            seriesid = series[0].findtext('id')
+            series_id = series[0].findtext('id')
         elif INTERACTIVE:
             # Display all the shows found
             if len(series) > 1:
@@ -412,36 +412,36 @@ def get_series_id(mirror_url, show_name, show_dir,
                     print("------------------------------------")
                 print("####################################\n\n")
                 try:
-                    seriesid = input('Please choose the correct seriesid: ')
+                    series_id = input('Please choose the correct series ID: ')
                 except KeyboardInterrupt:
                     print("\nCaught interrupt, exiting.")
                     sys.exit(1)
 
         elif len(series) > 1:
             debug(1, "Using best match: " + series[0].findtext('SeriesName'))
-            seriesid = series[0].findtext('id')
+            series_id = series[0].findtext('id')
 
         # Did we find any matches
-        if series and seriesid:
+        if series and series_id:
             # creating series ID file from scratch, so pick best path
             if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
                 seriesidpath = os.path.join(
                         show_dir, META_DIR, show_name + ".seriesID")
             else:
                 seriesidpath = os.path.join(show_dir, show_name + ".seriesID")
-            debug(1, "Found seriesID: " + seriesid)
+            debug(1, "Found seriesID: " + series_id)
             debug(2, "Writing seriesID to file: " + seriesidpath)
-            with open(seriesidpath, 'w') as seriesidfile 
-                seriesidfile.write(seriesid)
+            with open(seriesidpath, 'w') as seriesidfile:
+                seriesidfile.write(series_id)
         else:
-            debug(1, "Unable to find seriesid.")
+            debug(1, "Unable to find series_id.")
 
-    if seriesid:
-        series_info = tvdb_v1_get_series_info(mirror_url, seriesid)
+    if series_id:
+        series_info = tvdb_v1_get_series_info(mirror_url, series_id)
     else:
         series_info = {}
 
-    return series_info, seriesid
+    return series_info, series_id
 
 def format_episode_data(ep_data, meta_filepath):
     # Takes a dict ep_data of XML elements, the series title, the Zap2It ID (aka
@@ -1009,20 +1009,20 @@ def parse_tv(mirror_url, tv_info, meta_filepath, show_dir,
                 mirror_url, tv_info['series'], show_dir,
                 use_metadir=use_metadir, clobber=clobber
                 )
-    (series_info, seriesid) = SERIES_INFO_CACHE[tv_info['series']]
-    if seriesid and series_info:
+    (series_info, series_id) = SERIES_INFO_CACHE[tv_info['series']]
+    if series_id and series_info:
         episode_info.update(series_info)
         if tv_info.get('season', None) and tv_info.get('episode', None):
             episode_info.update(
                     tvdb_v1_get_episode_info(
-                        mirror_url, seriesid,
+                        mirror_url, series_id,
                         tv_info['season'], tv_info['episode']
                         )
                     )
         else:
             episode_info.update(
                     tvdb_v1_get_episode_info_air_date(
-                        mirror_url, seriesid,
+                        mirror_url, series_id,
                         tv_info['year'], tv_info['month'], tv_info['day']
                         )
                     )

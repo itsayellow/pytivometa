@@ -151,7 +151,7 @@ def tvdb_v2_get_session_token():
 
     return tvdb_sess_token
 
-def tvdb_v2_search_series(search_string):
+def tvdb_v2_search_series(tvdb_token, search_string):
     """Given a search string, return a list from thetvdb.com of all possible
     television series matches.
 
@@ -163,13 +163,9 @@ def tvdb_v2_search_series(search_string):
             show
     """
 
-    if TVDB_SESSION_TOKEN == '':
-        print("ERROR - No Session Token")
-        return
-
     tvdb_search_series_url = "https://api.thetvdb.com/search/series"
     headers = {
-            'Authorization': 'Bearer '+ TVDB_SESSION_TOKEN,
+            'Authorization': 'Bearer '+ tvdb_token,
             'Accept': 'application/json'
             }
 
@@ -190,6 +186,12 @@ def tvdb_v2_search_series(search_string):
 
     return json_data['data']
 
+def tvdb_v2_get_series_info(tvdb_token, series_id):
+    pass
+def tvdb_v2_get_episode_info(tvdb_token, series_id, season, episode):
+    pass
+def tvdb_v1_get_episode_info_air_date(tvdb_token, series_id, year, month, day):
+    pass
 # -----------------------------------------------------------------------------
 # Current TVDB API v1 (XML) support -------------------------------------------
 
@@ -215,6 +217,37 @@ def tvdb_v1_get_mirror(timeout):
              )
         HAS_TVDB = False
     return mirror_url
+
+def tvdb_v1_search_series(mirror_url, bare_title):
+    getseriesid_url = '/api/GetSeries.php?'
+
+    debug(1, "Searching for: " + bare_title)
+    url = mirror_url + getseriesid_url + urllib.parse.urlencode({"seriesname" : bare_title})
+    debug(3, "series_xml: Using URL " + url)
+
+    series_xml = get_xml(url)
+    if series_xml is None:
+        debug(3, "Error getting Series Info")
+        return None, None
+    series = [Item for Item in series_xml.findall('Series')]
+
+    # return list of xml.etree.ElementTree.Element
+    return series
+
+def tvdb_v1_get_series_info(mirror_url, series_id):
+    series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + series_id + "/en.xml"
+    debug(3, "getSeriesInfoXML: Using URL " + series_url)
+
+    series_info_xml = get_xml(series_url)
+
+    series_info = {}
+    if series_info_xml is not None:
+        for node in series_info_xml.iter():
+            series_info[node.tag] = node.text
+    else:
+        debug(0, "!! Error parsing series info, skipping.")
+
+    return series_info
 
 def tvdb_v1_get_episode_info(mirror_url, series_id, season, episode):
     """Take a well-specified tv episode and return data
@@ -261,37 +294,6 @@ def tvdb_v1_get_episode_info_air_date(mirror_url, series_id, year, month, day):
         episode_info = None
 
     return episode_info
-
-def tvdb_v1_search_series(mirror_url, bare_title):
-    getseriesid_url = '/api/GetSeries.php?'
-
-    debug(1, "Searching for: " + bare_title)
-    url = mirror_url + getseriesid_url + urllib.parse.urlencode({"seriesname" : bare_title})
-    debug(3, "series_xml: Using URL " + url)
-
-    series_xml = get_xml(url)
-    if series_xml is None:
-        debug(3, "Error getting Series Info")
-        return None, None
-    series = [Item for Item in series_xml.findall('Series')]
-
-    # return list of xml.etree.ElementTree.Element
-    return series
-
-def tvdb_v1_get_series_info(mirror_url, series_id):
-    series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + series_id + "/en.xml"
-    debug(3, "getSeriesInfoXML: Using URL " + series_url)
-
-    series_info_xml = get_xml(series_url)
-
-    series_info = {}
-    if series_info_xml is not None:
-        for node in series_info_xml.iter():
-            series_info[node.tag] = node.text
-    else:
-        debug(0, "!! Error parsing series info, skipping.")
-
-    return series_info
 
 # fetch plaintext or gzipped xml data from url
 def get_xml(url):

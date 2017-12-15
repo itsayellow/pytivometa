@@ -688,7 +688,7 @@ def format_movie_data(movie, dir_, file_name, metadata_file_name, tags,
 
     # search for user language or country version of title if present
     title_aka = ''
-    for aka in movie.get('akas',[]):
+    for aka in movie.get('akas', []):
         (title_aka, info_aka) = aka.split('::')
         # Note: maybe safer to search for '(imdb display title)' ?
         #   see: Volver, which finds "To Return" with USA, English?
@@ -709,7 +709,7 @@ def format_movie_data(movie, dir_, file_name, metadata_file_name, tags,
 
     if movie.get('release dates', None):
         # movie has key 'release dates' and it is not empty string
-        reldate += get_rel_date(movie['release dates']) + '. '
+        reldate = get_rel_date(movie['release dates']) + '. '
     else:
         reldate = ''
 

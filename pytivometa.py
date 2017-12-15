@@ -49,6 +49,7 @@ like a season and episode specification as part of it.
 import argparse
 from datetime import datetime
 import os
+import os.path
 import re
 import sys
 import textwrap

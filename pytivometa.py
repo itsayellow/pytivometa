@@ -256,7 +256,25 @@ def tvdb_v1_get_episode_info_air_date(mirror_url, seriesid, year, month, day):
 
     return episode_info
 
-def tvdb_v1_find_series_by_year(series, year):
+def tvdb_v1_search_series(mirror_url, bare_title):
+    getseriesid_url = '/api/GetSeries.php?'
+
+    debug(1, "Searching for: " + bare_title)
+    url = mirror_url + getseriesid_url + urllib.parse.urlencode({"seriesname" : bare_title})
+    debug(3, "series_xml: Using URL " + url)
+
+    series_xml = get_xml(url)
+    if series_xml is None:
+        debug(3, "Error getting Series Info")
+        return None, None
+    series = [Item for Item in series_xml.findall('Series')]
+
+    # return list of xml.etree.ElementTree.Element
+    return series
+
+# -----------------------------------------------------------------------------
+
+def find_series_by_year(series, year):
     matching_series = []
     for show in series:
         first_aired = show.findtext('FirstAired')
@@ -266,8 +284,6 @@ def tvdb_v1_find_series_by_year(series, year):
                 matching_series.append(show)
     # Return all that matched the year (which may be an empty list)
     return matching_series
-
-# -----------------------------------------------------------------------------
 
 # fetch plaintext or gzipped xml data from url
 def get_xml(url):
@@ -307,11 +323,6 @@ def get_xml(url):
 
 def get_series_id(mirror_url, show_name, show_dir,
         use_metadir=False, clobber=False):
-    # useful URL substrings
-    getseriesid_url = '/api/GetSeries.php?'
-    #getepisodeid_url = '/GetEpisodes.php?'
-    #getepisodeinfo_url = '/EpisodeUpdates.php?'
-
     seriesid = None
     sidfiles = [os.path.join(show_dir, show_name + ".seriesID")]
     if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
@@ -340,21 +351,15 @@ def get_series_id(mirror_url, show_name, show_dir,
     if not clobber and seriesid:
         seriesid = re.sub("\n", "", seriesid)
     else:
-        debug(1, "Searching for: " + bare_title)
-        url = mirror_url + getseriesid_url + urllib.parse.urlencode({"seriesname" : bare_title})
-        debug(3, "series_xml: Using URL " + url)
+        series = tvdb_v1_search_series(mirror_url, bare_title)
 
-        series_xml = get_xml(url)
-        if series_xml is None:
-            debug(3, "Error getting Series Info")
-            return None, None
-        series = [Item for Item in series_xml.findall('Series')]
+        print(series)
 
         if year and len(series) > 1:
             debug(2, "There are %d matching series, "%(len(series)) + \
                     "but we know what year to search for (%s)."%year
                     )
-            series = tvdb_v1_find_series_by_year(series, year)
+            series = find_series_by_year(series, year)
             debug(2, "Series that match by year: %d." % len(series))
 
         if len(series) == 1:
@@ -362,7 +367,7 @@ def get_series_id(mirror_url, show_name, show_dir,
             seriesid = series[0].findtext('id')
         elif INTERACTIVE:
             # Display all the shows found
-            if len(series) >= 2:
+            if len(series) > 1:
                 print("####################################\n")
                 print("Multiple TV Shows found:\n")
                 print("Found %s shows for Series Title %s"%(len(series), show_name)

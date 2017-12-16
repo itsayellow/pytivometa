@@ -613,7 +613,7 @@ def get_movie_info(title, is_trailer=False):
         sys.exit(3)
 
     if not results:
-        debug(1, "No matches found.")
+        debug(0, title + ": No matches found.")
         return
 
     if INTERACTIVE:

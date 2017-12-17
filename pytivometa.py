@@ -120,6 +120,9 @@ TVDB_SESSION_TOKEN = ''
 def tvdb_v2_get_session_token():
     """Get a current session token for thetvdb.com, necessary for any
     future requests of data.
+
+    Returns:
+        str: TVDB session token, used for all future requests in http header
     """
     global TVDB_SESSION_TOKEN
 
@@ -156,13 +159,28 @@ def tvdb_v2_search_series(tvdb_token, search_string):
     television series matches.
 
     Args:
+        tvdb_token (str): tvdb API session token
         search_string (str): string to search for tvdb series info
 
     Returns:
         list: list of dicts, each dict contains data of a possibly-matching
             show
-    """
 
+        e.g.
+        [
+            {'aliases': [], 'banner': 'graphical/314614-g6.jpg',
+                'firstAired': '2016-07-21', 'id': 314614,
+                'network': 'BBC Three',
+                'overview': 'Meet Fleabag. She’s not talking to all of us....',
+                'seriesName': 'Fleabag', 'status': 'Continuing'
+            },
+            {'aliases': [], 'banner': '', 'firstAired': '', 'id': 269062,
+                'network': '',
+                'overview': "A living, breathing, farting embodiment ....",
+                'seriesName': 'Fleabag Monkeyface', 'status': 'Ended'
+            }
+        ]
+    """
     tvdb_search_series_url = "https://api.thetvdb.com/search/series"
     headers = {
             'Authorization': 'Bearer '+ tvdb_token,
@@ -187,11 +205,61 @@ def tvdb_v2_search_series(tvdb_token, search_string):
     return json_data['data']
 
 def tvdb_v2_get_series_info(tvdb_token, series_id):
-    pass
+    """Given a series ID, return info on the series
+
+    Args:
+        tvdb_token (str): tvdb API session token
+        series_id (str): Zap2It / Tivo series ID number for series
+
+    Returns:
+        dict: Available data from TVDB about series
+
+        e.g.: {'id': 314614, 'seriesName': 'Fleabag', 'aliases': [],
+            'banner': 'graphical/314614-g6.jpg', 'seriesId': '',
+            'status': 'Continuing', 'firstAired': '2016-07-21',
+            'network': 'BBC Three', 'networkId': '', 'runtime': '25',
+            'genre': ['Comedy'],
+            'overview': 'Meet Fleabag. She’s not talking to all of us.....',
+            'lastUpdated': 1510663171, 'airsDayOfWeek': 'Thursday',
+            'airsTime': '', 'rating': '', 'imdbId': 'tt5687612',
+            'zap2itId': '', 'added': '2016-07-21 03:03:01', 'addedBy': 380790,
+            'siteRating': 8.8, 'siteRatingCount': 9}
+    """
+    # TODO: can use /series/{id}/filter to get only desired tags
+    # TODO: also use /series/{id}/actors to get series actors
+    tvdb_series_info_url = "https://api.thetvdb.com/series"
+    headers = {
+            'Authorization': 'Bearer '+ tvdb_token,
+            'Accept': 'application/json'
+            }
+
+    request = urllib.request.Request(
+            tvdb_series_info_url + "/" + series_id,
+            headers=headers
+            )
+
+    try:
+        json_reply_raw = urllib.request.urlopen(request)
+    except urllib.error.HTTPError as http_error:
+        print(http_error)
+        # TODO: do something better than re-raise
+        raise
+
+    json_reply = json_reply_raw.read().decode()
+    json_data = json.loads(json_reply)
+
+    return json_data['data']
+
 def tvdb_v2_get_episode_info(tvdb_token, series_id, season, episode):
     pass
-def tvdb_v1_get_episode_info_air_date(tvdb_token, series_id, year, month, day):
+    # /series/{id}/episodes/query to get episode 'id'
+    # Then  /episodes/{id} for full details
+
+def tvdb_v2_get_episode_info_air_date(tvdb_token, series_id, year, month, day):
     pass
+    # need to get all pages in /series/{id}/episodes to find air date?
+    # Then  /episodes/{id} for full details
+
 # -----------------------------------------------------------------------------
 # Current TVDB API v1 (XML) support -------------------------------------------
 
@@ -219,6 +287,21 @@ def tvdb_v1_get_mirror(timeout):
     return mirror_url
 
 def tvdb_v1_search_series(mirror_url, bare_title):
+    """Given a search string, return a list from thetvdb.com of all possible
+    television series matches.
+
+    Args:
+        mirror_url (str): tvdb mirror base url
+        bare_title (str): string to search for tvdb series info
+
+    Returns:
+        list: list of xml.etree.ElementTree.Element's containing series ID,
+            description
+
+        e.g.
+        [
+        ]
+    """
     getseriesid_url = '/api/GetSeries.php?'
 
     debug(1, "Searching for: " + bare_title)
@@ -229,12 +312,45 @@ def tvdb_v1_search_series(mirror_url, bare_title):
     if series_xml is None:
         debug(3, "Error getting Series Info")
         return None, None
-    series = [Item for Item in series_xml.findall('Series')]
+    series_xml_data = [Item for Item in series_xml.findall('Series')]
+
+    series = []
+    for this_series_xml_data in series_xml_data:
+        this_series = {}
+        this_series['id'] = this_series_xml_data.findtext('id')
+        this_series['FirstAired'] = this_series_xml_data.findtext('FirstAired')
+        this_series['SeriesName'] = this_series_xml_data.findtext('SeriesName')
+        this_series['Overview'] = this_series_xml_data.findtext('Overview')
+        series.append(this_series)
 
     # return list of xml.etree.ElementTree.Element
     return series
 
 def tvdb_v1_get_series_info(mirror_url, series_id):
+    """Given a series ID, return info on the series
+
+    Args:
+        mirror_url (str): tvdb mirror base url
+        series_id (str): Zap2It / Tivo series ID number for series
+
+    Returns:
+        dict: Available data from TVDB about series
+
+        e.g.: {'Data': '\n  ', 'Series': '\n    ', 'id': '314614',
+        'Actors': '|Phoebe Waller-Bridge|Ben Aldridge|Brett Gelman|Bill Paterson|Sian Clifford|Jenny Rainsford|Hugh Skinner|Olivia Colman|Jamie Demetriou|Hugh Dennis|',
+        'Airs_DayOfWeek': 'Thursday', 'Airs_Time': None, 'ContentRating': None,
+        'FirstAired': '2016-07-21', 'Genre': '|Comedy|', 'IMDB_ID': 'tt5687612',
+        'Language': 'en', 'Network': 'BBC Three', 'NetworkID': None,
+        'Overview': 'Meet Fleabag. She’s not talking to all of us....',
+        'Rating': '8.8', 'RatingCount': '9', 'Runtime': '25', 'SeriesID': None,
+        'SeriesName': 'Fleabag', 'Status': 'Continuing',
+        'added': '2016-07-21 03:03:01', 'addedBy': '380790',
+        'banner': 'graphical/314614-g6.jpg',
+        'fanart': 'fanart/original/314614-4.jpg', 'finale_aired': '2016-08-25',
+        'lastupdated': '1510663171', 'poster': 'posters/314614-3.jpg',
+        'tms_wanted_old': '0', 'zap2it_id': None}
+
+    """
     series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + series_id + "/en.xml"
     debug(3, "getSeriesInfoXML: Using URL " + series_url)
 
@@ -260,6 +376,20 @@ def tvdb_v1_get_episode_info(mirror_url, series_id, season, episode):
 
     Returns:
         dict: data from xml file from thetvdb.com
+
+        e.g.: {'Data': None, 'Episode': '\n', 'id': '5685549',
+        'seasonid': '674592', 'EpisodeNumber': '1', 'EpisodeName': 'Episode 1',
+        'FirstAired': '2016-07-21', 'GuestStars': None, 'Director': None,
+        'Writer': 'Phoebe Waller-Bridge',
+        'Overview': 'Angry, pervy, outrageous and hilarious, Fleabag....',
+        'ProductionCode': 'p040trv9', 'lastupdated': '1510609127',
+        'flagged': '0', 'DVD_discid': None, 'DVD_season': None,
+        'DVD_episodenumber': None, 'DVD_chapter': None, 'absolute_number': None,
+        'filename': 'episodes/314614/5685549.jpg', 'seriesid': '314614',
+        'thumb_added': '2016-07-21 03:27:02', 'thumb_width': '400',
+        'thumb_height': '225', 'tms_export': None, 'mirrorupdate':
+        '2017-11-13 13:29:46', 'IMDB_ID': 'tt5705890', 'EpImgFlag': '2',
+        'is_movie': '0', 'Rating': '8', 'SeasonNumber': '1', 'Language': 'en'}
     """
     url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + series_id + \
             "/default/" + season + "/" + episode + "/en.xml"
@@ -278,6 +408,31 @@ def tvdb_v1_get_episode_info(mirror_url, series_id, season, episode):
     return episode_info
 
 def tvdb_v1_get_episode_info_air_date(mirror_url, series_id, year, month, day):
+    """Take a well-specified tv episode and return data
+
+    Args:
+        mirror_url (str): url of thetvdb.com mirror we are using
+        series_id (str): string of series ID number
+        year (str): string of year of air date
+        month (str): string of month of air date
+        day (str): string of date of air date
+
+    Returns:
+        dict: data from xml file from thetvdb.com
+
+        e.g.: {'Data': '\n', 'Episode': '\n', 'id': '5685549',
+        'Combined_episodenumber': '1', 'Combined_season': '1',
+        'DVD_chapter': None, 'DVD_discid': None, 'DVD_episodenumber': None,
+        'DVD_season': None, 'Director': None, 'EpImgFlag': '2',
+        'EpisodeName': 'Episode 1', 'EpisodeNumber': '1',
+        'FirstAired': '2016-07-21', 'GuestStars': None,
+        'IMDB_ID': 'tt5705890', 'Language': 'en',
+        'Overview': 'Angry, pervy, outrageous and hilarious....',
+        'ProductionCode': 'p040trv9', 'Rating': None, 'SeasonNumber': '1',
+        'Writer': 'Phoebe Waller-Bridge', 'absolute_number': None,
+        'filename': 'episodes/314614/5685549.jpg', 'lastupdated': '1510609127',
+        'seasonid': '674592', 'seriesid': '314614'}
+    """
     # Takes a series_id, year number, month number, day number, and return xml data
     url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + TVDB_APIKEY + \
             "&seriesid=" + series_id + "&airdate=" + year + "-" + month + "-" + day
@@ -335,12 +490,12 @@ def get_xml(url):
 
 def find_series_by_year(series, year):
     matching_series = []
-    for show in series:
-        first_aired = show.findtext('FirstAired')
+    for series_candidate in series:
+        first_aired = series_candidate['FirstAired']
         if first_aired:
             match = re.search(r'(\d\d\d\d)-\d\d-\d\d', first_aired)
             if match and year == match.group(1):
-                matching_series.append(show)
+                matching_series.append(series_candidate)
     # Return all that matched the year (which may be an empty list)
     return matching_series
 
@@ -384,7 +539,7 @@ def get_series_id(mirror_url, show_name, show_dir,
 
         if len(series) == 1:
             debug(1, "Found exact match")
-            series_id = series[0].findtext('id')
+            series_id = series[0]['id']
         elif INTERACTIVE:
             # Display all the shows found
             if len(series) > 1:
@@ -393,11 +548,11 @@ def get_series_id(mirror_url, show_name, show_dir,
                 print("Found %s shows for Series Title %s"%(len(series), show_name)
                     )
                 print("------------------------------------")
-                for episode in series:
-                    ep_series_name = episode.findtext('SeriesName')
-                    ep_id = episode.findtext('id')
-                    ep_overview = episode.findtext('Overview')
-                    first_aired = episode.findtext('FirstAired')
+                for series_candidate in series:
+                    ep_series_name = series_candidate['SeriesName']
+                    ep_id = series_candidate['id']
+                    ep_overview = series_candidate['Overview']
+                    first_aired = series_candidate['FirstAired']
                     # ep_overview may not exist, so default them to something so
                     #   print doesn't fail
                     if ep_overview is None:
@@ -418,8 +573,8 @@ def get_series_id(mirror_url, show_name, show_dir,
                     sys.exit(1)
 
         elif len(series) > 1:
-            debug(1, "Using best match: " + series[0].findtext('SeriesName'))
-            series_id = series[0].findtext('id')
+            debug(1, "Using best match: " + series[0]['SeriesName'])
+            series_id = series[0]['id']
 
         # Did we find any matches
         if series and series_id:
@@ -446,8 +601,9 @@ def get_series_id(mirror_url, show_name, show_dir,
 def format_episode_data(ep_data, meta_filepath):
     # Takes a dict ep_data of XML elements, the series title, the Zap2It ID (aka
     #   the Tivo groupID), and a filepath meta_filepath
-    # This is weak. Should just detect if EpisodeNumber exists.
     metadata_text = ''
+
+    # assuming we are TV episode, this is true
     ep_data["isEpisode"] = "true"
 
     # The following is a dictionary of pyTivo metadata attributes and how they
@@ -1001,6 +1157,124 @@ def tvinfo_from_filename(filename):
 
 def parse_tv(mirror_url, tv_info, meta_filepath, show_dir,
         use_metadir=False, clobber=False):
+    """
+    Tags we need in episode_info if possible:
+        'Actors',
+        'Choreographer'
+        'Director',
+        'EpisodeName',
+        'EpisodeNumber',
+        'ExecProducer',
+        'FirstAired',
+        'Genre',
+        'GuestStars',
+        'Host',
+        'Overview',
+        'Producer',
+        'SeriesName',
+        'Writer',
+        'callsign',
+        'displayMajorNumber',
+        'displayMinorNumber',
+        'isEpisode',
+        'showingBits',
+        'startTime',
+        'stopTime',
+        'time',
+        'tvRating',
+        'zap2it_id',
+
+    Tags in TVDB /series/{id}
+        {
+            "added": "string",
+            "airsDayOfWeek": "string",
+            "airsTime": "string",
+            "aliases": ["string",]
+            "banner": "string",
+            "firstAired": "string",
+            "genre": ["string",]
+            "id": 0,
+            "imdbId": "string",
+            "lastUpdated": 0,
+            "network": "string",
+            "networkId": "string",
+            "overview": "string",
+            "rating": "string",
+            "runtime": "string",
+            "seriesId": 0,
+            "seriesName": "string",
+            "siteRating": 0,
+            "siteRatingCount": 0,
+            "status": "string",
+            "zap2itId": "string"
+        }
+
+    Tags in TVDB /series/{id}/actors
+        [
+            {
+                "id": 0,
+                "image": "string",
+                "imageAdded": "string",
+                "imageAuthor": 0,
+                "lastUpdated": "string",
+                "name": "string",
+                "role": "string",
+                "seriesId": 0,
+                "sortOrder": 0
+            },
+        ]
+
+    Tags in TVDB /series/{id}/episodes/query or /series/{id}/episodes
+        [
+            {
+                "absoluteNumber": 0,
+                "airedEpisodeNumber": 0,
+                "airedSeason": 0,
+                "dvdEpisodeNumber": 0,
+                "dvdSeason": 0,
+                "episodeName": "string",
+                "firstAired": "string",
+                "id": 0,
+                "lastUpdated": 0,
+                "overview": "string"
+            }
+        ]
+
+    Tags in TVDB /episodes/{id}
+    {
+        "absoluteNumber": 0,
+        "airedEpisodeNumber": 0,
+        "airedSeason": 0,
+        "airsAfterSeason": 0,
+        "airsBeforeEpisode": 0,
+        "airsBeforeSeason": 0,
+        "director": "string",
+        "directors": [ "string" ],
+        "dvdChapter": 0,
+        "dvdDiscid": "string",
+        "dvdEpisodeNumber": 0,
+        "dvdSeason": 0,
+        "episodeName": "string",
+        "filename": "string",
+        "firstAired": "string",
+        "guestStars": [ "string" ],
+        "id": 0,
+        "imdbId": "string",
+        "lastUpdated": 0,
+        "lastUpdatedBy": "string",
+        "overview": "string",
+        "productionCode": "string",
+        "seriesId": "string",
+        "showUrl": "string",
+        "siteRating": 0,
+        "siteRatingCount": 0,
+        "thumbAdded": "string",
+        "thumbAuthor": 0,
+        "thumbHeight": "string",
+        "thumbWidth": "string",
+        "writers": [ "string" ]
+    }
+    """
     # TODO: thetvdb.com is switching to json, and abandoning xml!
 
     episode_info = {}

@@ -625,56 +625,79 @@ def format_episode_data(ep_data, meta_filepath):
 
     # The following is a dictionary of pyTivo metadata attributes and how they
     #   map to thetvdb xml elements.
+
+    # TODO: episodeNumber is hash of TVDB: (airedSeason, airedEpisodeNumber)
+    # NOTE: 'NOT_IN_TVDB_INFO' is a placeholder to show it does not exist
+    #       as metadata on TVDB
     pytivo_metadata = {
         # https://pytivo.sourceforge.io/wiki/index.php/Metadata
-        'time' : 'time',
-        'originalAirDate' : 'FirstAired',
+        'time' : 'NOT_IN_TVDB_INFO', # pytivo wants either 'file' or 'oad' or time_str that works in: datetime(*uniso(time_str)[:6])
+        'originalAirDate' : 'firstAired',
         'seriesTitle' : 'seriesName',
-        'title' : 'EpisodeName',
-        'episodeTitle' : 'EpisodeName',
-        'description' : 'Overview',
+        'episodeTitle' : 'episodeName',
+        'title' : 'airedEpisodeName', # seriesTitle - episodeTitle
+        'description' : 'overview',
         'isEpisode' : 'isEpisode',
         'seriesId' : 'zap2itId',
-        'episodeNumber' : 'EpisodeNumber',
-        'displayMajorNumber' : 'displayMajorNumber',
-        'callsign' : 'callsign',
-        'showingBits' : 'showingBits',
-        'displayMinorNumber' : 'displayMinorNumber',
-        'startTime' : 'startTime',
-        'stopTime' : 'stopTime',
-        'tvRating' : 'tvRating',
-        'vProgramGenre' : 'genre',
-        'vSeriesGenre' : 'genre',
+        'episodeNumber' : 'airedEpisodeNumber', # airedSeason + airedEpisodeNumber
+        'displayMajorNumber' : 'NOT_IN_TVDB_INFO',
+        'displayMinorNumber' : 'NOT_IN_TVDB_INFO',
+        'callsign' : 'network',
+        'showingBits' : 'NOT_IN_TVDB_INFO',
+        'partCount' : 'NOT_IN_TVDB_INFO',
+        'partIndex' : 'NOT_IN_TVDB_INFO',
+        'tvRating' : 'rating',
+        'vProgramGenre' : 'genre', # can be list
+        'vSeriesGenre' : 'genre', # can be list
         'vActor' : 'actors',
-        'vGuestStar' : 'GuestStars',
-        'vDirector' : 'Director',
-        'vProducer' : 'Producer',
-        'vExecProducer' : 'ExecProducer',
-        'vWriter' : 'Writer',
-        'vHost' : 'Host',
-        'vChoreographer' : 'Choreographer',
+        'vGuestStar' : 'guestStars',
+        'vDirector' : 'directors',
+        'vProducer' : 'NOT_IN_TVDB_INFO',
+        'vExecProducer' : 'NOT_IN_TVDB_INFO',
+        'vWriter' : 'writers',
+        'vHost' : 'NOT_IN_TVDB_INFO', # check
+        'vChoreographer' : 'NOT_IN_TVDB_INFO',
     }
 
     # These are thetvdb xml elements that have no corresponding Tivo metadata
-    #   attribute. Maybe someday.
-    #unused = {
-    #    'id' : 'id',
-    #    'seasonid' : 'seasonid',
-    #    'ProductionCode' : 'ProductionCode',
-    #    'ShowURL' : 'ShowURL',
-    #    'lastupdated' : 'lastupdated',
-    #    'flagged' : 'flagged',
-    #    'DVD_discid' : 'DVD_discid',
-    #    'DVD_season' : 'DVD_season',
-    #    'DVD_episodenumber' : 'DVD_episodenumber',
-    #    'DVD_chapter' : 'DVD_chapter',
-    #    'absolute_number' : 'absolute_number',
-    #    'filename' : 'filename',
-    #    'lastupdatedby' : 'lastupdatedby',
-    #    'mirrorupdate' : 'mirrorupdate',
-    #    'lockedby' : 'lockedby',
-    #    'SeasonNumber': 'SeasonNumber'
-    #}
+    #   attribute.
+    # absoluteNumber
+    # added
+    # addedBy
+    # airedSeasonID
+    # airsAfterSeason
+    # airsBeforeEpisode
+    # airsBeforeSeason
+    # airsDayOfWeek
+    # airsTime
+    # aliases
+    # banner
+    # director - DEPRECATED, use directors instead
+    # dvdChapter
+    # dvdDiscid
+    # dvdEpisodeNumber
+    # dvdSeason
+    # filename
+    # id
+    # imdbId
+    # language
+    # lastUpdated
+    # lastUpdatedBy
+    # network
+    # networkId
+    # productionCode
+    # rating
+    # runtime
+    # seriesId
+    # showUrl
+    # siteRating
+    # siteRatingCount
+    # status
+    # thumbAdded
+    # thumbAuthor
+    # thumbHeight
+    # thumbWidth
+    
 
     # pyTivo Metadata tag order
     pytivo_metadata_order = [
@@ -728,6 +751,8 @@ def format_episode_data(ep_data, meta_filepath):
             else:
                 text = str(ep_data[pytivo_metadata[tv_tag]])
             text = text.translate(transtable)
+            # replace all whitespace chacaters with single spaces
+            text = ' '.join(text.split())
 
             # for debugging character translations
             #if tv_tag == 'description':
@@ -753,9 +778,9 @@ def format_episode_data(ep_data, meta_filepath):
 
             # Only check to see if Season is > 0, allow EpNum to be 0 for
             #   things like "1x00 - Bonus content"
-            if (tv_tag == 'episodeNumber' and ep_data['EpisodeNumber'] and
-                    int(ep_data['SeasonNumber'])):
-                text = "%d%02d"%(int(ep_data['SeasonNumber']), int(ep_data['EpisodeNumber']))
+            if (tv_tag == 'episodeNumber' and ep_data['airedEpisodeNumber'] and
+                    int(ep_data['airedSeason'])):
+                text = "%d%02d"%(int(ep_data['airedSeason']), int(ep_data['airedEpisodeNumber']))
 
             if tv_tag in metadata_name_fields:
                 term = "|"
@@ -1276,8 +1301,8 @@ def parse_tv(tvdb_token, tvdb_mirror, tv_info, meta_filepath, show_dir,
         episode_info.update(series_info)
         if tv_info.get('season', None) and tv_info.get('episode', None):
             episode_info.update(
-                    tvdb_v1_get_episode_info(
-                        tvdb_mirror, tvdb_series_id,
+                    tvdb_v2_get_episode_info(
+                        tvdb_token, tvdb_series_id,
                         tv_info['season'], tv_info['episode']
                         )
                     )

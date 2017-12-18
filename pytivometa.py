@@ -115,7 +115,27 @@ def debug(level, text):
 # Experimental TVDB new API v2 support ----------------------------------------
 import json
 
-TVDB_SESSION_TOKEN = ''
+def tvdb_v2_get(url, tvdb_token, headers_extra=None):
+    headers = {
+            'Authorization': 'Bearer '+ tvdb_token,
+            'Accept': 'application/json'
+            }
+    if headers_extra is not None:
+        headers.update(headers_extra)
+
+    request = urllib.request.Request(url, headers=headers)
+
+    try:
+        json_reply_raw = urllib.request.urlopen(request)
+    except urllib.error.HTTPError as http_error:
+        print(http_error)
+        # TODO: do something better than re-raise
+        raise
+
+    json_reply = json_reply_raw.read().decode()
+    json_data = json.loads(json_reply)
+
+    return json_data
 
 def tvdb_v2_get_session_token():
     """Get a current session token for thetvdb.com, necessary for any
@@ -124,8 +144,6 @@ def tvdb_v2_get_session_token():
     Returns:
         str: TVDB session token, used for all future requests in http header
     """
-    global TVDB_SESSION_TOKEN
-
     # execute POST: send apikey, receive session token
     tvdb_api_login_url = "https://api.thetvdb.com/login"
     post_fields = {'apikey': TVDB_APIKEY}
@@ -149,8 +167,6 @@ def tvdb_v2_get_session_token():
     json_reply = json_reply_raw.read().decode()
     json_data = json.loads(json_reply)
     tvdb_sess_token = json_data['token']
-
-    TVDB_SESSION_TOKEN = tvdb_sess_token
 
     return tvdb_sess_token
 
@@ -182,37 +198,48 @@ def tvdb_v2_search_series(tvdb_token, search_string):
         ]
     """
     tvdb_search_series_url = "https://api.thetvdb.com/search/series"
-    headers = {
-            'Authorization': 'Bearer '+ tvdb_token,
-            'Accept': 'application/json'
-            }
 
-    request = urllib.request.Request(
+    json_data = tvdb_v2_get(
             tvdb_search_series_url + "?name=" + search_string,
-            headers=headers
+            tvdb_token=tvdb_token
             )
-
-    try:
-        json_reply_raw = urllib.request.urlopen(request)
-    except urllib.error.HTTPError as http_error:
-        print(http_error)
-        # TODO: do something better than re-raise
-        raise
-
-    json_reply = json_reply_raw.read().decode()
-    json_data = json.loads(json_reply)
 
     return json_data['data']
 
-def tvdb_v2_get_series_info(tvdb_token, series_id):
+def tvdb_v2_get_series_info(tvdb_token, tvdb_series_id):
     """Given a series ID, return info on the series
 
     Args:
         tvdb_token (str): tvdb API session token
-        series_id (str): Zap2It / Tivo series ID number for series
+        tvdb_series_id (str): TVDB series ID number for series
 
     Returns:
         dict: Available data from TVDB about series
+            keys:
+            [
+            'added',
+            'addedBy',
+            'airsDayOfWeek',
+            'airsTime',
+            'aliases',
+            'banner',
+            'firstAired',
+            'genre',
+            'id',
+            'imdbId',
+            'lastUpdated',
+            'network',
+            'networkId',
+            'overview',
+            'rating',
+            'runtime',
+            'seriesId',
+            'seriesName',
+            'siteRating',
+            'siteRatingCount',
+            'status',
+            'zap2itId',
+            ]
 
         e.g.: {'id': 314614, 'seriesName': 'Fleabag', 'aliases': [],
             'banner': 'graphical/314614-g6.jpg', 'seriesId': '',
@@ -228,34 +255,39 @@ def tvdb_v2_get_series_info(tvdb_token, series_id):
     # TODO: can use /series/{id}/filter to get only desired tags
     # TODO: also use /series/{id}/actors to get series actors
     tvdb_series_info_url = "https://api.thetvdb.com/series"
-    headers = {
-            'Authorization': 'Bearer '+ tvdb_token,
-            'Accept': 'application/json'
-            }
+    #headers = {
+    #        'Authorization': 'Bearer '+ tvdb_token,
+    #        'Accept': 'application/json'
+    #        }
 
-    request = urllib.request.Request(
-            tvdb_series_info_url + "/" + series_id,
-            headers=headers
+    #request = urllib.request.Request(
+    #        tvdb_series_info_url + "/" + tvdb_series_id,
+    #        headers=headers
+    #        )
+
+    #try:
+    #    json_reply_raw = urllib.request.urlopen(request)
+    #except urllib.error.HTTPError as http_error:
+    #    print(http_error)
+    #    # TODO: do something better than re-raise
+    #    raise
+
+    #json_reply = json_reply_raw.read().decode()
+    #json_data = json.loads(json_reply)
+
+    json_data = tvdb_v2_get(
+            tvdb_series_info_url + "/" + tvdb_series_id,
+            tvdb_token=tvdb_token
             )
-
-    try:
-        json_reply_raw = urllib.request.urlopen(request)
-    except urllib.error.HTTPError as http_error:
-        print(http_error)
-        # TODO: do something better than re-raise
-        raise
-
-    json_reply = json_reply_raw.read().decode()
-    json_data = json.loads(json_reply)
 
     return json_data['data']
 
-def tvdb_v2_get_episode_info(tvdb_token, series_id, season, episode):
+def tvdb_v2_get_episode_info(tvdb_token, tvdb_series_id, season, episode):
     pass
     # /series/{id}/episodes/query to get episode 'id'
     # Then  /episodes/{id} for full details
 
-def tvdb_v2_get_episode_info_air_date(tvdb_token, series_id, year, month, day):
+def tvdb_v2_get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, day):
     pass
     # need to get all pages in /series/{id}/episodes to find air date?
     # Then  /episodes/{id} for full details
@@ -286,55 +318,58 @@ def tvdb_v1_get_mirror(timeout):
         HAS_TVDB = False
     return mirror_url
 
-def tvdb_v1_search_series(mirror_url, bare_title):
-    """Given a search string, return a list from thetvdb.com of all possible
-    television series matches.
+#def tvdb_v1_search_series(mirror_url, bare_title):
+#    """Given a search string, return a list from thetvdb.com of all possible
+#    television series matches.
+#
+#    Args:
+#        mirror_url (str): tvdb mirror base url
+#        bare_title (str): string to search for tvdb series info
+#
+#    Returns:
+#        list: list of dicts containing: id, FirstAired, SeriesName,
+#            Overview
+#    """
+#    getseriesid_url = '/api/GetSeries.php?'
+#
+#    debug(1, "Searching for: " + bare_title)
+#    url = mirror_url + getseriesid_url + urllib.parse.urlencode({"seriesname" : bare_title})
+#    debug(3, "series_xml: Using URL " + url)
+#
+#    series_xml = get_xml(url)
+#    if series_xml is None:
+#        debug(3, "Error getting Series Info")
+#        return None, None
+#    series_xml_data = [Item for Item in series_xml.findall('Series')]
+#
+#    series = []
+#    for this_series_xml_data in series_xml_data:
+#        this_series = {}
+#        this_series['id'] = this_series_xml_data.findtext('id')
+#        this_series['FirstAired'] = this_series_xml_data.findtext('FirstAired')
+#        this_series['SeriesName'] = this_series_xml_data.findtext('SeriesName')
+#        this_series['Overview'] = this_series_xml_data.findtext('Overview')
+#        series.append(this_series)
+#
+#    # return list of xml.etree.ElementTree.Element
+#    return series
 
-    Args:
-        mirror_url (str): tvdb mirror base url
-        bare_title (str): string to search for tvdb series info
-
-    Returns:
-        list: list of xml.etree.ElementTree.Element's containing series ID,
-            description
-
-        e.g.
-        [
-        ]
-    """
-    getseriesid_url = '/api/GetSeries.php?'
-
-    debug(1, "Searching for: " + bare_title)
-    url = mirror_url + getseriesid_url + urllib.parse.urlencode({"seriesname" : bare_title})
-    debug(3, "series_xml: Using URL " + url)
-
-    series_xml = get_xml(url)
-    if series_xml is None:
-        debug(3, "Error getting Series Info")
-        return None, None
-    series_xml_data = [Item for Item in series_xml.findall('Series')]
-
-    series = []
-    for this_series_xml_data in series_xml_data:
-        this_series = {}
-        this_series['id'] = this_series_xml_data.findtext('id')
-        this_series['FirstAired'] = this_series_xml_data.findtext('FirstAired')
-        this_series['SeriesName'] = this_series_xml_data.findtext('SeriesName')
-        this_series['Overview'] = this_series_xml_data.findtext('Overview')
-        series.append(this_series)
-
-    # return list of xml.etree.ElementTree.Element
-    return series
-
-def tvdb_v1_get_series_info(mirror_url, series_id):
+def tvdb_v1_get_series_info(mirror_url, tvdb_series_id):
     """Given a series ID, return info on the series
 
     Args:
         mirror_url (str): tvdb mirror base url
-        series_id (str): Zap2It / Tivo series ID number for series
+        tvdb_series_id (str): TVDB series ID number for series
 
     Returns:
-        dict: Available data from TVDB about series
+        dict: Available data from TVDB about series.
+            keys:
+            ['Actors', 'Airs_DayOfWeek', 'Airs_Time', 'ContentRating', 'Data',
+            'FirstAired', 'Genre', 'IMDB_ID', 'Language', 'Network',
+            'NetworkID', 'Overview', 'Rating', 'RatingCount', 'Runtime',
+            'Series', 'SeriesID', 'SeriesName', 'Status', 'added', 'addedBy',
+            'banner', 'fanart', 'finale_aired', 'id', 'lastupdated', 'poster',
+            'tms_wanted_old', 'zap2it_id']
 
         e.g.: {'Data': '\n  ', 'Series': '\n    ', 'id': '314614',
         'Actors': '|Phoebe Waller-Bridge|Ben Aldridge|Brett Gelman|Bill Paterson|Sian Clifford|Jenny Rainsford|Hugh Skinner|Olivia Colman|Jamie Demetriou|Hugh Dennis|',
@@ -351,7 +386,7 @@ def tvdb_v1_get_series_info(mirror_url, series_id):
         'tms_wanted_old': '0', 'zap2it_id': None}
 
     """
-    series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + series_id + "/en.xml"
+    series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + tvdb_series_id + "/en.xml"
     debug(3, "getSeriesInfoXML: Using URL " + series_url)
 
     series_info_xml = get_xml(series_url)
@@ -365,12 +400,12 @@ def tvdb_v1_get_series_info(mirror_url, series_id):
 
     return series_info
 
-def tvdb_v1_get_episode_info(mirror_url, series_id, season, episode):
+def tvdb_v1_get_episode_info(mirror_url, tvdb_series_id, season, episode):
     """Take a well-specified tv episode and return data
 
     Args:
         mirror_url (str): url of thetvdb.com mirror we are using
-        series_id (str): string of series ID number
+        tvdb_series_id (str): string of series ID number
         season (str): string of season number
         episode (str): string of episode number
 
@@ -391,7 +426,7 @@ def tvdb_v1_get_episode_info(mirror_url, series_id, season, episode):
         '2017-11-13 13:29:46', 'IMDB_ID': 'tt5705890', 'EpImgFlag': '2',
         'is_movie': '0', 'Rating': '8', 'SeasonNumber': '1', 'Language': 'en'}
     """
-    url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + series_id + \
+    url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + tvdb_series_id + \
             "/default/" + season + "/" + episode + "/en.xml"
     debug(3, "tvdb_v1_get_episode_info: Using URL " + url)
 
@@ -407,12 +442,12 @@ def tvdb_v1_get_episode_info(mirror_url, series_id, season, episode):
 
     return episode_info
 
-def tvdb_v1_get_episode_info_air_date(mirror_url, series_id, year, month, day):
+def tvdb_v1_get_episode_info_air_date(mirror_url, tvdb_series_id, year, month, day):
     """Take a well-specified tv episode and return data
 
     Args:
         mirror_url (str): url of thetvdb.com mirror we are using
-        series_id (str): string of series ID number
+        tvdb_series_id (str): string of series ID number
         year (str): string of year of air date
         month (str): string of month of air date
         day (str): string of date of air date
@@ -433,9 +468,9 @@ def tvdb_v1_get_episode_info_air_date(mirror_url, series_id, year, month, day):
         'filename': 'episodes/314614/5685549.jpg', 'lastupdated': '1510609127',
         'seasonid': '674592', 'seriesid': '314614'}
     """
-    # Takes a series_id, year number, month number, day number, and return xml data
+    # Takes a tvdb_series_id, year number, month number, day number, and return xml data
     url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + TVDB_APIKEY + \
-            "&seriesid=" + series_id + "&airdate=" + year + "-" + month + "-" + day
+            "&seriesid=" + tvdb_series_id + "&airdate=" + year + "-" + month + "-" + day
     debug(3, "tvdb_v1_get_episode_info_air_date: Using URL " + url)
 
     episode_info_xml = get_xml(url)
@@ -491,7 +526,7 @@ def get_xml(url):
 def find_series_by_year(series, year):
     matching_series = []
     for series_candidate in series:
-        first_aired = series_candidate['FirstAired']
+        first_aired = series_candidate['firstAired']
         if first_aired:
             match = re.search(r'(\d\d\d\d)-\d\d-\d\d', first_aired)
             if match and year == match.group(1):
@@ -499,12 +534,14 @@ def find_series_by_year(series, year):
     # Return all that matched the year (which may be an empty list)
     return matching_series
 
-def get_series_id(mirror_url, show_name, show_dir,
+def get_series_id(tvdb_token, mirror_url, show_name, show_dir,
         use_metadir=False, clobber=False):
-    series_id = None
-    sidfiles = [os.path.join(show_dir, show_name + ".seriesID")]
+    tvdb_series_id = None
+    series_id_files = [os.path.join(show_dir, show_name + ".seriesID")]
     if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
-        sidfiles.append(os.path.join(show_dir, META_DIR, show_name + ".seriesID"))
+        series_id_files.append(
+                os.path.join(show_dir, META_DIR, show_name + ".seriesID")
+                )
 
     # See if there's a year in the name
     match = re.search(r'(.+?) *\(((?:19|20)\d\d)\)', show_name)
@@ -516,19 +553,20 @@ def get_series_id(mirror_url, show_name, show_dir,
         year = ''
 
     # Prepare the seriesID file
-    for seriesidpath in sidfiles:
+    for seriesidpath in series_id_files:
         debug(2, "Looking for .seriesID file in " + seriesidpath)
-        # Get series_id
+        # Get tvdb_series_id
         if os.path.exists(seriesidpath):
             debug(2, "Reading seriesID from file: " + seriesidpath)
             with open(seriesidpath, 'r') as seriesidfile:
-                series_id = seriesidfile.read()
-            debug(1, "Using stored seriesID: " + series_id)
+                tvdb_series_id = seriesidfile.read()
+            debug(1, "Using stored seriesID: " + tvdb_series_id)
 
-    if not clobber and series_id:
-        series_id = re.sub("\n", "", series_id)
+    if not clobber and tvdb_series_id:
+        tvdb_series_id = re.sub("\n", "", tvdb_series_id)
     else:
-        series = tvdb_v1_search_series(mirror_url, bare_title)
+        #series = tvdb_v1_search_series(mirror_url, bare_title)
+        series = tvdb_v2_search_series(tvdb_token, bare_title)
 
         if year and len(series) > 1:
             debug(2, "There are %d matching series, "%(len(series)) + \
@@ -539,7 +577,7 @@ def get_series_id(mirror_url, show_name, show_dir,
 
         if len(series) == 1:
             debug(1, "Found exact match")
-            series_id = series[0]['id']
+            tvdb_series_id = series[0]['id']
         elif INTERACTIVE:
             # Display all the shows found
             if len(series) > 1:
@@ -549,10 +587,11 @@ def get_series_id(mirror_url, show_name, show_dir,
                     )
                 print("------------------------------------")
                 for series_candidate in series:
-                    ep_series_name = series_candidate['SeriesName']
+                    print(series_candidate)
+                    ep_series_name = series_candidate['seriesName']
                     ep_id = series_candidate['id']
-                    ep_overview = series_candidate['Overview']
-                    first_aired = series_candidate['FirstAired']
+                    ep_overview = series_candidate['overview']
+                    first_aired = series_candidate['firstAired']
                     # ep_overview may not exist, so default them to something so
                     #   print doesn't fail
                     if ep_overview is None:
@@ -560,43 +599,43 @@ def get_series_id(mirror_url, show_name, show_dir,
                     if len(ep_overview) > 240:
                         ep_overview = ep_overview[0:239]
                     print("Series Name:\t%s" % ep_series_name)
-                    print("Series ID:\t%s" % ep_id)
+                    print("TVDB Series ID:\t%s" % ep_id)
                     if first_aired:
                         print("1st Aired:\t%s" % first_aired)
                     print(textwrap.fill("Description:\t%s"%ep_overview, width=78))
                     print("------------------------------------")
                 print("####################################\n\n")
                 try:
-                    series_id = input('Please choose the correct series ID: ')
+                    tvdb_series_id = input('Please choose the correct series ID: ')
                 except KeyboardInterrupt:
                     print("\nCaught interrupt, exiting.")
                     sys.exit(1)
 
         elif len(series) > 1:
-            debug(1, "Using best match: " + series[0]['SeriesName'])
-            series_id = series[0]['id']
+            debug(1, "Using best match: " + series[0]['seriesName'])
+            tvdb_series_id = series[0]['id']
 
         # Did we find any matches
-        if series and series_id:
+        if series and tvdb_series_id:
             # creating series ID file from scratch, so pick best path
             if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
                 seriesidpath = os.path.join(
                         show_dir, META_DIR, show_name + ".seriesID")
             else:
                 seriesidpath = os.path.join(show_dir, show_name + ".seriesID")
-            debug(1, "Found seriesID: " + series_id)
+            debug(1, "Found seriesID: " + tvdb_series_id)
             debug(2, "Writing seriesID to file: " + seriesidpath)
             with open(seriesidpath, 'w') as seriesidfile:
-                seriesidfile.write(series_id)
+                seriesidfile.write(tvdb_series_id)
         else:
-            debug(1, "Unable to find series_id.")
+            debug(1, "Unable to find tvdb_series_id.")
 
-    if series_id:
-        series_info = tvdb_v1_get_series_info(mirror_url, series_id)
+    if tvdb_series_id:
+        series_info = tvdb_v1_get_series_info(mirror_url, tvdb_series_id)
     else:
         series_info = {}
 
-    return series_info, series_id
+    return series_info, tvdb_series_id
 
 def format_episode_data(ep_data, meta_filepath):
     # Takes a dict ep_data of XML elements, the series title, the Zap2It ID (aka
@@ -1155,7 +1194,7 @@ def tvinfo_from_filename(filename):
 
     return tv_info
 
-def parse_tv(mirror_url, tv_info, meta_filepath, show_dir,
+def parse_tv(tvdb_token, mirror_url, tv_info, meta_filepath, show_dir,
         use_metadir=False, clobber=False):
     """
     Tags we need in episode_info if possible:
@@ -1280,23 +1319,24 @@ def parse_tv(mirror_url, tv_info, meta_filepath, show_dir,
     episode_info = {}
     if tv_info['series'] not in SERIES_INFO_CACHE:
         SERIES_INFO_CACHE[tv_info['series']] = get_series_id(
+                tvdb_token,
                 mirror_url, tv_info['series'], show_dir,
                 use_metadir=use_metadir, clobber=clobber
                 )
-    (series_info, series_id) = SERIES_INFO_CACHE[tv_info['series']]
-    if series_id and series_info:
+    (series_info, tvdb_series_id) = SERIES_INFO_CACHE[tv_info['series']]
+    if tvdb_series_id and series_info:
         episode_info.update(series_info)
         if tv_info.get('season', None) and tv_info.get('episode', None):
             episode_info.update(
                     tvdb_v1_get_episode_info(
-                        mirror_url, series_id,
+                        mirror_url, tvdb_series_id,
                         tv_info['season'], tv_info['episode']
                         )
                     )
         else:
             episode_info.update(
                     tvdb_v1_get_episode_info_air_date(
-                        mirror_url, series_id,
+                        mirror_url, tvdb_series_id,
                         tv_info['year'], tv_info['month'], tv_info['day']
                         )
                     )
@@ -1304,7 +1344,7 @@ def parse_tv(mirror_url, tv_info, meta_filepath, show_dir,
         if episode_info is not None:
             format_episode_data(episode_info, meta_filepath)
 
-def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,
+def process_dir(dir_proc, dir_files, tvdb_token, mirror_url, use_metadir=False,
         clobber=False, genre_dir=None):
     debug(1, "\n## Looking for videos in: " + dir_proc)
 
@@ -1336,7 +1376,8 @@ def process_dir(dir_proc, dir_files, mirror_url, use_metadir=False,
 
             if tv_info:
                 if HAS_TVDB:
-                    parse_tv(mirror_url, tv_info, meta_filepath, dir_proc,
+                    parse_tv(tvdb_token, mirror_url, tv_info, meta_filepath,
+                            dir_proc,
                             use_metadir=use_metadir, clobber=clobber
                             )
                 else:
@@ -1459,6 +1500,7 @@ def main():
 
     # Initalize things we'll need for looking up data
     tvdb_mirror = tvdb_v1_get_mirror(args.timeout)
+    tvdb_token = tvdb_v2_get_session_token()
 
     # create/set genre dir if specified and possible
     if args.genre:
@@ -1474,14 +1516,14 @@ def main():
                 # only non-hidden dirs (no dirs starting with .)
                 #   but '.' dir is OK
                 if not re.search(r'\..+', dirname):
-                    process_dir(dirpath, dir_files, tvdb_mirror,
+                    process_dir(dirpath, dir_files, tvdb_token, tvdb_mirror,
                             use_metadir=args.metadir,
                             clobber=args.clobber,
                             genre_dir=genre_dir
                             )
         else:
             dir_files = os.listdir(search_dir)
-            process_dir(search_dir, dir_files, tvdb_mirror,
+            process_dir(search_dir, dir_files, tvdb_token, tvdb_mirror,
                     use_metadir=args.metadir,
                     clobber=args.clobber,
                     genre_dir=genre_dir

@@ -311,87 +311,6 @@ def tvdb_v1_get_mirror(timeout):
         HAS_TVDB = False
     return tvdb_mirror
 
-#def tvdb_v1_search_series(tvdb_mirror, bare_title):
-#    """Given a search string, return a list from thetvdb.com of all possible
-#    television series matches.
-#
-#    Args:
-#        tvdb_mirror (str): tvdb mirror base url
-#        bare_title (str): string to search for tvdb series info
-#
-#    Returns:
-#        list: list of dicts containing: id, FirstAired, SeriesName,
-#            Overview
-#    """
-#    getseriesid_url = '/api/GetSeries.php?'
-#
-#    debug(1, "Searching for: " + bare_title)
-#    url = tvdb_mirror + getseriesid_url + urllib.parse.urlencode({"seriesname" : bare_title})
-#    debug(3, "series_xml: Using URL " + url)
-#
-#    series_xml = get_xml(url)
-#    if series_xml is None:
-#        debug(3, "Error getting Series Info")
-#        return None, None
-#    series_xml_data = [Item for Item in series_xml.findall('Series')]
-#
-#    series = []
-#    for this_series_xml_data in series_xml_data:
-#        this_series = {}
-#        this_series['id'] = this_series_xml_data.findtext('id')
-#        this_series['FirstAired'] = this_series_xml_data.findtext('FirstAired')
-#        this_series['SeriesName'] = this_series_xml_data.findtext('SeriesName')
-#        this_series['Overview'] = this_series_xml_data.findtext('Overview')
-#        series.append(this_series)
-#
-#    # return list of xml.etree.ElementTree.Element
-#    return series
-
-#def tvdb_v1_get_series_info(tvdb_mirror, tvdb_series_id):
-#    """Given a series ID, return info on the series
-#
-#    Args:
-#        tvdb_mirror (str): tvdb mirror base url
-#        tvdb_series_id (str): TVDB series ID number for series
-#
-#    Returns:
-#        dict: Available data from TVDB about series.
-#            keys:
-#            ['Actors', 'Airs_DayOfWeek', 'Airs_Time', 'ContentRating', 'Data',
-#            'FirstAired', 'Genre', 'IMDB_ID', 'Language', 'Network',
-#            'NetworkID', 'Overview', 'Rating', 'RatingCount', 'Runtime',
-#            'Series', 'SeriesID', 'SeriesName', 'Status', 'added', 'addedBy',
-#            'banner', 'fanart', 'finale_aired', 'id', 'lastupdated', 'poster',
-#            'tms_wanted_old', 'zap2it_id']
-#
-#        e.g.: {'Data': '\n  ', 'Series': '\n    ', 'id': '314614',
-#        'Actors': '|Phoebe Waller-Bridge|Ben Aldridge|Brett Gelman|Bill Paterson|Sian Clifford|Jenny Rainsford|Hugh Skinner|Olivia Colman|Jamie Demetriou|Hugh Dennis|',
-#        'Airs_DayOfWeek': 'Thursday', 'Airs_Time': None, 'ContentRating': None,
-#        'FirstAired': '2016-07-21', 'Genre': '|Comedy|', 'IMDB_ID': 'tt5687612',
-#        'Language': 'en', 'Network': 'BBC Three', 'NetworkID': None,
-#        'Overview': 'Meet Fleabag. She’s not talking to all of us....',
-#        'Rating': '8.8', 'RatingCount': '9', 'Runtime': '25', 'SeriesID': None,
-#        'SeriesName': 'Fleabag', 'Status': 'Continuing',
-#        'added': '2016-07-21 03:03:01', 'addedBy': '380790',
-#        'banner': 'graphical/314614-g6.jpg',
-#        'fanart': 'fanart/original/314614-4.jpg', 'finale_aired': '2016-08-25',
-#        'lastupdated': '1510663171', 'poster': 'posters/314614-3.jpg',
-#        'tms_wanted_old': '0', 'zap2it_id': None}
-#
-#    """
-#    series_url = tvdb_mirror + "/api/" + TVDB_APIKEY + "/series/" + tvdb_series_id + "/en.xml"
-#    debug(3, "getSeriesInfoXML: Using URL " + series_url)
-#
-#    series_info_xml = get_xml(series_url)
-#
-#    series_info = {}
-#    if series_info_xml is not None:
-#        for node in series_info_xml.iter():
-#            series_info[node.tag] = node.text
-#    else:
-#        debug(0, "!! Error parsing series info, skipping.")
-#
-#    return series_info
 
 def tvdb_v1_get_episode_info(tvdb_mirror, tvdb_series_id, season, episode):
     """Take a well-specified tv episode and return data
@@ -584,7 +503,7 @@ def find_series_by_year(series, year):
     # Return all that matched the year (which may be an empty list)
     return matching_series
 
-def get_series_id(tvdb_token, tvdb_mirror, show_name, show_dir,
+def get_series_id(tvdb_token, show_name, show_dir,
         use_metadir=False, clobber=False):
     tvdb_series_id = None
     series_id_files = [os.path.join(show_dir, show_name + ".seriesID")]
@@ -615,7 +534,6 @@ def get_series_id(tvdb_token, tvdb_mirror, show_name, show_dir,
     if not clobber and tvdb_series_id:
         tvdb_series_id = re.sub("\n", "", tvdb_series_id)
     else:
-        #series = tvdb_v1_search_series(tvdb_mirror, bare_title)
         series = tvdb_v2_search_series(tvdb_token, bare_title)
 
         if year and len(series) > 1:
@@ -672,7 +590,6 @@ def get_series_id(tvdb_token, tvdb_mirror, show_name, show_dir,
             debug(1, "Unable to find tvdb_series_id.")
 
     if tvdb_series_id is not None:
-        #series_info = tvdb_v1_get_series_info(tvdb_mirror, tvdb_series_id)
         series_info = tvdb_v2_get_series_info(tvdb_token, tvdb_series_id)
     else:
         series_info = {}
@@ -1332,8 +1249,7 @@ def parse_tv(tvdb_token, tvdb_mirror, tv_info, meta_filepath, show_dir,
     episode_info = {}
     if tv_info['series'] not in SERIES_INFO_CACHE:
         SERIES_INFO_CACHE[tv_info['series']] = get_series_id(
-                tvdb_token,
-                tvdb_mirror, tv_info['series'], show_dir,
+                tvdb_token, tv_info['series'], show_dir,
                 use_metadir=use_metadir, clobber=clobber
                 )
     (series_info, tvdb_series_id) = SERIES_INFO_CACHE[tv_info['series']]

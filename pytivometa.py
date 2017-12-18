@@ -300,9 +300,75 @@ def tvdb_v2_get_episode_info(tvdb_token, tvdb_series_id, season, episode):
     return episode_info
 
 def tvdb_v2_get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, day):
-    pass
-    # need to get all pages in /series/{id}/episodes to find air date?
-    # Then  /episodes/{id} for full details
+    season = None
+    epsiode = None
+
+    # assumes year, month, day are all strings
+    search_date_num = int("%04d%02d%02d"%(int(year),int(month),int(day)))
+    debug(1, "searching for episode date %d"%search_date_num)
+
+    # need to get all pages in /series/{id}/episodes to find air date
+    get_episodes_url = TVDB_API_URL + "series/" + tvdb_series_id + "/episodes?page="
+
+    page = 1
+    done = False
+    while(not done):
+        # go through each page of episodes until match is found, or
+        #   we run out of pages (HTTP Error 404)
+        page_str = str(page)
+        debug(2, "tvdb_v2_get_episode_info_air_date page %s"%page_str)
+        try:
+            json_data = tvdb_v2_get(
+                    get_episodes_url + page_str,
+                    tvdb_token=tvdb_token
+                    )
+        except urllib.error.HTTPError as http_error:
+            if http_error.code == 404:
+                episode_list = []
+                done = True
+            else:
+                print("HTTP error:")
+                print(http_error.code)
+                print(http_error.reason)
+                print(http_error.headers)
+                raise
+        else:
+            episode_list = json_data['data']
+
+        if episode_list:
+            for episode in episode_list:
+                # NOTE: currently episode list seems to be sorted odd!
+                #   All seasons' episode 1, then all seasons' episode 2, ...
+                if episode['firstAired']:
+                    ep_date_re = re.search(r'(\d+)-(\d+)-(\d+)', episode['firstAired'])
+                    if ep_date_re:
+                        year = ep_date_re.group(1)
+                        month = ep_date_re.group(2)
+                        day = ep_date_re.group(3)
+                        ep_date_num = int("%04d%02d%02d"%(int(year),int(month),int(day)))
+                        debug(2, "searching: episode date %d season %s episode %s"%(ep_date_num,episode['airedSeason'],episode['airedEpisodeNumber']))
+                        if ep_date_num == search_date_num:
+                            # found a match
+                            season = episode['airedSeason']
+                            episode = episode['airedEpisodeNumber']
+                            done = True
+                            break
+        else:
+            done = True
+
+        page += 1
+
+    if season is not None and episode is not None:
+        debug(1, "Air date %d matches: Season %d, Episode %d"%(search_date_num, season, episode))
+        episode_info = tvdb_v2_get_episode_info(
+                tvdb_token, tvdb_series_id,
+                str(season), str(episode)
+                )
+    else:
+        debug(0, "!! Error looking up data for this episode, skipping.")
+        episode_info = None
+
+    return episode_info
 
 # -----------------------------------------------------------------------------
 # Current TVDB API v1 (XML) support -------------------------------------------
@@ -312,145 +378,145 @@ import io
 import urllib.parse
 from xml.etree.ElementTree import parse
 
-def tvdb_v1_get_mirror(timeout):
-    global HAS_TVDB
-    # Query tvdb for a list of mirrors
-    mirrors_url = "http://www.thetvdb.com/api/%s/mirrors.xml" % TVDB_APIKEY
-    tvdb_mirror = ''
-    try:
-        # from xml.etree.ElementTree import parse, returns
-        #   xml.etree.ElementTree.ElemenTree
-        mirrors_xml = parse(urllib.request.urlopen(mirrors_url, None, timeout))
-        mirrors = [Item for Item in mirrors_xml.findall('Mirror')]
-        tvdb_mirror = mirrors[0].findtext('mirrorpath')
-    except:
-        debug(0, "Error looking information from thetvdb, no metadata will "\
-                "be retrieved for TV shows."
-             )
-        HAS_TVDB = False
-    return tvdb_mirror
+#def tvdb_v1_get_mirror(timeout):
+#    global HAS_TVDB
+#    # Query tvdb for a list of mirrors
+#    mirrors_url = "http://www.thetvdb.com/api/%s/mirrors.xml" % TVDB_APIKEY
+#    tvdb_mirror = ''
+#    try:
+#        # from xml.etree.ElementTree import parse, returns
+#        #   xml.etree.ElementTree.ElemenTree
+#        mirrors_xml = parse(urllib.request.urlopen(mirrors_url, None, timeout))
+#        mirrors = [Item for Item in mirrors_xml.findall('Mirror')]
+#        tvdb_mirror = mirrors[0].findtext('mirrorpath')
+#    except:
+#        debug(0, "Error looking information from thetvdb, no metadata will "\
+#                "be retrieved for TV shows."
+#             )
+#        HAS_TVDB = False
+#    return tvdb_mirror
 
 
-def tvdb_v1_get_episode_info(tvdb_mirror, tvdb_series_id, season, episode):
-    """Take a well-specified tv episode and return data
+#def tvdb_v1_get_episode_info(tvdb_mirror, tvdb_series_id, season, episode):
+#    """Take a well-specified tv episode and return data
+#
+#    Args:
+#        tvdb_mirror (str): url of thetvdb.com mirror we are using
+#        tvdb_series_id (str): string of series ID number
+#        season (str): string of season number
+#        episode (str): string of episode number
+#
+#    Returns:
+#        dict: data from xml file from thetvdb.com
+#
+#        e.g.: {'Data': None, 'Episode': '\n', 'id': '5685549',
+#        'seasonid': '674592', 'EpisodeNumber': '1', 'EpisodeName': 'Episode 1',
+#        'FirstAired': '2016-07-21', 'GuestStars': None, 'Director': None,
+#        'Writer': 'Phoebe Waller-Bridge',
+#        'Overview': 'Angry, pervy, outrageous and hilarious, Fleabag....',
+#        'ProductionCode': 'p040trv9', 'lastupdated': '1510609127',
+#        'flagged': '0', 'DVD_discid': None, 'DVD_season': None,
+#        'DVD_episodenumber': None, 'DVD_chapter': None, 'absolute_number': None,
+#        'filename': 'episodes/314614/5685549.jpg', 'seriesid': '314614',
+#        'thumb_added': '2016-07-21 03:27:02', 'thumb_width': '400',
+#        'thumb_height': '225', 'tms_export': None, 'mirrorupdate':
+#        '2017-11-13 13:29:46', 'IMDB_ID': 'tt5705890', 'EpImgFlag': '2',
+#        'is_movie': '0', 'Rating': '8', 'SeasonNumber': '1', 'Language': 'en'}
+#    """
+#    url = tvdb_mirror + "/api/" + TVDB_APIKEY + "/series/" + tvdb_series_id + \
+#            "/default/" + season + "/" + episode + "/en.xml"
+#    debug(3, "tvdb_v1_get_episode_info: Using URL " + url)
+#
+#    episode_info_xml = get_xml(url)
+#
+#    episode_info = {}
+#    if episode_info_xml is not None:
+#        for node in episode_info_xml.iter():
+#            episode_info[node.tag] = node.text
+#    else:
+#        debug(0, "!! Error looking up data for this episode, skipping.")
+#        episode_info = None
+#
+#    return episode_info
 
-    Args:
-        tvdb_mirror (str): url of thetvdb.com mirror we are using
-        tvdb_series_id (str): string of series ID number
-        season (str): string of season number
-        episode (str): string of episode number
+#def tvdb_v1_get_episode_info_air_date(tvdb_mirror, tvdb_series_id, year, month, day):
+#    """Take a well-specified tv episode and return data
+#
+#    Args:
+#        tvdb_mirror (str): url of thetvdb.com mirror we are using
+#        tvdb_series_id (str): string of series ID number
+#        year (str): string of year of air date
+#        month (str): string of month of air date
+#        day (str): string of date of air date
+#
+#    Returns:
+#        dict: data from xml file from thetvdb.com
+#
+#        e.g.: {'Data': '\n', 'Episode': '\n', 'id': '5685549',
+#        'Combined_episodenumber': '1', 'Combined_season': '1',
+#        'DVD_chapter': None, 'DVD_discid': None, 'DVD_episodenumber': None,
+#        'DVD_season': None, 'Director': None, 'EpImgFlag': '2',
+#        'EpisodeName': 'Episode 1', 'EpisodeNumber': '1',
+#        'FirstAired': '2016-07-21', 'GuestStars': None,
+#        'IMDB_ID': 'tt5705890', 'Language': 'en',
+#        'Overview': 'Angry, pervy, outrageous and hilarious....',
+#        'ProductionCode': 'p040trv9', 'Rating': None, 'SeasonNumber': '1',
+#        'Writer': 'Phoebe Waller-Bridge', 'absolute_number': None,
+#        'filename': 'episodes/314614/5685549.jpg', 'lastupdated': '1510609127',
+#        'seasonid': '674592', 'seriesid': '314614'}
+#    """
+#    # Takes a tvdb_series_id, year number, month number, day number, and return xml data
+#    url = tvdb_mirror + "/api/GetEpisodeByAirDate.php?apikey=" + TVDB_APIKEY + \
+#            "&seriesid=" + tvdb_series_id + "&airdate=" + year + "-" + month + "-" + day
+#    debug(3, "tvdb_v1_get_episode_info_air_date: Using URL " + url)
+#
+#    episode_info_xml = get_xml(url)
+#
+#    episode_info = {}
+#    if episode_info_xml is not None:
+#        for node in episode_info_xml.iter():
+#            episode_info[node.tag] = node.text
+#    else:
+#        debug(0, "!! Error looking up data for this episode, skipping.")
+#        episode_info = None
+#
+#    return episode_info
 
-    Returns:
-        dict: data from xml file from thetvdb.com
-
-        e.g.: {'Data': None, 'Episode': '\n', 'id': '5685549',
-        'seasonid': '674592', 'EpisodeNumber': '1', 'EpisodeName': 'Episode 1',
-        'FirstAired': '2016-07-21', 'GuestStars': None, 'Director': None,
-        'Writer': 'Phoebe Waller-Bridge',
-        'Overview': 'Angry, pervy, outrageous and hilarious, Fleabag....',
-        'ProductionCode': 'p040trv9', 'lastupdated': '1510609127',
-        'flagged': '0', 'DVD_discid': None, 'DVD_season': None,
-        'DVD_episodenumber': None, 'DVD_chapter': None, 'absolute_number': None,
-        'filename': 'episodes/314614/5685549.jpg', 'seriesid': '314614',
-        'thumb_added': '2016-07-21 03:27:02', 'thumb_width': '400',
-        'thumb_height': '225', 'tms_export': None, 'mirrorupdate':
-        '2017-11-13 13:29:46', 'IMDB_ID': 'tt5705890', 'EpImgFlag': '2',
-        'is_movie': '0', 'Rating': '8', 'SeasonNumber': '1', 'Language': 'en'}
-    """
-    url = tvdb_mirror + "/api/" + TVDB_APIKEY + "/series/" + tvdb_series_id + \
-            "/default/" + season + "/" + episode + "/en.xml"
-    debug(3, "tvdb_v1_get_episode_info: Using URL " + url)
-
-    episode_info_xml = get_xml(url)
-
-    episode_info = {}
-    if episode_info_xml is not None:
-        for node in episode_info_xml.iter():
-            episode_info[node.tag] = node.text
-    else:
-        debug(0, "!! Error looking up data for this episode, skipping.")
-        episode_info = None
-
-    return episode_info
-
-def tvdb_v1_get_episode_info_air_date(tvdb_mirror, tvdb_series_id, year, month, day):
-    """Take a well-specified tv episode and return data
-
-    Args:
-        tvdb_mirror (str): url of thetvdb.com mirror we are using
-        tvdb_series_id (str): string of series ID number
-        year (str): string of year of air date
-        month (str): string of month of air date
-        day (str): string of date of air date
-
-    Returns:
-        dict: data from xml file from thetvdb.com
-
-        e.g.: {'Data': '\n', 'Episode': '\n', 'id': '5685549',
-        'Combined_episodenumber': '1', 'Combined_season': '1',
-        'DVD_chapter': None, 'DVD_discid': None, 'DVD_episodenumber': None,
-        'DVD_season': None, 'Director': None, 'EpImgFlag': '2',
-        'EpisodeName': 'Episode 1', 'EpisodeNumber': '1',
-        'FirstAired': '2016-07-21', 'GuestStars': None,
-        'IMDB_ID': 'tt5705890', 'Language': 'en',
-        'Overview': 'Angry, pervy, outrageous and hilarious....',
-        'ProductionCode': 'p040trv9', 'Rating': None, 'SeasonNumber': '1',
-        'Writer': 'Phoebe Waller-Bridge', 'absolute_number': None,
-        'filename': 'episodes/314614/5685549.jpg', 'lastupdated': '1510609127',
-        'seasonid': '674592', 'seriesid': '314614'}
-    """
-    # Takes a tvdb_series_id, year number, month number, day number, and return xml data
-    url = tvdb_mirror + "/api/GetEpisodeByAirDate.php?apikey=" + TVDB_APIKEY + \
-            "&seriesid=" + tvdb_series_id + "&airdate=" + year + "-" + month + "-" + day
-    debug(3, "tvdb_v1_get_episode_info_air_date: Using URL " + url)
-
-    episode_info_xml = get_xml(url)
-
-    episode_info = {}
-    if episode_info_xml is not None:
-        for node in episode_info_xml.iter():
-            episode_info[node.tag] = node.text
-    else:
-        debug(0, "!! Error looking up data for this episode, skipping.")
-        episode_info = None
-
-    return episode_info
-
-# fetch plaintext or gzipped xml data from url
-def get_xml(url):
-    """Fetch entire xml file from url
-
-    Returns:
-        bytes: byte-string of entirel xml document
-    """
-    debug(3, "get_xml: Using URL " + url)
-    try:
-        # HTTPResponse.read() always returns bytes b''
-        raw_xml = urllib.request.urlopen(url).read()
-    except Exception as e:
-        debug(0, "\n Exception = " + str(e))
-        return None
-
-    xml = None
-    # check for gzip compressed data (first two bytes of gzip file: 0x1f, 0x8b)
-    if raw_xml[0:2] != b'\x1f\x8b':
-        # StringIO needs string, so decode raw_xml bytes
-        # TODO: assuming utf-8 for now, need to check this from data
-        filestream = io.StringIO(raw_xml.decode('utf-8'))
-        debug(1, "Not gzip compressed data " +  repr(raw_xml[0:2]))
-    else:
-        filestream = gzip.GzipFile(fileobj=io.BytesIO(raw_xml))
-        debug(1, "gzip compressed data")
-
-    try:
-        # from xml.etree.ElementTree import parse, returns
-        #   xml.etree.ElementTree.ElemenTree
-        xml = parse(filestream).getroot()
-    except Exception as e:
-        debug(0, "\n Exception = " + str(e))
-        debug(3, "\nraw_xml = " + raw_xml + "\n\nhexXML = " + repr(raw_xml))
-
-    return xml
+## fetch plaintext or gzipped xml data from url
+#def get_xml(url):
+#    """Fetch entire xml file from url
+#
+#    Returns:
+#        bytes: byte-string of entirel xml document
+#    """
+#    debug(3, "get_xml: Using URL " + url)
+#    try:
+#        # HTTPResponse.read() always returns bytes b''
+#        raw_xml = urllib.request.urlopen(url).read()
+#    except Exception as e:
+#        debug(0, "\n Exception = " + str(e))
+#        return None
+#
+#    xml = None
+#    # check for gzip compressed data (first two bytes of gzip file: 0x1f, 0x8b)
+#    if raw_xml[0:2] != b'\x1f\x8b':
+#        # StringIO needs string, so decode raw_xml bytes
+#        # TODO: assuming utf-8 for now, need to check this from data
+#        filestream = io.StringIO(raw_xml.decode('utf-8'))
+#        debug(1, "Not gzip compressed data " +  repr(raw_xml[0:2]))
+#    else:
+#        filestream = gzip.GzipFile(fileobj=io.BytesIO(raw_xml))
+#        debug(1, "gzip compressed data")
+#
+#    try:
+#        # from xml.etree.ElementTree import parse, returns
+#        #   xml.etree.ElementTree.ElemenTree
+#        xml = parse(filestream).getroot()
+#    except Exception as e:
+#        debug(0, "\n Exception = " + str(e))
+#        debug(3, "\nraw_xml = " + raw_xml + "\n\nhexXML = " + repr(raw_xml))
+#
+#    return xml
 
 # -----------------------------------------------------------------------------
 
@@ -1168,7 +1234,7 @@ def tvinfo_from_filename(filename):
 
     return tv_info
 
-def parse_tv(tvdb_token, tvdb_mirror, tv_info, meta_filepath, show_dir,
+def parse_tv(tvdb_token, tv_info, meta_filepath, show_dir,
         use_metadir=False, clobber=False):
     """
     Tags we need in episode_info if possible:
@@ -1308,8 +1374,8 @@ def parse_tv(tvdb_token, tvdb_mirror, tv_info, meta_filepath, show_dir,
                     )
         else:
             episode_info.update(
-                    tvdb_v1_get_episode_info_air_date(
-                        tvdb_mirror, tvdb_series_id,
+                    tvdb_v2_get_episode_info_air_date(
+                        tvdb_token, tvdb_series_id,
                         tv_info['year'], tv_info['month'], tv_info['day']
                         )
                     )
@@ -1317,7 +1383,7 @@ def parse_tv(tvdb_token, tvdb_mirror, tv_info, meta_filepath, show_dir,
         if episode_info is not None:
             format_episode_data(episode_info, meta_filepath)
 
-def process_dir(dir_proc, dir_files, tvdb_token, tvdb_mirror, use_metadir=False,
+def process_dir(dir_proc, dir_files, tvdb_token, use_metadir=False,
         clobber=False, genre_dir=None):
     debug(1, "\n## Looking for videos in: " + dir_proc)
 
@@ -1349,8 +1415,7 @@ def process_dir(dir_proc, dir_files, tvdb_token, tvdb_mirror, use_metadir=False,
 
             if tv_info:
                 if HAS_TVDB:
-                    parse_tv(tvdb_token, tvdb_mirror, tv_info, meta_filepath,
-                            dir_proc,
+                    parse_tv(tvdb_token, tv_info, meta_filepath, dir_proc,
                             use_metadir=use_metadir, clobber=clobber
                             )
                 else:
@@ -1472,7 +1537,7 @@ def main():
     debug(2, "Metadata File Output encoding: %s\n" % FILE_ENCODING)
 
     # Initalize things we'll need for looking up data
-    tvdb_mirror = tvdb_v1_get_mirror(args.timeout)
+    #tvdb_mirror = tvdb_v1_get_mirror(args.timeout)
     tvdb_token = tvdb_v2_get_session_token()
 
     # create/set genre dir if specified and possible
@@ -1489,14 +1554,14 @@ def main():
                 # only non-hidden dirs (no dirs starting with .)
                 #   but '.' dir is OK
                 if not re.search(r'\..+', dirname):
-                    process_dir(dirpath, dir_files, tvdb_token, tvdb_mirror,
+                    process_dir(dirpath, dir_files, tvdb_token,
                             use_metadir=args.metadir,
                             clobber=args.clobber,
                             genre_dir=genre_dir
                             )
         else:
             dir_files = os.listdir(search_dir)
-            process_dir(search_dir, dir_files, tvdb_token, tvdb_mirror,
+            process_dir(search_dir, dir_files, tvdb_token,
                     use_metadir=args.metadir,
                     clobber=args.clobber,
                     genre_dir=genre_dir

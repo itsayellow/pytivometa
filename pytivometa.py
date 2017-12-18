@@ -217,6 +217,7 @@ def tvdb_v2_get_series_info(tvdb_token, tvdb_series_id):
         dict: Available data from TVDB about series
             keys:
             [
+            'actors'
             'added',
             'addedBy',
             'airsDayOfWeek',
@@ -253,34 +254,26 @@ def tvdb_v2_get_series_info(tvdb_token, tvdb_series_id):
             'siteRating': 8.8, 'siteRatingCount': 9}
     """
     # TODO: can use /series/{id}/filter to get only desired tags
-    # TODO: also use /series/{id}/actors to get series actors
     tvdb_series_info_url = "https://api.thetvdb.com/series"
-    #headers = {
-    #        'Authorization': 'Bearer '+ tvdb_token,
-    #        'Accept': 'application/json'
-    #        }
-
-    #request = urllib.request.Request(
-    #        tvdb_series_info_url + "/" + tvdb_series_id,
-    #        headers=headers
-    #        )
-
-    #try:
-    #    json_reply_raw = urllib.request.urlopen(request)
-    #except urllib.error.HTTPError as http_error:
-    #    print(http_error)
-    #    # TODO: do something better than re-raise
-    #    raise
-
-    #json_reply = json_reply_raw.read().decode()
-    #json_data = json.loads(json_reply)
 
     json_data = tvdb_v2_get(
             tvdb_series_info_url + "/" + tvdb_series_id,
             tvdb_token=tvdb_token
             )
+    series_info = json_data['data']
 
-    return json_data['data']
+    json_data_actors = tvdb_v2_get(
+            tvdb_series_info_url + "/" + tvdb_series_id + "/actors",
+            tvdb_token=tvdb_token
+            )
+    series_info_actors = json_data_actors['data']
+    # TODO: sort by last name after sortOrder
+    series_info_actors.sort(key=lambda x:x['sortOrder'])
+
+    actors = [actdata['name'] for actdata in series_info_actors]
+    series_info['actors'] = actors
+
+    return series_info
 
 def tvdb_v2_get_episode_info(tvdb_token, tvdb_series_id, season, episode):
     pass
@@ -354,51 +347,51 @@ def tvdb_v1_get_mirror(timeout):
 #    # return list of xml.etree.ElementTree.Element
 #    return series
 
-def tvdb_v1_get_series_info(mirror_url, tvdb_series_id):
-    """Given a series ID, return info on the series
-
-    Args:
-        mirror_url (str): tvdb mirror base url
-        tvdb_series_id (str): TVDB series ID number for series
-
-    Returns:
-        dict: Available data from TVDB about series.
-            keys:
-            ['Actors', 'Airs_DayOfWeek', 'Airs_Time', 'ContentRating', 'Data',
-            'FirstAired', 'Genre', 'IMDB_ID', 'Language', 'Network',
-            'NetworkID', 'Overview', 'Rating', 'RatingCount', 'Runtime',
-            'Series', 'SeriesID', 'SeriesName', 'Status', 'added', 'addedBy',
-            'banner', 'fanart', 'finale_aired', 'id', 'lastupdated', 'poster',
-            'tms_wanted_old', 'zap2it_id']
-
-        e.g.: {'Data': '\n  ', 'Series': '\n    ', 'id': '314614',
-        'Actors': '|Phoebe Waller-Bridge|Ben Aldridge|Brett Gelman|Bill Paterson|Sian Clifford|Jenny Rainsford|Hugh Skinner|Olivia Colman|Jamie Demetriou|Hugh Dennis|',
-        'Airs_DayOfWeek': 'Thursday', 'Airs_Time': None, 'ContentRating': None,
-        'FirstAired': '2016-07-21', 'Genre': '|Comedy|', 'IMDB_ID': 'tt5687612',
-        'Language': 'en', 'Network': 'BBC Three', 'NetworkID': None,
-        'Overview': 'Meet Fleabag. She’s not talking to all of us....',
-        'Rating': '8.8', 'RatingCount': '9', 'Runtime': '25', 'SeriesID': None,
-        'SeriesName': 'Fleabag', 'Status': 'Continuing',
-        'added': '2016-07-21 03:03:01', 'addedBy': '380790',
-        'banner': 'graphical/314614-g6.jpg',
-        'fanart': 'fanart/original/314614-4.jpg', 'finale_aired': '2016-08-25',
-        'lastupdated': '1510663171', 'poster': 'posters/314614-3.jpg',
-        'tms_wanted_old': '0', 'zap2it_id': None}
-
-    """
-    series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + tvdb_series_id + "/en.xml"
-    debug(3, "getSeriesInfoXML: Using URL " + series_url)
-
-    series_info_xml = get_xml(series_url)
-
-    series_info = {}
-    if series_info_xml is not None:
-        for node in series_info_xml.iter():
-            series_info[node.tag] = node.text
-    else:
-        debug(0, "!! Error parsing series info, skipping.")
-
-    return series_info
+#def tvdb_v1_get_series_info(mirror_url, tvdb_series_id):
+#    """Given a series ID, return info on the series
+#
+#    Args:
+#        mirror_url (str): tvdb mirror base url
+#        tvdb_series_id (str): TVDB series ID number for series
+#
+#    Returns:
+#        dict: Available data from TVDB about series.
+#            keys:
+#            ['Actors', 'Airs_DayOfWeek', 'Airs_Time', 'ContentRating', 'Data',
+#            'FirstAired', 'Genre', 'IMDB_ID', 'Language', 'Network',
+#            'NetworkID', 'Overview', 'Rating', 'RatingCount', 'Runtime',
+#            'Series', 'SeriesID', 'SeriesName', 'Status', 'added', 'addedBy',
+#            'banner', 'fanart', 'finale_aired', 'id', 'lastupdated', 'poster',
+#            'tms_wanted_old', 'zap2it_id']
+#
+#        e.g.: {'Data': '\n  ', 'Series': '\n    ', 'id': '314614',
+#        'Actors': '|Phoebe Waller-Bridge|Ben Aldridge|Brett Gelman|Bill Paterson|Sian Clifford|Jenny Rainsford|Hugh Skinner|Olivia Colman|Jamie Demetriou|Hugh Dennis|',
+#        'Airs_DayOfWeek': 'Thursday', 'Airs_Time': None, 'ContentRating': None,
+#        'FirstAired': '2016-07-21', 'Genre': '|Comedy|', 'IMDB_ID': 'tt5687612',
+#        'Language': 'en', 'Network': 'BBC Three', 'NetworkID': None,
+#        'Overview': 'Meet Fleabag. She’s not talking to all of us....',
+#        'Rating': '8.8', 'RatingCount': '9', 'Runtime': '25', 'SeriesID': None,
+#        'SeriesName': 'Fleabag', 'Status': 'Continuing',
+#        'added': '2016-07-21 03:03:01', 'addedBy': '380790',
+#        'banner': 'graphical/314614-g6.jpg',
+#        'fanart': 'fanart/original/314614-4.jpg', 'finale_aired': '2016-08-25',
+#        'lastupdated': '1510663171', 'poster': 'posters/314614-3.jpg',
+#        'tms_wanted_old': '0', 'zap2it_id': None}
+#
+#    """
+#    series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + tvdb_series_id + "/en.xml"
+#    debug(3, "getSeriesInfoXML: Using URL " + series_url)
+#
+#    series_info_xml = get_xml(series_url)
+#
+#    series_info = {}
+#    if series_info_xml is not None:
+#        for node in series_info_xml.iter():
+#            series_info[node.tag] = node.text
+#    else:
+#        debug(0, "!! Error parsing series info, skipping.")
+#
+#    return series_info
 
 def tvdb_v1_get_episode_info(mirror_url, tvdb_series_id, season, episode):
     """Take a well-specified tv episode and return data
@@ -679,7 +672,8 @@ def get_series_id(tvdb_token, mirror_url, show_name, show_dir,
             debug(1, "Unable to find tvdb_series_id.")
 
     if tvdb_series_id is not None:
-        series_info = tvdb_v1_get_series_info(mirror_url, tvdb_series_id)
+        #series_info = tvdb_v1_get_series_info(mirror_url, tvdb_series_id)
+        series_info = tvdb_v2_get_series_info(tvdb_token, tvdb_series_id)
     else:
         series_info = {}
 
@@ -699,12 +693,12 @@ def format_episode_data(ep_data, meta_filepath):
         # https://pytivo.sourceforge.io/wiki/index.php/Metadata
         'time' : 'time',
         'originalAirDate' : 'FirstAired',
-        'seriesTitle' : 'SeriesName',
+        'seriesTitle' : 'seriesName',
         'title' : 'EpisodeName',
         'episodeTitle' : 'EpisodeName',
         'description' : 'Overview',
         'isEpisode' : 'isEpisode',
-        'seriesId' : 'zap2it_id',
+        'seriesId' : 'zap2itId',
         'episodeNumber' : 'EpisodeNumber',
         'displayMajorNumber' : 'displayMajorNumber',
         'callsign' : 'callsign',
@@ -713,9 +707,9 @@ def format_episode_data(ep_data, meta_filepath):
         'startTime' : 'startTime',
         'stopTime' : 'stopTime',
         'tvRating' : 'tvRating',
-        'vProgramGenre' : 'Genre',
-        'vSeriesGenre' : 'Genre',
-        'vActor' : 'Actors',
+        'vProgramGenre' : 'genre',
+        'vSeriesGenre' : 'genre',
+        'vActor' : 'actors',
         'vGuestStar' : 'GuestStars',
         'vDirector' : 'Director',
         'vProducer' : 'Producer',
@@ -792,7 +786,12 @@ def format_episode_data(ep_data, meta_filepath):
         if pytivo_metadata.get(tv_tag, '') and ep_data.get(pytivo_metadata[tv_tag], ''):
             # got data to work with
             line = term = ""
-            text = str(ep_data[pytivo_metadata[tv_tag]]).translate(transtable)
+
+            if isinstance(ep_data[pytivo_metadata[tv_tag]], list):
+                text = '|'.join(ep_data[pytivo_metadata[tv_tag]])
+            else:
+                text = str(ep_data[pytivo_metadata[tv_tag]])
+            text = text.translate(transtable)
 
             # for debugging character translations
             #if tv_tag == 'description':

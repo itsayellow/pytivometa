@@ -524,25 +524,30 @@ def get_xml(url):
 # -----------------------------------------------------------------------------
 
 def ask_user(options_text, option_returns, max_options=5):
+    indent = " "*4
+
     # Get number of movies found
-    num_titles = len(option_returns)
+    num_choices = len(option_returns)
 
-    debug(2, "Found " + str(num_titles) + " matches.")
+    debug(2, "Found " + str(num_choices) + " matches.")
     # Show max max_options titles
-    num_titles = min(num_titles, max_options)
+    num_choices = min(num_choices, max_options)
 
-    for i in range(0, num_titles):
+    for i in range(num_choices):
         option_text = ""
         option_text_lines = options_text[i].splitlines()
         for line in option_text_lines:
             option_text += textwrap.fill(
                     line,
-                    width=70,
-                    initial_indent="\t",
-                    subsequent_indent="\t"
+                    width=75,
+                    initial_indent=indent,
+                    subsequent_indent=indent
                     ) + "\n"
-        option_text = option_text.rstrip()
-        print("%d%s"%(i, option_text))
+        option_text = option_text.strip()
+        if num_choices < 10:
+            print("%d   %s"%(i, option_text))
+        else:
+            print("%2d  %s"%(i, option_text))
     print("")
     try:
         choice_num = input(
@@ -563,7 +568,7 @@ def ask_user(options_text, option_returns, max_options=5):
             choice_num = None
         else:
             # Check for out-of-range input
-            if choice_num < 0 or choice_num > num_titles:
+            if choice_num < 0 or choice_num > num_choices:
                 choice_num = None
 
     if choice_num is not None:
@@ -648,7 +653,7 @@ def get_series_id(tvdb_token, mirror_url, show_name, show_dir,
                 if series_overview is not None:
                     overview_text = " ".join(series_overview[0:239].split())
                     text_option += "Overview: %s\n"%overview_text
-                text_option += "------------------------------------"
+                text_option += "-"*30
                 options_text.append(text_option)
 
             tvdb_series_ids = [s['id'] for s in series]

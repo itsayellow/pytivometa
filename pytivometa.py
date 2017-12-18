@@ -532,7 +532,17 @@ def ask_user(options_text, option_returns, max_options=5):
     num_titles = min(num_titles, max_options)
 
     for i in range(0, num_titles):
-        print("%d\t%s" % (i, options_text[i]))
+        option_text = ""
+        option_text_lines = options_text[i].splitlines()
+        for line in option_text_lines:
+            option_text += textwrap.fill(
+                    line,
+                    width=70,
+                    initial_indent="\t",
+                    subsequent_indent="\t"
+                    ) + "\n"
+        option_text = option_text.rstrip()
+        print("%d%s"%(i, option_text))
     print("")
     try:
         choice_num = input(
@@ -550,18 +560,17 @@ def ask_user(options_text, option_returns, max_options=5):
         try:
             choice_num = int(choice_num)
         except ValueError:
-            print("No choice, skipping...")
             choice_num = None
         else:
             # Check for out-of-range input
             if choice_num < 0 or choice_num > num_titles:
-                print("No choice, skipping...")
                 choice_num = None
 
     if choice_num is not None:
         print("Option %d chosen."%choice_num)
         returnval = option_returns[choice_num]
     else:
+        print("No choice recorded, skipping...")
         returnval = None
 
     return returnval
@@ -621,45 +630,36 @@ def get_series_id(tvdb_token, mirror_url, show_name, show_dir,
         if len(series) == 1:
             debug(1, "Found exact match")
             tvdb_series_id = series[0]['id']
-        elif INTERACTIVE:
+        elif INTERACTIVE and len(series) > 1:
             # Display all the shows found
-            if len(series) > 1:
-                print("####################################\n")
-                print("Multiple TV Shows found:\n")
-                print("Found %s shows for Series Title %s"%(len(series), show_name)
-                    )
-                print("------------------------------------")
-                for series_candidate in series:
-                    print(series_candidate)
-                    ep_series_name = series_candidate['seriesName']
-                    ep_id = series_candidate['id']
-                    ep_overview = series_candidate['overview']
-                    first_aired = series_candidate['firstAired']
-                    # ep_overview may not exist, so default them to something so
-                    #   print doesn't fail
-                    if ep_overview is None:
-                        ep_overview = "<None>"
-                    if len(ep_overview) > 240:
-                        ep_overview = ep_overview[0:239]
-                    print("Series Name:\t%s" % ep_series_name)
-                    print("TVDB Series ID:\t%s" % ep_id)
-                    if first_aired:
-                        print("1st Aired:\t%s" % first_aired)
-                    print(textwrap.fill("Description:\t%s"%ep_overview, width=78))
-                    print("------------------------------------")
-                print("####################################\n\n")
-                try:
-                    tvdb_series_id = input('Please choose the correct series ID: ')
-                except KeyboardInterrupt:
-                    print("\nCaught interrupt, exiting.")
-                    sys.exit(1)
+            print("\nMatches for TV series title '%s'"%show_name
+                )
+            print("------------------------------------")
 
-        elif len(series) > 1:
-            debug(1, "Using best match: " + series[0]['seriesName'])
-            tvdb_series_id = series[0]['id']
+            options_text = []
+            for series_candidate in series:
+                series_name = series_candidate['seriesName']
+                series_overview = series_candidate['overview']
+                first_aired = series_candidate['firstAired']
+
+                text_option = "Series Name: %s\n"%series_name
+                if first_aired:
+                    text_option += "1st Aired: %s\n"%first_aired
+                if series_overview is not None:
+                    overview_text = " ".join(series_overview[0:239].split())
+                    text_option += "Overview: %s\n"%overview_text
+                text_option += "------------------------------------"
+                options_text.append(text_option)
+
+            tvdb_series_ids = [s['id'] for s in series]
+            tvdb_series_id = ask_user(
+                    options_text, tvdb_series_ids, max_options=5
+                    )
+            print("------------------------------------")
 
         # Did we find any matches
         if series and tvdb_series_id:
+            tvdb_series_id = str(tvdb_series_id)
             # creating series ID file from scratch, so pick best path
             if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
                 seriesidpath = os.path.join(
@@ -855,17 +855,15 @@ def get_movie_info(title, is_trailer=False):
         return
 
     if len(results) > 1 and INTERACTIVE:
-        print("\nMatches for '%s'"%title)
-        print("------------------------------------")
-        print("Num\tTitle")
+        print("\nMatches for movie title '%s'"%title)
         print("------------------------------------")
         options_text = []
         for result in results:
             options_text.append(result['long imdb title'])
         movie_info = ask_user(options_text, results, max_options=5)
         print("------------------------------------")
-
-    else: # automatically pick first match
+    else:
+        # automatically pick first match
         movie_info = results[0]
         report_match(movie_info, len(results))
 

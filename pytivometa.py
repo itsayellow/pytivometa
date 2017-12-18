@@ -663,7 +663,7 @@ def get_series_id(tvdb_token, mirror_url, show_name, show_dir,
             print("------------------------------------")
 
         # Did we find any matches
-        if series and tvdb_series_id:
+        if series and tvdb_series_id is not None:
             tvdb_series_id = str(tvdb_series_id)
             # creating series ID file from scratch, so pick best path
             if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
@@ -678,7 +678,7 @@ def get_series_id(tvdb_token, mirror_url, show_name, show_dir,
         else:
             debug(1, "Unable to find tvdb_series_id.")
 
-    if tvdb_series_id:
+    if tvdb_series_id is not None:
         series_info = tvdb_v1_get_series_info(mirror_url, tvdb_series_id)
     else:
         series_info = {}

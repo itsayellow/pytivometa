@@ -523,6 +523,49 @@ def get_xml(url):
 
 # -----------------------------------------------------------------------------
 
+def ask_user(options_text, option_returns, max_options=5):
+    # Get number of movies found
+    num_titles = len(option_returns)
+
+    debug(2, "Found " + str(num_titles) + " matches.")
+    # Show max max_options titles
+    num_titles = min(num_titles, max_options)
+
+    for i in range(0, num_titles):
+        print("%d\t%s" % (i, options_text[i]))
+    print("")
+    try:
+        choice_num = input(
+                "Please choose the correct option, or 's' to skip [0]: "
+                )
+    except KeyboardInterrupt:
+        print("\nCaught interrupt, exiting.")
+        sys.exit(1)
+
+    if not choice_num:
+        # Empty string, default to the top choice
+        choice_num = 0
+    else:
+        # Check for non-numeric input
+        try:
+            choice_num = int(choice_num)
+        except ValueError:
+            print("No choice, skipping...")
+            choice_num = None
+        else:
+            # Check for out-of-range input
+            if choice_num < 0 or choice_num > num_titles:
+                print("No choice, skipping...")
+                choice_num = None
+
+    if choice_num is not None:
+        print("Option %d chosen."%choice_num)
+        returnval = option_returns[choice_num]
+    else:
+        returnval = None
+
+    return returnval
+
 def find_series_by_year(series, year):
     matching_series = []
     for series_candidate in series:
@@ -811,77 +854,45 @@ def get_movie_info(title, is_trailer=False):
         debug(0, title + ": No IMDB matches found.")
         return
 
-    if INTERACTIVE:
-        # Get number of movies found
-        num_titles = len(results)
-
-        # If only one found, select and go on
-        if num_titles == 1:
-            movie_info = results[0]
-            report_match(movie_info, len(results))
-        else:
-            debug(2, "Found " + str(num_titles) + " matches.")
-            # Show max 5 titles
-            num_titles = min(num_titles, 5)
-
-            print("\nMatches for '%s'"%title)
-            print("------------------------------------")
-            print("Num\tTitle")
-            print("------------------------------------")
-            for i in range(0, num_titles):
-                m_title = results[i]['long imdb title']
-                print("%d\t%s" % (i, m_title))
-            print("")
-            try:
-                movie_num = input("Please choose the correct movie, or 's' to skip [0]: ")
-            except KeyboardInterrupt:
-                print("\nCaught interrupt, exiting.")
-                sys.exit(1)
-
-            if not movie_num:
-                # Empty string, default to the top choice
-                movie_num = 0
-            else:
-                # Check for non-numeric input
-                try:
-                    movie_num = int(movie_num)
-                except ValueError:
-                    print("Skipping this movie.")
-                    return
-                # Check for out-of-range input
-                if movie_num < 0 or movie_num > num_titles:
-                    print("Skipping this movie.")
-                    return
-            movie_info = results[movie_num]
-            print("------------------------------------")
+    if len(results) > 1 and INTERACTIVE:
+        print("\nMatches for '%s'"%title)
+        print("------------------------------------")
+        print("Num\tTitle")
+        print("------------------------------------")
+        options_text = []
+        for result in results:
+            options_text.append(result['long imdb title'])
+        movie_info = ask_user(options_text, results, max_options=5)
+        print("------------------------------------")
 
     else: # automatically pick first match
         movie_info = results[0]
         report_match(movie_info, len(results))
 
-    # So far the movie_info object only contains basic information like the
-    # title and the year; retrieve main information:
-    try:
-        imdb_access.update(movie_info)
-        #debug(3, movie_info.summary())
-    except Exception as e:
-        debug(0, "Warning: unable to get extended details from IMDb for: " + str(movie_info))
-        debug(0, "         You may need to update your imdbpy module.")
-
-    try:
-        pass
-        #don't enable the next line unless you want the full cast,
-        #   actors + everyone else who worked on the movie
-        #imdb_access.update(movie_info, 'full credits')
-    except:
-        debug(1, "Warning: unable to retrieve full credits.")
-
-    if is_trailer:
+    if movie_info is not None:
+        # So far the movie_info object only contains basic information like the
+        # title and the year; retrieve main information:
         try:
-            # This slows down the process, so only do it for trailers
-            imdb_access.update(movie_info, 'release dates')
+            imdb_access.update(movie_info)
+            #debug(3, movie_info.summary())
         except Exception as e:
-            debug(1, "Warning: unable to get release date.")
+            debug(0, "Warning: unable to get extended details from IMDb for: " + str(movie_info))
+            debug(0, "         You may need to update your imdbpy module.")
+
+        try:
+            pass
+            #don't enable the next line unless you want the full cast,
+            #   actors + everyone else who worked on the movie
+            #imdb_access.update(movie_info, 'full credits')
+        except:
+            debug(1, "Warning: unable to retrieve full credits.")
+
+        if is_trailer:
+            try:
+                # This slows down the process, so only do it for trailers
+                imdb_access.update(movie_info, 'release dates')
+            except Exception as e:
+                debug(1, "Warning: unable to get release date.")
 
     return movie_info
 

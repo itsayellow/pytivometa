@@ -80,6 +80,8 @@ HAS_TVDB = True
 
 TVDB_APIKEY = "22FF0E9C529331C6"
 
+TVDB_API_URL = "https://api.thetvdb.com/"
+
 # When using a subdir for metadata files, what should it be called
 META_DIR = '.meta'
 
@@ -145,7 +147,7 @@ def tvdb_v2_get_session_token():
         str: TVDB session token, used for all future requests in http header
     """
     # execute POST: send apikey, receive session token
-    tvdb_api_login_url = "https://api.thetvdb.com/login"
+    tvdb_api_login_url = TVDB_API_URL + "login"
     post_fields = {'apikey': TVDB_APIKEY}
     headers = {
             'Content-type': 'application/json',
@@ -197,10 +199,10 @@ def tvdb_v2_search_series(tvdb_token, search_string):
             }
         ]
     """
-    tvdb_search_series_url = "https://api.thetvdb.com/search/series"
+    tvdb_search_series_url = TVDB_API_URL + "search/series?name="+ search_string
 
     json_data = tvdb_v2_get(
-            tvdb_search_series_url + "?name=" + search_string,
+            tvdb_search_series_url,
             tvdb_token=tvdb_token
             )
 
@@ -254,16 +256,16 @@ def tvdb_v2_get_series_info(tvdb_token, tvdb_series_id):
             'siteRating': 8.8, 'siteRatingCount': 9}
     """
     # TODO: can use /series/{id}/filter to get only desired tags
-    tvdb_series_info_url = "https://api.thetvdb.com/series"
+    tvdb_series_info_url = TVDB_API_URL + "series/" + tvdb_series_id
 
     json_data = tvdb_v2_get(
-            tvdb_series_info_url + "/" + tvdb_series_id,
+            tvdb_series_info_url,
             tvdb_token=tvdb_token
             )
     series_info = json_data['data']
 
     json_data_actors = tvdb_v2_get(
-            tvdb_series_info_url + "/" + tvdb_series_id + "/actors",
+            tvdb_series_info_url + "/actors",
             tvdb_token=tvdb_token
             )
     series_info_actors = json_data_actors['data']
@@ -276,9 +278,26 @@ def tvdb_v2_get_series_info(tvdb_token, tvdb_series_id):
     return series_info
 
 def tvdb_v2_get_episode_info(tvdb_token, tvdb_series_id, season, episode):
-    pass
-    # /series/{id}/episodes/query to get episode 'id'
-    # Then  /episodes/{id} for full details
+    get_episode_id_url = TVDB_API_URL + "series/" + tvdb_series_id + \
+            "/episodes/query?airedSeason=" + season + \
+            "&airedEpisode=" + episode
+    json_data = tvdb_v2_get(
+            get_episode_id_url,
+            tvdb_token=tvdb_token
+            )
+    episode_list_info = json_data['data']
+
+    assert(len(episode_list_info)==1)
+
+    episode_id = str(episode_list_info[0]['id'])
+
+    get_episode_info_url = TVDB_API_URL + "episodes/" + episode_id
+    json_data = tvdb_v2_get(
+            get_episode_info_url,
+            tvdb_token=tvdb_token
+            )
+    episode_info = json_data['data']
+    return episode_info
 
 def tvdb_v2_get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, day):
     pass

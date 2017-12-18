@@ -1363,11 +1363,11 @@ def process_command_line(argv):
 
     return args
 
-def main():
+def main(argv):
     global INTERACTIVE
     global DEBUG_LEVEL
 
-    args = process_command_line(sys.argv)
+    args = process_command_line(argv)
 
     # set master debug message level
     DEBUG_LEVEL = args.debug
@@ -1379,7 +1379,7 @@ def main():
     debug(2, "Console Output encoding: %s" % OUT_ENCODING)
     debug(2, "Metadata File Output encoding: %s\n" % FILE_ENCODING)
 
-    # Initalize things we'll need for looking up data
+    # Initalize tvdb session token
     tvdb_token = tvdb_v2_get_session_token()
 
     # create/set genre dir if specified and possible
@@ -1409,5 +1409,15 @@ def main():
                     genre_dir=genre_dir
                     )
 
+    # exit status 0 if everything's ok
+    return 0
+
 if __name__ == "__main__":
-    main()
+    try:
+        status = main(sys.argv)
+    except KeyboardInterrupt:
+        print("Stopped by Keyboard Interrupt", file=sys.stderr)
+        # exit error code for Ctrl-C
+        status = 130
+
+    sys.exit(status)

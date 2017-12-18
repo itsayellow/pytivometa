@@ -103,9 +103,6 @@ FILE_ENCODING = 'UTF-8'
 # debug level for messages of entire file
 DEBUG_LEVEL = 0
 
-# True if interactive shell detected
-INTERACTIVE = True
-
 # Cache for series info.
 SERIES_INFO_CACHE = {}
 
@@ -437,7 +434,7 @@ def find_series_by_year(series, year):
     return matching_series
 
 def get_series_id(tvdb_token, show_name, show_dir,
-        use_metadir=False, clobber=False):
+        interactive=False, use_metadir=False, clobber=False):
     tvdb_series_id = None
     series_id_files = [os.path.join(show_dir, show_name + ".seriesID")]
     if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
@@ -479,7 +476,7 @@ def get_series_id(tvdb_token, show_name, show_dir,
         if len(series) == 1:
             debug(1, "Found exact match")
             tvdb_series_id = series[0]['id']
-        elif INTERACTIVE and len(series) > 1:
+        elif interactive and len(series) > 1:
             # Display all the shows found
             print("\nMatches for TV series title '%s'"%show_name
                 )
@@ -715,7 +712,7 @@ def format_episode_data(ep_data, meta_filepath):
         with open(meta_filepath, 'w') as out_file:
             out_file.write(metadata_text)
 
-def get_movie_info(title, is_trailer=False):
+def get_movie_info(title, interactive=False, is_trailer=False):
     debug(1, "Searching IMDb for: " + title)
     # IMDB access object
     imdb_access = imdb.IMDb()
@@ -730,7 +727,7 @@ def get_movie_info(title, is_trailer=False):
         debug(0, title + ": No IMDB matches found.")
         return
 
-    if len(results) > 1 and INTERACTIVE:
+    if len(results) > 1 and interactive:
         print("\nMatches for movie title '%s'"%title)
         print("------------------------------------")
         options_text = []
@@ -994,7 +991,7 @@ def mkdir_if_needed(dirname):
                 )
 
 def parse_movie(search_dir, filename, metadata_file_name,
-        is_trailer, genre_dir=None):
+        interactive=False, is_trailer=False, genre_dir=None):
     if not HAS_IMDB:
         print("No IMDB module, skipping movie: " + filename)
         return
@@ -1031,7 +1028,9 @@ def parse_movie(search_dir, filename, metadata_file_name,
     title = fix_spaces(title)
     debug(3, "After fixing spaces, title is: " + title)
 
-    movie_info = get_movie_info(title, is_trailer)
+    movie_info = get_movie_info(
+            title, interactive=interactive, is_trailer=is_trailer
+            )
 
     if movie_info is not None:
         format_movie_data(movie_info, search_dir, filename, metadata_file_name,
@@ -1080,7 +1079,7 @@ def tvinfo_from_filename(filename):
     return tv_info
 
 def parse_tv(tvdb_token, tv_info, meta_filepath, show_dir,
-        use_metadir=False, clobber=False):
+        interactive=False, use_metadir=False, clobber=False):
     """
     Tags we need in episode_info if possible:
         'Actors',
@@ -1203,7 +1202,8 @@ def parse_tv(tvdb_token, tv_info, meta_filepath, show_dir,
     if tv_info['series'] not in SERIES_INFO_CACHE:
         SERIES_INFO_CACHE[tv_info['series']] = get_series_id(
                 tvdb_token, tv_info['series'], show_dir,
-                use_metadir=use_metadir, clobber=clobber
+                interactive=interactive, use_metadir=use_metadir,
+                clobber=clobber
                 )
     (series_info, tvdb_series_id) = SERIES_INFO_CACHE[tv_info['series']]
     if tvdb_series_id and series_info:
@@ -1226,8 +1226,8 @@ def parse_tv(tvdb_token, tv_info, meta_filepath, show_dir,
         if episode_info is not None:
             format_episode_data(episode_info, meta_filepath)
 
-def process_dir(dir_proc, dir_files, tvdb_token, use_metadir=False,
-        clobber=False, genre_dir=None):
+def process_dir(dir_proc, dir_files, tvdb_token, interactive=False,
+        use_metadir=False, clobber=False, genre_dir=None):
     debug(1, "\n## Looking for videos in: " + dir_proc)
 
     video_files = get_video_files(dir_proc, dir_files)
@@ -1259,7 +1259,8 @@ def process_dir(dir_proc, dir_files, tvdb_token, use_metadir=False,
             if tv_info:
                 if HAS_TVDB:
                     parse_tv(tvdb_token, tv_info, meta_filepath, dir_proc,
-                            use_metadir=use_metadir, clobber=clobber
+                            interactive=interactive, use_metadir=use_metadir,
+                            clobber=clobber
                             )
                 else:
                     debug(1, "Metadata service for TV shows is " + \
@@ -1267,7 +1268,7 @@ def process_dir(dir_proc, dir_files, tvdb_token, use_metadir=False,
             else:
                 # assume movie if filename not matching tv
                 parse_movie(dir_proc, filename, meta_filepath,
-                        is_trailer, genre_dir=genre_dir
+                        interactive=interactive, is_trailer=is_traler, genre_dir=genre_dir
                         )
 
 def check_interactive():
@@ -1364,7 +1365,6 @@ def process_command_line(argv):
     return args
 
 def main(argv):
-    global INTERACTIVE
     global DEBUG_LEVEL
 
     args = process_command_line(argv)
@@ -1373,7 +1373,7 @@ def main(argv):
     DEBUG_LEVEL = args.debug
 
     # set interactive if we are in an interactive shell
-    INTERACTIVE = check_interactive()
+    interactive = check_interactive()
 
     debug(2, "\nConsole Input encoding: %s" % IN_ENCODING)
     debug(2, "Console Output encoding: %s" % OUT_ENCODING)
@@ -1397,6 +1397,7 @@ def main(argv):
                 #   but '.' dir is OK
                 if not re.search(r'\..+', dirname):
                     process_dir(dirpath, dir_files, tvdb_token,
+                            interactive=interactive,
                             use_metadir=args.metadir,
                             clobber=args.clobber,
                             genre_dir=genre_dir
@@ -1404,6 +1405,7 @@ def main(argv):
         else:
             dir_files = os.listdir(search_dir)
             process_dir(search_dir, dir_files, tvdb_token,
+                    interactive=interactive,
                     use_metadir=args.metadir,
                     clobber=args.clobber,
                     genre_dir=genre_dir

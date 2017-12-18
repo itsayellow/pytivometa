@@ -268,7 +268,7 @@ def tvdb_v2_get_series_info(tvdb_token, tvdb_series_id):
             )
     series_info_actors = json_data_actors['data']
     # TODO: sort by last name after sortOrder
-    series_info_actors.sort(key=lambda x:x['sortOrder'])
+    series_info_actors.sort(key=lambda x: x['sortOrder'])
 
     actors = [actdata['name'] for actdata in series_info_actors]
     series_info['actors'] = actors
@@ -285,7 +285,7 @@ def tvdb_v2_get_episode_info(tvdb_token, tvdb_series_id, season, episode):
             )
     episode_list_info = json_data['data']
 
-    assert(len(episode_list_info)==1)
+    assert len(episode_list_info) == 1
 
     episode_id = str(episode_list_info[0]['id'])
 
@@ -299,10 +299,10 @@ def tvdb_v2_get_episode_info(tvdb_token, tvdb_series_id, season, episode):
 
 def tvdb_v2_get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, day):
     season = None
-    epsiode = None
+    episode = None
 
     # assumes year, month, day are all strings
-    search_date_num = int("%04d%02d%02d"%(int(year),int(month),int(day)))
+    search_date_num = int("%04d%02d%02d"%(int(year), int(month), int(day)))
     debug(1, "searching for episode date %d"%search_date_num)
 
     # need to get all pages in /series/{id}/episodes to find air date
@@ -310,7 +310,7 @@ def tvdb_v2_get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, d
 
     page = 1
     done = False
-    while(not done):
+    while not done:
         # go through each page of episodes until match is found, or
         #   we run out of pages (HTTP Error 404)
         page_str = str(page)
@@ -334,21 +334,21 @@ def tvdb_v2_get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, d
             episode_list = json_data['data']
 
         if episode_list:
-            for episode in episode_list:
+            for episode_info in episode_list:
                 # NOTE: currently episode list seems to be sorted odd!
                 #   All seasons' episode 1, then all seasons' episode 2, ...
-                if episode['firstAired']:
-                    ep_date_re = re.search(r'(\d+)-(\d+)-(\d+)', episode['firstAired'])
+                if episode_info['firstAired']:
+                    ep_date_re = re.search(r'(\d+)-(\d+)-(\d+)', episode_info['firstAired'])
                     if ep_date_re:
                         year = ep_date_re.group(1)
                         month = ep_date_re.group(2)
                         day = ep_date_re.group(3)
-                        ep_date_num = int("%04d%02d%02d"%(int(year),int(month),int(day)))
-                        debug(2, "searching: episode date %d season %s episode %s"%(ep_date_num,episode['airedSeason'],episode['airedEpisodeNumber']))
+                        ep_date_num = int("%04d%02d%02d"%(int(year), int(month), int(day)))
+                        debug(2, "searching: episode date %d season %s episode %s"%(ep_date_num, episode_info['airedSeason'], episode_info['airedEpisodeNumber']))
                         if ep_date_num == search_date_num:
                             # found a match
-                            season = episode['airedSeason']
-                            episode = episode['airedEpisodeNumber']
+                            season = episode_info['airedSeason']
+                            episode = episode_info['airedEpisodeNumber']
                             done = True
                             break
         else:
@@ -540,7 +540,6 @@ def format_episode_data(ep_data, meta_filepath):
     # The following is a dictionary of pyTivo metadata attributes and how they
     #   map to thetvdb xml elements.
 
-    # TODO: episodeNumber is hash of TVDB: (airedSeason, airedEpisodeNumber)
     # NOTE: 'NOT_IN_TVDB_INFO' is a placeholder to show it does not exist
     #       as metadata on TVDB
     pytivo_metadata = {
@@ -611,7 +610,7 @@ def format_episode_data(ep_data, meta_filepath):
     # thumbAuthor
     # thumbHeight
     # thumbWidth
-    
+
 
     # pyTivo Metadata tag order
     pytivo_metadata_order = [
@@ -717,8 +716,6 @@ def format_episode_data(ep_data, meta_filepath):
             out_file.write(metadata_text)
 
 def get_movie_info(title, is_trailer=False):
-    line = ""
-
     debug(1, "Searching IMDb for: " + title)
     # IMDB access object
     imdb_access = imdb.IMDb()
@@ -1202,8 +1199,6 @@ def parse_tv(tvdb_token, tv_info, meta_filepath, show_dir,
         "writers": [ "string" ]
     }
     """
-    # TODO: thetvdb.com is switching to json, and abandoning xml!
-
     episode_info = {}
     if tv_info['series'] not in SERIES_INFO_CACHE:
         SERIES_INFO_CACHE[tv_info['series']] = get_series_id(

@@ -297,26 +297,26 @@ def tvdb_v1_get_mirror(timeout):
     global HAS_TVDB
     # Query tvdb for a list of mirrors
     mirrors_url = "http://www.thetvdb.com/api/%s/mirrors.xml" % TVDB_APIKEY
-    mirror_url = ''
+    tvdb_mirror = ''
     try:
         # from xml.etree.ElementTree import parse, returns
         #   xml.etree.ElementTree.ElemenTree
         mirrors_xml = parse(urllib.request.urlopen(mirrors_url, None, timeout))
         mirrors = [Item for Item in mirrors_xml.findall('Mirror')]
-        mirror_url = mirrors[0].findtext('mirrorpath')
+        tvdb_mirror = mirrors[0].findtext('mirrorpath')
     except:
         debug(0, "Error looking information from thetvdb, no metadata will "\
                 "be retrieved for TV shows."
              )
         HAS_TVDB = False
-    return mirror_url
+    return tvdb_mirror
 
-#def tvdb_v1_search_series(mirror_url, bare_title):
+#def tvdb_v1_search_series(tvdb_mirror, bare_title):
 #    """Given a search string, return a list from thetvdb.com of all possible
 #    television series matches.
 #
 #    Args:
-#        mirror_url (str): tvdb mirror base url
+#        tvdb_mirror (str): tvdb mirror base url
 #        bare_title (str): string to search for tvdb series info
 #
 #    Returns:
@@ -326,7 +326,7 @@ def tvdb_v1_get_mirror(timeout):
 #    getseriesid_url = '/api/GetSeries.php?'
 #
 #    debug(1, "Searching for: " + bare_title)
-#    url = mirror_url + getseriesid_url + urllib.parse.urlencode({"seriesname" : bare_title})
+#    url = tvdb_mirror + getseriesid_url + urllib.parse.urlencode({"seriesname" : bare_title})
 #    debug(3, "series_xml: Using URL " + url)
 #
 #    series_xml = get_xml(url)
@@ -347,11 +347,11 @@ def tvdb_v1_get_mirror(timeout):
 #    # return list of xml.etree.ElementTree.Element
 #    return series
 
-#def tvdb_v1_get_series_info(mirror_url, tvdb_series_id):
+#def tvdb_v1_get_series_info(tvdb_mirror, tvdb_series_id):
 #    """Given a series ID, return info on the series
 #
 #    Args:
-#        mirror_url (str): tvdb mirror base url
+#        tvdb_mirror (str): tvdb mirror base url
 #        tvdb_series_id (str): TVDB series ID number for series
 #
 #    Returns:
@@ -379,7 +379,7 @@ def tvdb_v1_get_mirror(timeout):
 #        'tms_wanted_old': '0', 'zap2it_id': None}
 #
 #    """
-#    series_url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + tvdb_series_id + "/en.xml"
+#    series_url = tvdb_mirror + "/api/" + TVDB_APIKEY + "/series/" + tvdb_series_id + "/en.xml"
 #    debug(3, "getSeriesInfoXML: Using URL " + series_url)
 #
 #    series_info_xml = get_xml(series_url)
@@ -393,11 +393,11 @@ def tvdb_v1_get_mirror(timeout):
 #
 #    return series_info
 
-def tvdb_v1_get_episode_info(mirror_url, tvdb_series_id, season, episode):
+def tvdb_v1_get_episode_info(tvdb_mirror, tvdb_series_id, season, episode):
     """Take a well-specified tv episode and return data
 
     Args:
-        mirror_url (str): url of thetvdb.com mirror we are using
+        tvdb_mirror (str): url of thetvdb.com mirror we are using
         tvdb_series_id (str): string of series ID number
         season (str): string of season number
         episode (str): string of episode number
@@ -419,7 +419,7 @@ def tvdb_v1_get_episode_info(mirror_url, tvdb_series_id, season, episode):
         '2017-11-13 13:29:46', 'IMDB_ID': 'tt5705890', 'EpImgFlag': '2',
         'is_movie': '0', 'Rating': '8', 'SeasonNumber': '1', 'Language': 'en'}
     """
-    url = mirror_url + "/api/" + TVDB_APIKEY + "/series/" + tvdb_series_id + \
+    url = tvdb_mirror + "/api/" + TVDB_APIKEY + "/series/" + tvdb_series_id + \
             "/default/" + season + "/" + episode + "/en.xml"
     debug(3, "tvdb_v1_get_episode_info: Using URL " + url)
 
@@ -435,11 +435,11 @@ def tvdb_v1_get_episode_info(mirror_url, tvdb_series_id, season, episode):
 
     return episode_info
 
-def tvdb_v1_get_episode_info_air_date(mirror_url, tvdb_series_id, year, month, day):
+def tvdb_v1_get_episode_info_air_date(tvdb_mirror, tvdb_series_id, year, month, day):
     """Take a well-specified tv episode and return data
 
     Args:
-        mirror_url (str): url of thetvdb.com mirror we are using
+        tvdb_mirror (str): url of thetvdb.com mirror we are using
         tvdb_series_id (str): string of series ID number
         year (str): string of year of air date
         month (str): string of month of air date
@@ -462,7 +462,7 @@ def tvdb_v1_get_episode_info_air_date(mirror_url, tvdb_series_id, year, month, d
         'seasonid': '674592', 'seriesid': '314614'}
     """
     # Takes a tvdb_series_id, year number, month number, day number, and return xml data
-    url = mirror_url + "/api/GetEpisodeByAirDate.php?apikey=" + TVDB_APIKEY + \
+    url = tvdb_mirror + "/api/GetEpisodeByAirDate.php?apikey=" + TVDB_APIKEY + \
             "&seriesid=" + tvdb_series_id + "&airdate=" + year + "-" + month + "-" + day
     debug(3, "tvdb_v1_get_episode_info_air_date: Using URL " + url)
 
@@ -584,7 +584,7 @@ def find_series_by_year(series, year):
     # Return all that matched the year (which may be an empty list)
     return matching_series
 
-def get_series_id(tvdb_token, mirror_url, show_name, show_dir,
+def get_series_id(tvdb_token, tvdb_mirror, show_name, show_dir,
         use_metadir=False, clobber=False):
     tvdb_series_id = None
     series_id_files = [os.path.join(show_dir, show_name + ".seriesID")]
@@ -615,7 +615,7 @@ def get_series_id(tvdb_token, mirror_url, show_name, show_dir,
     if not clobber and tvdb_series_id:
         tvdb_series_id = re.sub("\n", "", tvdb_series_id)
     else:
-        #series = tvdb_v1_search_series(mirror_url, bare_title)
+        #series = tvdb_v1_search_series(tvdb_mirror, bare_title)
         series = tvdb_v2_search_series(tvdb_token, bare_title)
 
         if year and len(series) > 1:
@@ -672,7 +672,7 @@ def get_series_id(tvdb_token, mirror_url, show_name, show_dir,
             debug(1, "Unable to find tvdb_series_id.")
 
     if tvdb_series_id is not None:
-        #series_info = tvdb_v1_get_series_info(mirror_url, tvdb_series_id)
+        #series_info = tvdb_v1_get_series_info(tvdb_mirror, tvdb_series_id)
         series_info = tvdb_v2_get_series_info(tvdb_token, tvdb_series_id)
     else:
         series_info = {}
@@ -1207,7 +1207,7 @@ def tvinfo_from_filename(filename):
 
     return tv_info
 
-def parse_tv(tvdb_token, mirror_url, tv_info, meta_filepath, show_dir,
+def parse_tv(tvdb_token, tvdb_mirror, tv_info, meta_filepath, show_dir,
         use_metadir=False, clobber=False):
     """
     Tags we need in episode_info if possible:
@@ -1333,7 +1333,7 @@ def parse_tv(tvdb_token, mirror_url, tv_info, meta_filepath, show_dir,
     if tv_info['series'] not in SERIES_INFO_CACHE:
         SERIES_INFO_CACHE[tv_info['series']] = get_series_id(
                 tvdb_token,
-                mirror_url, tv_info['series'], show_dir,
+                tvdb_mirror, tv_info['series'], show_dir,
                 use_metadir=use_metadir, clobber=clobber
                 )
     (series_info, tvdb_series_id) = SERIES_INFO_CACHE[tv_info['series']]
@@ -1342,14 +1342,14 @@ def parse_tv(tvdb_token, mirror_url, tv_info, meta_filepath, show_dir,
         if tv_info.get('season', None) and tv_info.get('episode', None):
             episode_info.update(
                     tvdb_v1_get_episode_info(
-                        mirror_url, tvdb_series_id,
+                        tvdb_mirror, tvdb_series_id,
                         tv_info['season'], tv_info['episode']
                         )
                     )
         else:
             episode_info.update(
                     tvdb_v1_get_episode_info_air_date(
-                        mirror_url, tvdb_series_id,
+                        tvdb_mirror, tvdb_series_id,
                         tv_info['year'], tv_info['month'], tv_info['day']
                         )
                     )
@@ -1357,7 +1357,7 @@ def parse_tv(tvdb_token, mirror_url, tv_info, meta_filepath, show_dir,
         if episode_info is not None:
             format_episode_data(episode_info, meta_filepath)
 
-def process_dir(dir_proc, dir_files, tvdb_token, mirror_url, use_metadir=False,
+def process_dir(dir_proc, dir_files, tvdb_token, tvdb_mirror, use_metadir=False,
         clobber=False, genre_dir=None):
     debug(1, "\n## Looking for videos in: " + dir_proc)
 
@@ -1389,7 +1389,7 @@ def process_dir(dir_proc, dir_files, tvdb_token, mirror_url, use_metadir=False,
 
             if tv_info:
                 if HAS_TVDB:
-                    parse_tv(tvdb_token, mirror_url, tv_info, meta_filepath,
+                    parse_tv(tvdb_token, tvdb_mirror, tv_info, meta_filepath,
                             dir_proc,
                             use_metadir=use_metadir, clobber=clobber
                             )

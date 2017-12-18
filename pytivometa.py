@@ -765,6 +765,73 @@ def get_movie_info(title, interactive=False, is_trailer=False):
 
 def format_movie_data(movie_info, dir_, file_name, metadata_file_name, tags,
         genre_dir=None):
+    """
+    All imdbpy tags seen in a long list of movies:
+    -------------------------------------------------------------------------
+    ['akas', 'animation department', 'art department', 'art direction', 'aspect
+    ratio', 'assistant director', 'camera and electrical department',
+    'canonical title', 'cast', 'casting department', 'casting director',
+    'certificates', 'cinematographer', 'color info', 'costume department',
+    'costume designer', 'countries', 'country codes', 'cover url', 'director',
+    'distributors', 'editor', 'editorial department', 'full-size cover url',
+    'genres', 'imdbIndex', 'kind', 'language codes', 'languages', 'location
+    management', 'long imdb canonical title', 'long imdb title', 'make up',
+    'miscellaneous companies', 'miscellaneous crew', 'mpaa', 'music
+    department', 'original music', 'plot', 'plot outline', 'producer',
+    'production companies', 'production design', 'production manager',
+    'rating', 'runtimes', 'set decoration', 'smart canonical title', 'smart
+    long imdb canonical title', 'sound crew', 'sound mix', 'special effects
+    companies', 'special effects department', 'stunt performer', 'thanks',
+    'title', 'top 250 rank', 'transportation department', 'visual effects',
+    'votes', 'writer', 'year']
+    
+    
+    Description of movie tags from imbdpy
+    https://github.com/alberanid/imdbpy/blob/master/docs/README.package.txt
+    -------------------------------------------------------------------------
+    title; string; the "usual" title of the movie, like "The Untouchables".
+    long imdb title; string; "Uncommon Valor (1983/II) (TV)"
+    canonical title; string; the title in the canonical format,
+                             like "Untouchables, The".
+    long imdb canonical title; string; "Patriot, The (2000)".
+    year; string; the year of release or '????' if unknown.
+    kind; string; one in ('movie', 'tv series', 'tv mini series', 'video game',
+                          'video movie', 'tv movie', 'episode')
+    imdbIndex; string; the roman number for movies with the same title/year.
+    director; Person list; a list of director's name (e.g.: ['Brian De Palma'])
+    cast; Person list; list of actor/actress, with the currentRole instance
+                       variable set to a Character object which describe his
+                       role/duty.
+    cover url; string; the link to the image of the poster.
+    writer; Person list; list of writers ['Oscar Fraley (novel)']
+    plot; list; list of plots and authors of the plot.
+    rating; string; user rating on IMDb from 1 to 10 (e.g. '7.8')
+    votes; string; number of votes (e.g. '24,101')
+    runtimes; string list; in minutes ['119'] or something like ['USA:118',
+              'UK:116']
+    number of episodes; int; number or episodes for a series.
+    color info; string list; ["Color (Technicolor)"]
+    countries; string list; production's country ['USA', 'Italy']
+    genres; string list; one or more in (Action, Adventure, Adult, Animation,
+                    Comedy, Crime, Documentary, Drama, Family, Fantasy, Film-Noir,
+                    Horror, Musical, Mystery, Romance, Sci-Fi, Short, Thriller,
+                    War, Western) and other genres defined by IMDb.
+    akas; string list; list of aka for this movie
+    languages; string list; list of languages
+    certificates; string list; ['UK:15', 'USA:R']
+    mpaa; string; the mpaa rating
+    episodes (series only); dictionary of dictionary; one key for every season,
+                            one key for every episode in the season.
+    number of episodes (series only); int; total number of episodes.
+    number of seasons (series only); int; total number of seasons.
+    series years (series only); string; range of years when the series was produced.
+    episode of (episode only); Movie object; the parent series for an episode.
+    season (episode only); int; the season number.
+    episode (episode only); int; the number of the episode in the season.
+    long imdb episode title (episode only); string; episode and series title.
+    series title; string.
+    canonical series title; string.
+    """
     line = ""
 
     # search for user language or country version of title if present
@@ -788,14 +855,8 @@ def format_movie_data(movie_info, dir_, file_name, metadata_file_name, tags,
     # movieYear
     line += "movieYear : %s\n" % movie_info['year']
 
-    if movie_info.get('release dates', None):
-        # movie_info has key 'release dates' and it is not empty string
-        reldate = get_rel_date(movie_info['release dates']) + '. '
-    else:
-        reldate = ''
-
     # description
-    line += 'description : ' + reldate
+    line += 'description : '
     if "plot outline" in list(movie_info.keys()):
         line += movie_info['plot outline']
     # IMDB score if available
@@ -831,40 +892,41 @@ def format_movie_data(movie_info, dir_, file_name, metadata_file_name, tags,
             line += "mpaaRating : %s\n" % mpaa_rating
 
     #vProgramGenre and vSeriesGenre
-    if "genres" in list(movie_info.keys()):
-        for i in movie_info['genres']:
-            line += "vProgramGenre : %s\n" % i
-        for i in movie_info['genres']:
-            line += "vSeriesGenre : %s\n" % i
-        if genre_dir:
-            link_genres(dir_, genre_dir, file_name, metadata_file_name,
-                    movie_info['genres']
-                    )
+    for genre in movie_info.get('genres', []):
+        line += "vProgramGenre : %s\n" % genre
+    for genre in movie_info.get('genres', []):
+        line += "vSeriesGenre : %s\n" % genre
 
-    # vDirector (suppress repeated names)
-    if "director" in list(movie_info.keys()):
-        directors = {}
-        for i in movie_info['director']:
-            if i['name'] not in directors:
-                directors[i['name']] = 1
-                line += "vDirector : %s|\n" % i['name']
-                debug(3, "vDirector : " + i['name'])
-    # vWriter (suppress repeated names)
-    if "writer" in list(movie_info.keys()):
-        writers = {}
-        for i in movie_info['writer']:
-            if i['name'] not in writers:
-                writers[i['name']] = 1
-                line += "vWriter : %s|\n" % i['name']
-                debug(3, "vWriter : " + i['name'])
-    # vActor (suppress repeated names)
-    if "cast" in list(movie_info.keys()):
-        actors = {}
-        for i in movie_info['cast']:
-            if i['name'] not in actors:
-                actors[i['name']] = 1
-                line += "vActor : %s|\n" % i['name']
-                debug(3, "vActor : " + i['name'])
+    # genre directory linking
+    if "genres" in list(movie_info.keys()) and genre_dir:
+        link_genres(dir_, genre_dir, file_name, metadata_file_name,
+                movie_info['genres']
+                )
+
+    # vDirector
+    # go through list, omitting duplicates
+    director_names = []
+    for director in movie_info.get('director', []):
+        if director['name'] not in director_names:
+            director_names.append(director['name'])
+            line += "vDirector : %s|\n" % director['name']
+            debug(3, "vDirector : " + director['name'])
+    # vWriter
+    # go through list, omitting duplicates
+    writer_names = []
+    for writer in movie_info.get('writer', []):
+        if writer['name'] not in writer_names:
+            writer_names.append(writer['name'])
+            line += "vWriter : %s|\n" % writer['name']
+            debug(3, "vWriter : " + writer['name'])
+    # vActor
+    # go through list, omitting duplicates
+    actor_names = []
+    for actor in movie_info.get('cast', []):
+        if actor['name'] not in actor_names:
+            actor_names.append(actor['name'])
+            line += "vActor : %s|\n" % actor['name']
+            debug(3, "vActor : " + actor['name'])
 
     debug(2, "Writing to %s" % metadata_file_name)
     with open(metadata_file_name, 'w') as out_file:
@@ -902,14 +964,6 @@ def report_match(movie_info, num_results):
         debug(1, matchtype + movie_info['long imdb title'])
     else:
         debug(1, matchtype + str(movie_info))
-
-def get_rel_date(reldates):
-    for rel_date in reldates:
-        if rel_date.encode(FILE_ENCODING, 'replace').lower().startswith(COUNTRY.lower() + '::'):
-            return rel_date[len(COUNTRY)+2:]
-    # Didn't find the country we want, so return the first one, but leave the
-    #   country name in there.
-    return reldates[0]
 
 def get_video_files(dirname, dir_files):
     """Get list of file info objects for files of particular extensions, and
@@ -1264,7 +1318,7 @@ def process_dir(dir_proc, dir_files, tvdb_token, interactive=False,
             else:
                 # assume movie if filename not matching tv
                 parse_movie(dir_proc, filename, meta_filepath,
-                        interactive=interactive, is_trailer=is_traler, genre_dir=genre_dir
+                        interactive=interactive, is_trailer=is_trailer, genre_dir=genre_dir
                         )
 
 def check_interactive():

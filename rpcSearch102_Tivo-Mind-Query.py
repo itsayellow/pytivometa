@@ -130,7 +130,7 @@ class Remote(object):
               count=25,
               bodyId=body_id,
               title=title,
-              subtitle = subtitle
+              subtitle=subtitle
         )
         self.Write(req)
         result = self.Read()
@@ -148,10 +148,10 @@ class Remote(object):
 
     def OfferSearchEpisodes(self, offset, collectionId):
         req = RpcRequest('contentSearch',
-            offset = offset,
+            offset=offset,
             #filterUnavailable = 'false',
-            count = 25,
-            orderBy = ['seasonNumber', 'episodeNum'],
+            count=25,
+            orderBy=['seasonNumber', 'episodeNum'],
             levelOfDetail = 'medium',
             collectionId = collectionId
         )
@@ -252,12 +252,12 @@ class Remote(object):
                         if offers:
                             for offer in offers:
                                 if not stop:
-                                      matched += 1
-                                      #print json.dumps(offer, indent=4) + '\r\n-------------\r\n'
-                                      #print '{"offeritem": ' + json.dumps(offer) + '},'
-                                      print(json.dumps(offer) + ',')
+                                    matched += 1
+                                    #print json.dumps(offer, indent=4) + '\r\n-------------\r\n'
+                                    #print '{"offeritem": ' + json.dumps(offer) + '},'
+                                    print(json.dumps(offer) + ',')
                                 if matched > max:
-                                      stop = True
+                                    stop = True
                         else:
                             stop = True
 
@@ -272,11 +272,11 @@ class Remote(object):
                     #print '============='
                     #print 'collectionId = ' + id
                     req = RpcRequest('contentSearch',
-                        collectionId = id,
-                        title = title,
-                        seasonNumber = season,
-                        episodeNum = ep,
-                        count = 1,
+                        collectionId=id,
+                        title=title,
+                        seasonNumber=season,
+                        episodeNum=ep,
+                        count=1,
                     )
                     self.Write(req)
                     result = self.Read()
@@ -290,7 +290,7 @@ class Remote(object):
 
     def searchOneSeason(self, title, season, maxEp):
         count = 25
-        stop = False;
+        stop = False
         collections = remote.collectionSearchSeries(count, title)
         collection = collections.get('collection')
         if collection:
@@ -301,14 +301,14 @@ class Remote(object):
                     id = c.get('collectionId')
                     #print '============='
                     #print 'collectionId = ' + id
-                    for epn in range(1,int(maxEp)+1):
+                    for epn in range(1, int(maxEp)+1):
                         ep = str(epn)
                         req = RpcRequest('contentSearch',
-                            collectionId = id,
-                            title = title,
-                            seasonNumber = season,
-                            episodeNum = ep,
-                            count = 1,
+                            collectionId=id,
+                            title=title,
+                            seasonNumber=season,
+                            episodeNum=ep,
+                            count=1,
                         )
                         self.Write(req)
                         result = self.Read()
@@ -327,7 +327,7 @@ if __name__ == '__main__':
         #print 'credentials = ' + username + ' (and) ' + password
         remote = Remote(username, password)
         if searchType == 'streaming':
-            remote.SearchEpisodes (25, 100, title) # test 100 was 25
+            remote.SearchEpisodes(25, 100, title) # test 100 was 25
         elif searchType == 'linear':
             body_id = 'tsn:' + sys.argv[4]
             result = remote.offerSearchLinear(title, subtitle)
@@ -350,10 +350,10 @@ if __name__ == '__main__':
                     cl = str(offer.get('partnerCollectionId'))
                     # TODO: figure out what this should be.  Was:
                     # st = str(unicode(offer.get('subtitle')).encode('utf8') )
-                    st = str(str(offer.get('subtitle')).encode('utf8') )
-                    s  = str(offer.get('seasonNumber') )
+                    st = str(str(offer.get('subtitle')).encode('utf8'))
+                    s = str(offer.get('seasonNumber'))
                     if offer.get('episodeNum'):
-                        e  = str(offer.get('episodeNum') )
+                        e = str(offer.get('episodeNum'))
                         print('S' + s + 'E' + e + ':' + pid + ' subTitle: ' + st + '^')
                     #break
             else:
@@ -362,7 +362,7 @@ if __name__ == '__main__':
             count = 25
             max = 10
             print('{ "movieoffer":  [')
-            remote.Search(count, max, sys.argv[1] )
+            remote.Search(count, max, sys.argv[1])
             print('] }')
         elif searchType == 'seasonep':
             season = sys.argv[6]

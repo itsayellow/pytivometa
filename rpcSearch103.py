@@ -2,6 +2,15 @@
 # Modified by KenV99
 # Modified by Matthew Clapp for python3, style updates, some functionality
 
+# TODO: catch HTTP errors of rpc_request
+#   HTTP 5xx server error
+# TODO: catch RPC error dictionary error
+#   {
+#       "code": <error code string>
+#       "text": <error explanation>
+#       "type": <"error" or ?>
+#   }
+
 import logging
 import random
 import re
@@ -13,9 +22,6 @@ import pprint
 
 TIVO_ADDR = 'middlemind.tivo.com'
 TIVO_PORT = 443
-
-RPC_ID = 0
-SESSION_ID = random.randrange(0x26c000, 0x27dc20)
 
 PP = pprint.PrettyPrinter(indent=4)
 #logging.basicConfig(level=logging.DEBUG)
@@ -38,46 +44,6 @@ def debug_fxn(func):
         return func(*args, **kwargs)
     return func_wrapper
 
-@debug_fxn
-def rpc_request(req_type, monitor=False, **kwargs):
-    """Direct RPC request to TiVo Mind
-
-    Args:
-        req_type ():
-        monitor (boolean):
-        **kwargs: keys need to be in camelCase because they are passed on
-            directly to request body
-    """
-    global RPC_ID
-    RPC_ID += 1
-    if 'bodyId' in kwargs:
-        body_id = kwargs['bodyId']
-    else:
-        body_id = ''
-
-    headers = '\r\n'.join((
-            'Type: request',
-            'RpcId: %d' % RPC_ID,
-            'SchemaVersion: 14',
-            'Content-Type: application/json',
-            'RequestType: %s' % req_type,
-            'ResponseCount: %s' % (monitor and 'multiple' or 'single'),
-            'BodyId: %s' % body_id,
-            'X-ApplicationName: Quicksilver',
-            'X-ApplicationVersion: 1.2',
-            'X-ApplicationSessionId: 0x%x' % SESSION_ID,
-            )) + '\r\n'
-
-    req_obj = dict(**kwargs)
-    req_obj.update({'type': req_type})
-
-    body = json.dumps(req_obj) + '\n'
-
-    # The "+ 2" is for the '\r\n' we'll add to the headers next.
-    start_line = 'MRPC/2 %d %d' % (len(headers) + 2, len(body))
-
-    return '\r\n'.join((start_line, headers, body))
-
 class Remote(object):
     @debug_fxn
     def __init__(self, username, password):
@@ -87,6 +53,10 @@ class Remote(object):
             username (str): tivo.com username
             password (str): tivo.com password
         """
+        # unique ID for entire session
+        self.session_id = random.randrange(0x26c000, 0x27dc20)
+        # unique ID for each request
+        self.rpc_id = 0
         # read buffer is bytes
         self.buf = b''
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -103,6 +73,52 @@ class Remote(object):
             print('credential error')
             # re-raise so we know exact exception
             raise
+
+    @debug_fxn
+    def _get_rpc_id(self):
+        """Fetches and then increments self.rpc_id for RPC requests
+        """
+        rpc_id = self.rpc_id
+        self.rpc_id = self.rpc_id + 1
+        return rpc_id
+
+    @debug_fxn
+    def rpc_request(self, req_type, monitor=False, **kwargs):
+        """Direct RPC request to TiVo Mind
+
+        Args:
+            req_type (str):
+            monitor (boolean): ResponseCount = 'multiple' if True, 'single' if False
+            **kwargs: keys need to be in camelCase because they are passed on
+                directly to JSON request body
+        """
+        if 'bodyId' in kwargs:
+            body_id = kwargs['bodyId']
+        else:
+            body_id = ''
+
+        headers = '\r\n'.join((
+                'Type: request',
+                'RpcId: %d' % self._get_rpc_id(),
+                'SchemaVersion: 14',
+                'Content-Type: application/json',
+                'RequestType: %s' % req_type,
+                'ResponseCount: %s' % (monitor and 'multiple' or 'single'),
+                'BodyId: %s' % body_id,
+                'X-ApplicationName: Quicksilver',
+                'X-ApplicationVersion: 1.2',
+                'X-ApplicationSessionId: 0x%x' % self.session_id,
+                )) + '\r\n'
+
+        req_obj = dict(**kwargs)
+        req_obj.update({'type': req_type})
+
+        body = json.dumps(req_obj) + '\n'
+
+        # The "+ 2" is for the '\r\n' we'll add to the headers next.
+        start_line = 'MRPC/2 %d %d' % (len(headers) + 2, len(body))
+
+        return '\r\n'.join((start_line, headers, body))
 
     @debug_fxn
     def _read(self):
@@ -147,7 +163,7 @@ class Remote(object):
             username (str): tivo.com username
             password (str): tivo.com password
         """
-        self._write(rpc_request('bodyAuthenticate',
+        self._write(self.rpc_request('bodyAuthenticate',
                 credential={
                         'type': 'mmaCredential',
                         'username': username,
@@ -166,7 +182,7 @@ class Remote(object):
             count (): maximum records to fetch
             keywords (str): strings to search for matching records
         """
-        req = rpc_request('collectionSearch',
+        req = self.rpc_request('collectionSearch',
               keyword=keywords,
               orderBy='strippedTitle',
               includeBroadcast='true',
@@ -185,7 +201,7 @@ class Remote(object):
 
     @debug_fxn
     def offer_search_linear(self, title, subtitle, body_id):
-        req = rpc_request('offerSearch',
+        req = self.rpc_request('offerSearch',
               count=25,
               bodyId=body_id,
               title=title,
@@ -197,7 +213,7 @@ class Remote(object):
 
     @debug_fxn
     def offer_search_linear_plus(self, title, body_id):
-        req = rpc_request('offerSearch',
+        req = self.rpc_request('offerSearch',
               count=25,
               bodyId=body_id,
               title=title
@@ -208,7 +224,7 @@ class Remote(object):
 
     @debug_fxn
     def offer_search_episodes(self, offset, collection_id):
-        req = rpc_request('contentSearch',
+        req = self.rpc_request('contentSearch',
             offset=offset,
             #filterUnavailable = 'false',
             count=25,
@@ -280,7 +296,7 @@ class Remote(object):
 
     @debug_fxn
     def collection_search(self, count, keywords):
-        req = rpc_request('collectionSearch',
+        req = sefl.rpc_request('collectionSearch',
               keyword=keywords,
               orderBy='strippedTitle',
               includeBroadcast='true',
@@ -298,7 +314,7 @@ class Remote(object):
 
     @debug_fxn
     def offer_search(self, offset, collection_id):
-        req = rpc_request('offerSearch',
+        req = self.rpc_request('offerSearch',
               offset=offset,
               count=25,
               namespace='trioserver',
@@ -346,7 +362,7 @@ class Remote(object):
                     collection_id = c.get('collectionId')
                     #print('=============')
                     #print('collectionId = ' + collection_id)
-                    req = rpc_request('contentSearch',
+                    req = self.rpc_request('contentSearch',
                         collectionId=collection_id,
                         title=title,
                         seasonNumber=season,
@@ -386,7 +402,7 @@ class Remote(object):
                     #print('=============')
                     #print('collectionId = ' + collection_id)
                     for episode_num in range(1, int(max_episode)+1):
-                        req = rpc_request('contentSearch',
+                        req = self.rpc_request('contentSearch',
                             collectionId=collection_id,
                             title=title,
                             seasonNumber=season,

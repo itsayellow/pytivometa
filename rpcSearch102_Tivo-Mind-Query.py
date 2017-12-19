@@ -152,8 +152,8 @@ class Remote(object):
             #filterUnavailable = 'false',
             count=25,
             orderBy=['seasonNumber', 'episodeNum'],
-            levelOfDetail = 'medium',
-            collectionId = collectionId
+            levelOfDetail='medium',
+            collectionId=collectionId
         )
         self.Write(req)
         result = self.Read()

@@ -11,15 +11,15 @@ import sys
 import json
 
 
-tivo_addr = 'middlemind.tivo.com'
-tivo_port = 443
+TIVO_ADDR = 'middlemind.tivo.com'
+TIVO_PORT = 443
 
-rpc_id = 0
-session_id = random.randrange(0x26c000, 0x27dc20)
+RPC_ID = 0
+SESSION_ID = random.randrange(0x26c000, 0x27dc20)
 
 def RpcRequest(type, monitor=False, **kwargs):
-    global rpc_id
-    rpc_id += 1
+    global RPC_ID
+    RPC_ID += 1
     if 'bodyId' in kwargs:
         body_id = kwargs['bodyId']
     else:
@@ -27,7 +27,7 @@ def RpcRequest(type, monitor=False, **kwargs):
 
     headers = '\r\n'.join((
             'Type: request',
-            'RpcId: %d' % rpc_id,
+            'RpcId: %d' % RPC_ID,
             'SchemaVersion: 14',
             'Content-Type: application/json',
             'RequestType: %s' % type,
@@ -35,7 +35,7 @@ def RpcRequest(type, monitor=False, **kwargs):
             'BodyId: %s' % body_id,
             'X-ApplicationName: Quicksilver',
             'X-ApplicationVersion: 1.2',
-            'X-ApplicationSessionId: 0x%x' % session_id,
+            'X-ApplicationSessionId: 0x%x' % SESSION_ID,
             )) + '\r\n'
 
     req_obj = dict(**kwargs)
@@ -49,21 +49,16 @@ def RpcRequest(type, monitor=False, **kwargs):
     return '\r\n'.join((start_line, headers, body))
 
 class Remote(object):
-    username = ''
-    password = ''
-
-    def __init__(self, myusername, mypassword):
-        username = myusername
-        password = mypassword
+    def __init__(self, username, password):
         self.buf = ''
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ssl_socket = ssl.wrap_socket(self.socket, certfile='cdata.pem')
         try:
-            self.ssl_socket.connect((tivo_addr, tivo_port))
+            self.ssl_socket.connect((TIVO_ADDR, TIVO_PORT))
         except:
             print('connect error')
         try:
-            self.Auth()
+            self.Auth(username, password)
         except:
             print('credential error')
 
@@ -94,7 +89,7 @@ class Remote(object):
         logging.debug('SEND %s', data)
         self.ssl_socket.send(data)
 
-    def Auth(self):
+    def Auth(self, username, password):
         self.Write(RpcRequest('bodyAuthenticate',
                 credential={
                         'type': 'mmaCredential',
@@ -125,7 +120,7 @@ class Remote(object):
         result = self.Read()
         return result
 
-    def offerSearchLinear(self, title, subtitle):
+    def offerSearchLinear(self, title, subtitle, body_id):
         req = RpcRequest('offerSearch',
               count=25,
               bodyId=body_id,
@@ -136,7 +131,7 @@ class Remote(object):
         result = self.Read()
         return result
 
-    def offerSearchLinearPlus(self, title):
+    def offerSearchLinearPlus(self, title, body_id):
         req = RpcRequest('offerSearch',
               count=25,
               bodyId=body_id,
@@ -152,8 +147,8 @@ class Remote(object):
             #filterUnavailable = 'false',
             count=25,
             orderBy=['seasonNumber', 'episodeNum'],
-            levelOfDetail = 'medium',
-            collectionId = collectionId
+            levelOfDetail='medium',
+            collectionId=collectionId
         )
         self.Write(req)
         result = self.Read()
@@ -161,7 +156,7 @@ class Remote(object):
 
     def SearchEpisodes(self, count, max, keywords):
         #matched = 0
-        result = remote.collectionSearchSeries(count, keywords)
+        result = self.collectionSearchSeries(count, keywords)
         collection = result.get('collection')
         foundIt = False
         if collection:
@@ -190,7 +185,7 @@ class Remote(object):
                     matched = 0
                     while not stop:
                         matched += 1
-                        result = remote.OfferSearchEpisodes(offset, c.get('collectionId'))
+                        result = self.OfferSearchEpisodes(offset, c.get('collectionId'))
                         all = result.get('content')
                         if all:
                             for ep in all:
@@ -238,8 +233,8 @@ class Remote(object):
 
     def Search(self, count, max, keywords):
         matched = 0
-        #result = remote.collectionSearch(count, 'as good as it gets')
-        result = remote.collectionSearch(count, keywords)
+        #result = self.collectionSearch(count, 'as good as it gets')
+        result = self.collectionSearch(count, keywords)
         collection = result.get('collection')
         if collection:
             for c in collection:
@@ -247,7 +242,7 @@ class Remote(object):
                     stop = False
                     offset = 0
                     while not stop:
-                        result = remote.offerSearch(offset, c.get('collectionId'))
+                        result = self.offerSearch(offset, c.get('collectionId'))
                         offers = result.get('offer')
                         if offers:
                             for offer in offers:
@@ -263,7 +258,7 @@ class Remote(object):
 
     def seasonEpisodeSearch(self, title, season, ep):
         count = 25
-        collections = remote.collectionSearchSeries(count, title)
+        collections = self.collectionSearchSeries(count, title)
         collection = collections.get('collection')
         if collection:
             for c in collection:
@@ -291,7 +286,7 @@ class Remote(object):
     def searchOneSeason(self, title, season, maxEp):
         count = 25
         stop = False
-        collections = remote.collectionSearchSeries(count, title)
+        collections = self.collectionSearchSeries(count, title)
         collection = collections.get('collection')
         if collection:
             for c in collection:
@@ -317,63 +312,73 @@ class Remote(object):
                             stop = True
                             print(ep + '%' + content[0].get('partnerCollectionId') + '%' + content[0].get('partnerContentId') + '^')
 
-if __name__ == '__main__':
-    try:
-        title = sys.argv[1]
-        username = sys.argv[2]
-        password = sys.argv[3]
-        searchType = sys.argv[5]
-        subtitle = sys.argv[6]
-        #print 'credentials = ' + username + ' (and) ' + password
-        remote = Remote(username, password)
-        if searchType == 'streaming':
-            remote.SearchEpisodes(25, 100, title) # test 100 was 25
-        elif searchType == 'linear':
-            body_id = 'tsn:' + sys.argv[4]
-            result = remote.offerSearchLinear(title, subtitle)
-            offers = result.get('offer')
-            if offers:
-                for offer in offers:
-                    pid = str(offer.get('partnerContentId'))
-                    cl = str(offer.get('partnerCollectionId'))
-                    print(cl + '%' + pid + '^')
-                    break
-            else:
-                print('error: no results')
-        elif searchType == 'linearplus':
-            body_id = 'tsn:' + sys.argv[4]
-            result = remote.offerSearchLinearPlus(title)
-            offers = result.get('offer')
-            if offers:
-                for offer in offers:
-                    pid = str(offer.get('partnerContentId'))
-                    cl = str(offer.get('partnerCollectionId'))
-                    # TODO: figure out what this should be.  Was:
-                    # st = str(unicode(offer.get('subtitle')).encode('utf8') )
-                    st = str(str(offer.get('subtitle')).encode('utf8'))
-                    s = str(offer.get('seasonNumber'))
-                    if offer.get('episodeNum'):
-                        e = str(offer.get('episodeNum'))
-                        print('S' + s + 'E' + e + ':' + pid + ' subTitle: ' + st + '^')
-                    #break
-            else:
-                print('error: no results')
-        elif searchType == 'movie':
-            count = 25
-            max = 10
-            print('{ "movieoffer":  [')
-            remote.Search(count, max, sys.argv[1])
-            print('] }')
-        elif searchType == 'seasonep':
-            season = sys.argv[6]
-            ep = sys.argv[7]
-            remote.seasonEpisodeSearch(title, season, ep)
-            #print json.dumps(remote.seasonEpisodeSearch(title, season, ep))
-        elif searchType == 'season':
-            season = sys.argv[6]
-            maxEp = sys.argv[7]
-            remote.searchOneSeason(title, season, maxEp)
+def main(argv):
+    title = argv[1]
+    username = argv[2]
+    password = argv[3]
+    searchType = argv[5]
+    subtitle = argv[6]
+    #print 'credentials = ' + username + ' (and) ' + password
+    remote = Remote(username, password)
+    if searchType == 'streaming':
+        remote.SearchEpisodes(25, 100, title) # test 100 was 25
+    elif searchType == 'linear':
+        body_id = 'tsn:' + argv[4]
+        result = remote.offerSearchLinear(title, subtitle, body_id)
+        offers = result.get('offer')
+        if offers:
+            for offer in offers:
+                pid = str(offer.get('partnerContentId'))
+                cl = str(offer.get('partnerCollectionId'))
+                print(cl + '%' + pid + '^')
+                break
         else:
-            print('error: invalid search type: ' + searchType)
-    except:
-        print('ErrorError')
+            print('error: no results')
+    elif searchType == 'linearplus':
+        body_id = 'tsn:' + argv[4]
+        result = remote.offerSearchLinearPlus(title, body_id)
+        offers = result.get('offer')
+        if offers:
+            for offer in offers:
+                pid = str(offer.get('partnerContentId'))
+                cl = str(offer.get('partnerCollectionId'))
+                # TODO: figure out what this should be.  Was:
+                # st = str(unicode(offer.get('subtitle')).encode('utf8') )
+                st = str(str(offer.get('subtitle')).encode('utf8'))
+                s = str(offer.get('seasonNumber'))
+                if offer.get('episodeNum'):
+                    e = str(offer.get('episodeNum'))
+                    print('S' + s + 'E' + e + ':' + pid + ' subTitle: ' + st + '^')
+                #break
+        else:
+            print('error: no results')
+    elif searchType == 'movie':
+        count = 25
+        max = 10
+        print('{ "movieoffer":  [')
+        remote.Search(count, max, argv[1])
+        print('] }')
+    elif searchType == 'seasonep':
+        season = argv[6]
+        ep = argv[7]
+        remote.seasonEpisodeSearch(title, season, ep)
+        #print json.dumps(remote.seasonEpisodeSearch(title, season, ep))
+    elif searchType == 'season':
+        season = argv[6]
+        maxEp = argv[7]
+        remote.searchOneSeason(title, season, maxEp)
+    else:
+        print('error: invalid search type: ' + searchType)
+
+    # no error status 
+    return 0
+
+if __name__ == "__main__":
+    try:
+        status = main(sys.argv)
+    except KeyboardInterrupt:
+        print("Stopped by Keyboard Interrupt", file=sys.stderr)
+        # exit error code for Ctrl-C
+        status = 130
+
+    sys.exit(status)

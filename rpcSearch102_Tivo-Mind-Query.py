@@ -1,5 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Modified by KenV99
+# Modified by Matthew Clapp
 
 import logging
 import random
@@ -60,11 +61,11 @@ class Remote(object):
         try:
             self.ssl_socket.connect((tivo_addr, tivo_port))
         except:
-            print  'connect error'
+            print('connect error')
         try:
             self.Auth()
         except:
-            print 'credential error'
+            print('credential error')
 
     def Read(self):
         start_line = ''
@@ -197,7 +198,7 @@ class Remote(object):
                                 #print '==================================================='
                                 if ep.get('episodeNum'):
                                     foundIt = True
-                                    print 'S' + str(ep.get('seasonNumber')) + 'E' + str(ep.get('episodeNum')) + ':' + str(ep.get('partnerContentId')) + ' subTitle: ' + unicode(ep.get('subtitle')).encode('utf8') + '^'
+                                    print('S' + str(ep.get('seasonNumber')) + 'E' + str(ep.get('episodeNum')) + ':' + str(ep.get('partnerContentId')) + ' subTitle: ' + str(ep.get('subtitle')).encode('utf8') + '^')
                         #print json.dumps(result)
                         #print '=============================='
                         offset += count
@@ -254,7 +255,7 @@ class Remote(object):
                                       matched += 1
                                       #print json.dumps(offer, indent=4) + '\r\n-------------\r\n'
                                       #print '{"offeritem": ' + json.dumps(offer) + '},'
-                                      print json.dumps(offer) + ','
+                                      print(json.dumps(offer) + ',')
                                 if matched > max:
                                       stop = True
                         else:
@@ -281,7 +282,7 @@ class Remote(object):
                     result = self.Read()
                     content = result.get('content')
                     if content:
-                        print content[0].get('partnerCollectionId') + '%' + content[0].get('partnerContentId') + '^'
+                        print(content[0].get('partnerCollectionId') + '%' + content[0].get('partnerContentId') + '^')
                     #if result.get('content').get('partnerCollectionId') == 'epgProvider:cl.SH016916':
                         #print json.dumps(result)
         #return result
@@ -314,7 +315,7 @@ class Remote(object):
                         content = result.get('content')
                         if content:
                             stop = True
-                            print ep + '%' + content[0].get('partnerCollectionId') + '%' + content[0].get('partnerContentId') + '^'
+                            print(ep + '%' + content[0].get('partnerCollectionId') + '%' + content[0].get('partnerContentId') + '^')
 
 if __name__ == '__main__':
     try:
@@ -335,10 +336,10 @@ if __name__ == '__main__':
                 for offer in offers:
                     pid = str(offer.get('partnerContentId'))
                     cl = str(offer.get('partnerCollectionId'))
-                    print cl + '%' + pid + '^'
+                    print(cl + '%' + pid + '^')
                     break
             else:
-                print 'error: no results'
+                print('error: no results')
         elif searchType == 'linearplus':
             body_id = 'tsn:' + sys.argv[4]
             result = remote.offerSearchLinearPlus(title)
@@ -347,20 +348,22 @@ if __name__ == '__main__':
                 for offer in offers:
                     pid = str(offer.get('partnerContentId'))
                     cl = str(offer.get('partnerCollectionId'))
-                    st = str(unicode(offer.get('subtitle')).encode('utf8') )
+                    # TODO: figure out what this should be.  Was:
+                    # st = str(unicode(offer.get('subtitle')).encode('utf8') )
+                    st = str(str(offer.get('subtitle')).encode('utf8') )
                     s  = str(offer.get('seasonNumber') )
                     if offer.get('episodeNum'):
                         e  = str(offer.get('episodeNum') )
-                        print 'S' + s + 'E' + e + ':' + pid + ' subTitle: ' + st + '^'
+                        print('S' + s + 'E' + e + ':' + pid + ' subTitle: ' + st + '^')
                     #break
             else:
-                print 'error: no results'
+                print('error: no results')
         elif searchType == 'movie':
             count = 25
             max = 10
-            print '{ "movieoffer":  ['
+            print('{ "movieoffer":  [')
             remote.Search(count, max, sys.argv[1] )
-            print '] }'
+            print('] }')
         elif searchType == 'seasonep':
             season = sys.argv[6]
             ep = sys.argv[7]
@@ -371,6 +374,6 @@ if __name__ == '__main__':
             maxEp = sys.argv[7]
             remote.searchOneSeason(title, season, maxEp)
         else:
-            print 'error: invalid search type: ' + searchType
+            print('error: invalid search type: ' + searchType)
     except:
-        print 'ErrorError'
+        print('ErrorError')

@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Modified by KenV99
 # Modified a bit more by George Stockfisch <gstock.public@gmail.com>
+# Modified by Matthew Clapp
 #
 # copied from https://github.com/KenV99/Tivo-Mind-Query
 # All rights reserved.
@@ -32,10 +33,10 @@ import ssl
 import sys
 import json
 
-import __builtin__
+import builtins
 #to set the log level of this script from the importer set "__builtin__.RPCLOGLEVEL = logging.INFO" or DEBUG/etc
 if 'RPCLOGLEVEL' not in vars(__builtin__):
-    print "Logelevel not defined by importee, setting to DEBUG"
+    print("Logelevel not defined by importee, setting to DEBUG")
     RPCLOGLEVEL = logging.DEBUG
 logging.basicConfig(format='%(message)s', level=RPCLOGLEVEL)
 
@@ -130,11 +131,11 @@ class Remote(object):
         try:
             self.ssl_socket.connect((tivo_addr, tivo_port))
         except:
-            print  'connect error'
+            print('connect error')
         try:
             self.Auth()
         except:
-            print 'credential error'
+            print('credential error')
 
     def PPrintJson(self, jsonString):
         if type(jsonString) is str:
@@ -280,7 +281,7 @@ class Remote(object):
                                 #print '==================================================='
                                 if ep.get('episodeNum'):
                                     foundIt = True
-                                    logging.debug( 'S' + str(ep.get('seasonNumber')) + 'E' + str(ep.get('episodeNum')) + ':' + str(ep.get('partnerContentId')) + ' subTitle: ' + unicode(ep.get('subtitle')).encode('utf8') + '^' )
+                                    logging.debug( 'S' + str(ep.get('seasonNumber')) + 'E' + str(ep.get('episodeNum')) + ':' + str(ep.get('partnerContentId')) + ' subTitle: ' + str(ep.get('subtitle')).encode('utf8') + '^' )
                         #print json.dumps(result)
                         #print '=============================='
                         offset += count
@@ -386,7 +387,9 @@ class Remote(object):
 
                     logging.info( firstEpisode.get('content')[0].get('collectionDescription'))#.get('collectionDescription')
                     collectionCounter += 1
-            inputSeries = input("Enter the number of the correct series: ")
+            # TODO: figure out what this should be.  Was:
+            # inputSeries = input("Enter the number of the correct series: ")
+            inputSeries = eval(input("Enter the number of the correct series: "))
             #TODO: this doesn't seem to work, in python 2.7, but the exception out will be a clue
             if ( type(inputSeries) != int):
                 logging.info("Not a valid value")
@@ -394,7 +397,7 @@ class Remote(object):
             retCollectionID = collectionNumberArray[inputSeries]
             #return None
         else:
-            print str(validCollections)
+            print(str(validCollections))
             retCollectionID = validCollections
         return retCollectionID
 
@@ -490,7 +493,7 @@ class Remote(object):
                         content = result.get('content')
                         if content:
                             stop = True
-                            print ep + '%' + content[0].get('partnerCollectionId') + '%' + content[0].get('partnerContentId') + '^'
+                            print(ep + '%' + content[0].get('partnerCollectionId') + '%' + content[0].get('partnerContentId') + '^')
 
 if __name__ == '__main__':
     try:
@@ -523,7 +526,9 @@ if __name__ == '__main__':
                 for offer in offers:
                     pid = str(offer.get('partnerContentId'))
                     cl = str(offer.get('partnerCollectionId'))
-                    st = str(unicode(offer.get('subtitle')).encode('utf8') )
+                    # TODO: figure out what this should be.  Was:
+                    # st = str(unicode(offer.get('subtitle')).encode('utf8') )
+                    st = str(str(offer.get('subtitle')).encode('utf8') )
                     s  = str(offer.get('seasonNumber') )
                     if offer.get('episodeNum'):
                         e  = str(offer.get('episodeNum') )

@@ -254,9 +254,9 @@ class Remote(object):
           logging.debug( '*******collectionId = ' + str(c.get('collectionId')))
           #if c.get('collectionId') == 'tivo:cl.16645':
           #print json.dumps(c)
-          if (str(c.get('descriptionLanguage')) == "English"): 
+          if (str(c.get('descriptionLanguage')) == "English"):
             logging.debug( "title: " + str(c.get('title')) + " type: " + str(c.get('collectionType')))
-          ok = True 
+          ok = True
           if c.get('descriptionLanguage') and c.get('title'):
             #print 'lang = ' +c.get('descriptionLanguage') + ', title = ' + c.get('title')
             if not c.get('descriptionLanguage') == 'English':
@@ -350,15 +350,15 @@ class Remote(object):
     collection = collections.get('collection')
     validCollections = []
     if collection:
-      
-      
+
+
 
       if( len(collection) > 1 ):
         logging.info( "Found more then 1 collection for : " + title)
         for c in collection:
-          if ((c.get('descriptionLanguage') == "English" or c.get('descriptionLanguage') == None) 
+          if ((c.get('descriptionLanguage') == "English" or c.get('descriptionLanguage') == None)
             #and c.get('collectionId').startswith("tivo:cl.ts")
-            and c.get('title').lower() == title.lower()): 
+            and c.get('title').lower() == title.lower()):
             logging.debug("CollectionID: " +  str(c.get('collectionId')))
             foundDescription = c.get('description')
             if (foundDescription != None):
@@ -461,7 +461,7 @@ class Remote(object):
             )
     self.Write(req)
     result = self.Read()
-    return result 
+    return result
 
 
   def searchOneSeason(self, title, season, maxEp):

@@ -17,6 +17,27 @@ TIVO_PORT = 443
 RPC_ID = 0
 SESSION_ID = random.randrange(0x26c000, 0x27dc20)
 
+#logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.INFO)
+
+# debug decorator that announces function call/entry and lists args
+def debug_fxn(func):
+    """Function decorator that (if enabled by DEBUG_FXN_ENTRY bit in DEBUG)
+    prints the function name and the arguments used in the function call
+    before executing the function
+    """
+    def func_wrapper(*args, **kwargs):
+        log_string = "FXN:" + func.__qualname__ + "(\n"
+        for arg in args[1:]:
+            log_string += "        " + repr(arg) + ",\n"
+        for key in kwargs:
+            log_string += "        " + key + "=" + repr(kwargs[key]) + ",\n"
+        log_string += "        )"
+        logging.info(log_string)
+        return func(*args, **kwargs)
+    return func_wrapper
+
+@debug_fxn
 def rpc_request(req_type, monitor=False, **kwargs):
     """Direct RPC request to TiVo Mind
 
@@ -57,6 +78,7 @@ def rpc_request(req_type, monitor=False, **kwargs):
     return '\r\n'.join((start_line, headers, body))
 
 class Remote(object):
+    @debug_fxn
     def __init__(self, username, password):
         """Initialize Remote TiVo mind connection
 
@@ -64,7 +86,8 @@ class Remote(object):
             username (str): tivo.com username
             password (str): tivo.com password
         """
-        self.buf = ''
+        # read buffer, we read bytes
+        self.buf = b''
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ssl_socket = ssl.wrap_socket(self.socket, certfile='cdata.pem')
         try:
@@ -80,6 +103,7 @@ class Remote(object):
             # re-raise so we know exact exception
             raise
 
+    @debug_fxn
     def _read(self):
         start_line = ''
         head_len = None
@@ -87,8 +111,10 @@ class Remote(object):
 
         while True:
             self.buf += self.ssl_socket.read(16)
-            match = re.match(r'MRPC/2 (\d+) (\d+)\r\n', self.buf)
+            logging.debug(self.buf)
+            match = re.match(r'MRPC/2 (\d+) (\d+)\r\n', self.buf.decode('utf-8'))
             if match:
+                logging.debug('_read match')
                 start_line = match.group(0)
                 head_len = int(match.group(1))
                 body_len = int(match.group(2))
@@ -96,17 +122,22 @@ class Remote(object):
 
         need_len = len(start_line) + head_len + body_len
         while len(self.buf) < need_len:
+            logging.debug('while 2')
+            logging.debug(self.buf)
             self.buf += self.ssl_socket.read(1024)
         buf = self.buf[:need_len]
         self.buf = self.buf[need_len:]
 
         # logging.debug('READ %s', buf)
-        return json.loads(buf[-1 * body_len:])
+        return json.loads(buf[-1 * body_len:].decode('utf-8'))
 
+    @debug_fxn
     def _write(self, data):
         logging.debug('SEND %s', data)
-        self.ssl_socket.send(data)
+        bytes_written = self.ssl_socket.send(data.encode('utf-8'))
+        logging.debug("%d bytes written", bytes_written)
 
+    @debug_fxn
     def _auth(self, username, password):
         """Private fxn only used in init of Remote to establish SSL credentials
 
@@ -126,6 +157,7 @@ class Remote(object):
             logging.error('Authentication failed!  Got: %s', result)
             sys.exit(1)
 
+    @debug_fxn
     def collection_search_series(self, count, keywords):
         req = rpc_request('collectionSearch',
               keyword=keywords,
@@ -144,6 +176,7 @@ class Remote(object):
         result = self._read()
         return result
 
+    @debug_fxn
     def offer_search_linear(self, title, subtitle, body_id):
         req = rpc_request('offerSearch',
               count=25,
@@ -155,6 +188,7 @@ class Remote(object):
         result = self._read()
         return result
 
+    @debug_fxn
     def offer_search_linear_plus(self, title, body_id):
         req = rpc_request('offerSearch',
               count=25,
@@ -165,6 +199,7 @@ class Remote(object):
         result = self._read()
         return result
 
+    @debug_fxn
     def offer_search_episodes(self, offset, collection_id):
         req = rpc_request('contentSearch',
             offset=offset,
@@ -178,6 +213,7 @@ class Remote(object):
         result = self._read()
         return result
 
+    @debug_fxn
     def search_episodes(self, count, max_matches, keywords):
         #matched = 0
         result = self.collection_search_series(count, keywords)
@@ -235,6 +271,7 @@ class Remote(object):
                             stop = True
 
 
+    @debug_fxn
     def collection_search(self, count, keywords):
         req = rpc_request('collectionSearch',
               keyword=keywords,
@@ -252,6 +289,7 @@ class Remote(object):
         result = self._read()
         return result
 
+    @debug_fxn
     def offer_search(self, offset, collection_id):
         req = rpc_request('offerSearch',
               offset=offset,
@@ -264,6 +302,7 @@ class Remote(object):
         result = self._read()
         return result
 
+    @debug_fxn
     def search(self, count, max_matches, keywords):
         matched = 0
         #result = self.collection_search(count, 'as good as it gets')
@@ -289,6 +328,7 @@ class Remote(object):
                         else:
                             stop = True
 
+    @debug_fxn
     def season_episode_search(self, title, season, episode):
         count = 25
         collections = self.collection_search_series(count, title)
@@ -315,6 +355,7 @@ class Remote(object):
         #return result
 
 
+    @debug_fxn
     def search_one_season(self, title, season, max_episode):
         count = 25
         stop = False
@@ -347,6 +388,7 @@ class Remote(object):
                                     '^'
                                     )
 
+@debug_fxn
 def main(argv):
     title = argv[1]
     username = argv[2]
@@ -410,11 +452,12 @@ def main(argv):
     return 0
 
 if __name__ == "__main__":
-    try:
-        status = main(sys.argv)
-    except KeyboardInterrupt:
-        print("Stopped by Keyboard Interrupt", file=sys.stderr)
-        # exit error code for Ctrl-C
-        status = 130
+    status = main(sys.argv)
+    #try:
+    #    status = main(sys.argv)
+    #except KeyboardInterrupt:
+    #    print("Stopped by Keyboard Interrupt", file=sys.stderr)
+    #    # exit error code for Ctrl-C
+    #    status = 130
 
     sys.exit(status)

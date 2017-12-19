@@ -58,6 +58,12 @@ def rpc_request(req_type, monitor=False, **kwargs):
 
 class Remote(object):
     def __init__(self, username, password):
+        """Initialize Remote TiVo mind connection
+
+        Args:
+            username (str): tivo.com username
+            password (str): tivo.com password
+        """
         self.buf = ''
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ssl_socket = ssl.wrap_socket(self.socket, certfile='cdata.pem')
@@ -65,12 +71,16 @@ class Remote(object):
             self.ssl_socket.connect((TIVO_ADDR, TIVO_PORT))
         except:
             print('connect error')
+            # re-raise so we know exact exception
+            raise
         try:
-            self.auth(username, password)
+            self._auth(username, password)
         except:
             print('credential error')
+            # re-raise so we know exact exception
+            raise
 
-    def read(self):
+    def _read(self):
         start_line = ''
         head_len = None
         body_len = None
@@ -93,19 +103,25 @@ class Remote(object):
         # logging.debug('READ %s', buf)
         return json.loads(buf[-1 * body_len:])
 
-    def write(self, data):
+    def _write(self, data):
         logging.debug('SEND %s', data)
         self.ssl_socket.send(data)
 
-    def auth(self, username, password):
-        self.write(rpc_request('bodyAuthenticate',
+    def _auth(self, username, password):
+        """Private fxn only used in init of Remote to establish SSL credentials
+
+        Args:
+            username (str): tivo.com username
+            password (str): tivo.com password
+        """
+        self._write(rpc_request('bodyAuthenticate',
                 credential={
                         'type': 'mmaCredential',
                         'username': username,
                         'password': password,
                         }
                 ))
-        result = self.read()
+        result = self._read()
         if result['status'] != 'success':
             logging.error('Authentication failed!  Got: %s', result)
             sys.exit(1)
@@ -124,8 +140,8 @@ class Remote(object):
               filterUnavailable='false',
               collectionType='series'
         )
-        self.write(req)
-        result = self.read()
+        self._write(req)
+        result = self._read()
         return result
 
     def offer_search_linear(self, title, subtitle, body_id):
@@ -135,8 +151,8 @@ class Remote(object):
               title=title,
               subtitle=subtitle
         )
-        self.write(req)
-        result = self.read()
+        self._write(req)
+        result = self._read()
         return result
 
     def offer_search_linear_plus(self, title, body_id):
@@ -145,8 +161,8 @@ class Remote(object):
               bodyId=body_id,
               title=title
         )
-        self.write(req)
-        result = self.read()
+        self._write(req)
+        result = self._read()
         return result
 
     def offer_search_episodes(self, offset, collection_id):
@@ -158,8 +174,8 @@ class Remote(object):
             levelOfDetail='medium',
             collectionId=collection_id
         )
-        self.write(req)
-        result = self.read()
+        self._write(req)
+        result = self._read()
         return result
 
     def search_episodes(self, count, max_matches, keywords):
@@ -232,8 +248,8 @@ class Remote(object):
               mergeOverridingCollections='true',
               filterUnavailable='false'
         )
-        self.write(req)
-        result = self.read()
+        self._write(req)
+        result = self._read()
         return result
 
     def offer_search(self, offset, collection_id):
@@ -244,8 +260,8 @@ class Remote(object):
               levelOfDetail='medium',
               collectionId=collection_id
         )
-        self.write(req)
-        result = self.read()
+        self._write(req)
+        result = self._read()
         return result
 
     def search(self, count, max_matches, keywords):
@@ -290,8 +306,8 @@ class Remote(object):
                         episodeNum=episode,
                         count=1,
                     )
-                    self.write(req)
-                    result = self.read()
+                    self._write(req)
+                    result = self._read()
                     content = result.get('content')
                     if content:
                         print(content[0].get('partnerCollectionId') + '%' + \
@@ -322,8 +338,8 @@ class Remote(object):
                             episodeNum=str(episode_num),
                             count=1,
                         )
-                        self.write(req)
-                        result = self.read()
+                        self._write(req)
+                        result = self._read()
                         content = result.get('content')
                         if content:
                             stop = True

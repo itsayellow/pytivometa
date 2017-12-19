@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Modified by KenV99
-# Modified by Matthew Clapp
+# Modified by Matthew Clapp for python3, style updates, some functionality
 
 import logging
 import random
@@ -9,7 +9,7 @@ import socket
 import ssl
 import sys
 import json
-
+import pprint
 
 TIVO_ADDR = 'middlemind.tivo.com'
 TIVO_PORT = 443
@@ -17,6 +17,7 @@ TIVO_PORT = 443
 RPC_ID = 0
 SESSION_ID = random.randrange(0x26c000, 0x27dc20)
 
+PP = pprint.PrettyPrinter(indent=4)
 #logging.basicConfig(level=logging.DEBUG)
 #logging.basicConfig(level=logging.INFO)
 
@@ -80,13 +81,13 @@ def rpc_request(req_type, monitor=False, **kwargs):
 class Remote(object):
     @debug_fxn
     def __init__(self, username, password):
-        """Initialize Remote TiVo mind connection
+        """Initialize Remote TiVo mind SSL socket connection
 
         Args:
             username (str): tivo.com username
             password (str): tivo.com password
         """
-        # read buffer, we read bytes
+        # read buffer is bytes
         self.buf = b''
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ssl_socket = ssl.wrap_socket(self.socket, certfile='cdata.pem')
@@ -105,16 +106,19 @@ class Remote(object):
 
     @debug_fxn
     def _read(self):
+        """Reads json data from ssl socket, parses and returns data structure
+
+        Returns:
+            list, dict, etc.: Python arbitrary complex data structure
+        """
         start_line = ''
         head_len = None
         body_len = None
 
         while True:
             self.buf += self.ssl_socket.read(16)
-            logging.debug(self.buf)
             match = re.match(r'MRPC/2 (\d+) (\d+)\r\n', self.buf.decode('utf-8'))
             if match:
-                logging.debug('_read match')
                 start_line = match.group(0)
                 head_len = int(match.group(1))
                 body_len = int(match.group(2))
@@ -122,8 +126,6 @@ class Remote(object):
 
         need_len = len(start_line) + head_len + body_len
         while len(self.buf) < need_len:
-            logging.debug('while 2')
-            logging.debug(self.buf)
             self.buf += self.ssl_socket.read(1024)
         buf = self.buf[:need_len]
         self.buf = self.buf[need_len:]
@@ -159,6 +161,11 @@ class Remote(object):
 
     @debug_fxn
     def collection_search_series(self, count, keywords):
+        """
+        Args:
+            count (): maximum records to fetch
+            keywords (str): strings to search for matching records
+        """
         req = rpc_request('collectionSearch',
               keyword=keywords,
               orderBy='strippedTitle',
@@ -357,16 +364,25 @@ class Remote(object):
 
     @debug_fxn
     def search_one_season(self, title, season, max_episode):
+        """List episodes in season of a TV series, up to max_episode
+
+        Args:
+            title (str): TV Series title
+            season (): Season number to view
+            max_episode (): Highest episode to list in season (starts at 1)
+        """
         count = 25
         stop = False
         collections = self.collection_search_series(count, title)
-        collection = collections.get('collection')
-        if collection:
-            for c in collection:
+        collection_list = collections.get('collection')
+        print("collection_list-----------------------------------------------")
+        PP.pprint(collection_list)
+        if collection_list:
+            for collection in collection_list:
                 if stop:
                     return
-                if c.get('collectionId'):
-                    collection_id = c.get('collectionId')
+                if collection.get('collectionId'):
+                    collection_id = collection.get('collectionId')
                     #print('=============')
                     #print('collectionId = ' + collection_id)
                     for episode_num in range(1, int(max_episode)+1):

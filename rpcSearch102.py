@@ -17,7 +17,7 @@ TIVO_PORT = 443
 RPC_ID = 0
 SESSION_ID = random.randrange(0x26c000, 0x27dc20)
 
-def RpcRequest(type, monitor=False, **kwargs):
+def rpc_request(type, monitor=False, **kwargs):
     global RPC_ID
     RPC_ID += 1
     if 'bodyId' in kwargs:
@@ -90,7 +90,7 @@ class Remote(object):
         self.ssl_socket.send(data)
 
     def Auth(self, username, password):
-        self.Write(RpcRequest('bodyAuthenticate',
+        self.Write(rpc_request('bodyAuthenticate',
                 credential={
                         'type': 'mmaCredential',
                         'username': username,
@@ -103,7 +103,7 @@ class Remote(object):
             sys.exit(1)
 
     def collectionSearchSeries(self, count, keywords):
-        req = RpcRequest('collectionSearch',
+        req = rpc_request('collectionSearch',
               keyword=keywords,
               orderBy='strippedTitle',
               includeBroadcast='true',
@@ -121,7 +121,7 @@ class Remote(object):
         return result
 
     def offerSearchLinear(self, title, subtitle, body_id):
-        req = RpcRequest('offerSearch',
+        req = rpc_request('offerSearch',
               count=25,
               bodyId=body_id,
               title=title,
@@ -132,7 +132,7 @@ class Remote(object):
         return result
 
     def offerSearchLinearPlus(self, title, body_id):
-        req = RpcRequest('offerSearch',
+        req = rpc_request('offerSearch',
               count=25,
               bodyId=body_id,
               title=title
@@ -142,7 +142,7 @@ class Remote(object):
         return result
 
     def OfferSearchEpisodes(self, offset, collectionId):
-        req = RpcRequest('contentSearch',
+        req = rpc_request('contentSearch',
             offset=offset,
             #filterUnavailable = 'false',
             count=25,
@@ -203,7 +203,7 @@ class Remote(object):
 
 
     def collectionSearch(self, count, keywords):
-        req = RpcRequest('collectionSearch',
+        req = rpc_request('collectionSearch',
               keyword=keywords,
               orderBy='strippedTitle',
               includeBroadcast='true',
@@ -220,7 +220,7 @@ class Remote(object):
         return result
 
     def offerSearch(self, offset, id):
-        req = RpcRequest('offerSearch',
+        req = rpc_request('offerSearch',
               offset=offset,
               count=25,
               namespace='trioserver',
@@ -266,7 +266,7 @@ class Remote(object):
                     id = c.get('collectionId')
                     #print '============='
                     #print 'collectionId = ' + id
-                    req = RpcRequest('contentSearch',
+                    req = rpc_request('contentSearch',
                         collectionId=id,
                         title=title,
                         seasonNumber=season,
@@ -298,7 +298,7 @@ class Remote(object):
                     #print 'collectionId = ' + id
                     for epn in range(1, int(maxEp)+1):
                         ep = str(epn)
-                        req = RpcRequest('contentSearch',
+                        req = rpc_request('contentSearch',
                             collectionId=id,
                             title=title,
                             seasonNumber=season,
@@ -370,7 +370,7 @@ def main(argv):
     else:
         print('error: invalid search type: ' + searchType)
 
-    # no error status 
+    # no error status
     return 0
 
 if __name__ == "__main__":

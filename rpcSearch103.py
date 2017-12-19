@@ -312,8 +312,6 @@ class Remote(object):
                     if content:
                         print(content[0].get('partnerCollectionId') + '%' + \
                                 content[0].get('partnerContentId') + '^')
-                    #if result.get('content').get('partnerCollectionId') == 'epgProvider:cl.SH016916':
-                        #print(json.dumps(result))
         #return result
 
 

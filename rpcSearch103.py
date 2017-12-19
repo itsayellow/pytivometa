@@ -17,7 +17,15 @@ TIVO_PORT = 443
 RPC_ID = 0
 SESSION_ID = random.randrange(0x26c000, 0x27dc20)
 
-def rpc_request(type, monitor=False, **kwargs):
+def rpc_request(req_type, monitor=False, **kwargs):
+    """Direct RPC request to TiVo Mind
+
+    Args:
+        req_type ():
+        monitor (boolean):
+        **kwargs: keys need to be in camelCase because they are passed on
+            directly to request body
+    """
     global RPC_ID
     RPC_ID += 1
     if 'bodyId' in kwargs:
@@ -30,7 +38,7 @@ def rpc_request(type, monitor=False, **kwargs):
             'RpcId: %d' % RPC_ID,
             'SchemaVersion: 14',
             'Content-Type: application/json',
-            'RequestType: %s' % type,
+            'RequestType: %s' % req_type,
             'ResponseCount: %s' % (monitor and 'multiple' or 'single'),
             'BodyId: %s' % body_id,
             'X-ApplicationName: Quicksilver',
@@ -39,7 +47,7 @@ def rpc_request(type, monitor=False, **kwargs):
             )) + '\r\n'
 
     req_obj = dict(**kwargs)
-    req_obj.update({'type': type})
+    req_obj.update({'type': req_type})
 
     body = json.dumps(req_obj) + '\n'
 
@@ -58,11 +66,11 @@ class Remote(object):
         except:
             print('connect error')
         try:
-            self.Auth(username, password)
+            self.auth(username, password)
         except:
             print('credential error')
 
-    def Read(self):
+    def read(self):
         start_line = ''
         head_len = None
         body_len = None
@@ -85,24 +93,24 @@ class Remote(object):
         # logging.debug('READ %s', buf)
         return json.loads(buf[-1 * body_len:])
 
-    def Write(self, data):
+    def write(self, data):
         logging.debug('SEND %s', data)
         self.ssl_socket.send(data)
 
-    def Auth(self, username, password):
-        self.Write(rpc_request('bodyAuthenticate',
+    def auth(self, username, password):
+        self.write(rpc_request('bodyAuthenticate',
                 credential={
                         'type': 'mmaCredential',
                         'username': username,
                         'password': password,
                         }
                 ))
-        result = self.Read()
+        result = self.read()
         if result['status'] != 'success':
             logging.error('Authentication failed!  Got: %s', result)
             sys.exit(1)
 
-    def collectionSearchSeries(self, count, keywords):
+    def collection_search_series(self, count, keywords):
         req = rpc_request('collectionSearch',
               keyword=keywords,
               orderBy='strippedTitle',
@@ -116,61 +124,62 @@ class Remote(object):
               filterUnavailable='false',
               collectionType='series'
         )
-        self.Write(req)
-        result = self.Read()
+        self.write(req)
+        result = self.read()
         return result
 
-    def offerSearchLinear(self, title, subtitle, body_id):
+    def offer_search_linear(self, title, subtitle, body_id):
         req = rpc_request('offerSearch',
               count=25,
               bodyId=body_id,
               title=title,
               subtitle=subtitle
         )
-        self.Write(req)
-        result = self.Read()
+        self.write(req)
+        result = self.read()
         return result
 
-    def offerSearchLinearPlus(self, title, body_id):
+    def offer_search_linear_plus(self, title, body_id):
         req = rpc_request('offerSearch',
               count=25,
               bodyId=body_id,
               title=title
         )
-        self.Write(req)
-        result = self.Read()
+        self.write(req)
+        result = self.read()
         return result
 
-    def OfferSearchEpisodes(self, offset, collectionId):
+    def offer_search_episodes(self, offset, collection_id):
         req = rpc_request('contentSearch',
             offset=offset,
             #filterUnavailable = 'false',
             count=25,
             orderBy=['seasonNumber', 'episodeNum'],
             levelOfDetail='medium',
-            collectionId=collectionId
+            collectionId=collection_id
         )
-        self.Write(req)
-        result = self.Read()
+        self.write(req)
+        result = self.read()
         return result
 
-    def SearchEpisodes(self, count, max, keywords):
+    def search_episodes(self, count, max_matches, keywords):
         #matched = 0
-        result = self.collectionSearchSeries(count, keywords)
+        result = self.collection_search_series(count, keywords)
         collection = result.get('collection')
-        foundIt = False
+        found_it = False
         if collection:
             ok = True
             for c in collection:
-                if foundIt:
+                if found_it:
                     break
                 if c.get('collectionId'):
-                    #print '*******collectionId = ' + str(c.get('collectionId'))
+                    #print('*******collectionId = ' + str(c.get('collectionId')))
                     #if c.get('collectionId') == 'tivo:cl.16645':
-                    #print json.dumps(c)
+                    #print(json.dumps(c))
                     ok = True
                     if c.get('descriptionLanguage') and c.get('title'):
-                        #print 'lang = ' +c.get('descriptionLanguage') + ', title = ' + c.get('title')
+                        #print('lang = ' +c.get('descriptionLanguage') + \
+                        #        ', title = ' + c.get('title'))
                         if not c.get('descriptionLanguage') == 'English':
                             ok = False
                         elif not c.get('title').lower() == keywords.lower():
@@ -185,24 +194,32 @@ class Remote(object):
                     matched = 0
                     while not stop:
                         matched += 1
-                        result = self.OfferSearchEpisodes(offset, c.get('collectionId'))
-                        all = result.get('content')
-                        if all:
-                            for ep in all:
-                                #print json.dumps(ep)
-                                #print '==================================================='
-                                if ep.get('episodeNum'):
-                                    foundIt = True
-                                    print('S' + str(ep.get('seasonNumber')) + 'E' + str(ep.get('episodeNum')) + ':' + str(ep.get('partnerContentId')) + ' subTitle: ' + str(ep.get('subtitle')).encode('utf8') + '^')
-                        #print json.dumps(result)
-                        #print '=============================='
+                        result = self.offer_search_episodes(
+                                offset,
+                                c.get('collectionId')
+                                )
+                        all_content = result.get('content')
+                        if all_content:
+                            for episode in all_content:
+                                #print(json.dumps(episode))
+                                #print('='*50)
+                                if episode.get('episodeNum'):
+                                    found_it = True
+                                    print('S' + str(episode.get('seasonNumber')) + \
+                                            'E' + str(episode.get('episodeNum')) + \
+                                            ':' + str(episode.get('partnerContentId')) + \
+                                            ' subTitle: ' + \
+                                            str(episode.get('subtitle')).encode('utf8') + \
+                                            '^')
+                        #print(json.dumps(result))
+                        #print('==============================')
                         offset += count
-                        if matched > max:
-                            #print 'max exceeded'
+                        if matched > max_matches:
+                            #print('max matches exceeded')
                             stop = True
 
 
-    def collectionSearch(self, count, keywords):
+    def collection_search(self, count, keywords):
         req = rpc_request('collectionSearch',
               keyword=keywords,
               orderBy='strippedTitle',
@@ -215,26 +232,26 @@ class Remote(object):
               mergeOverridingCollections='true',
               filterUnavailable='false'
         )
-        self.Write(req)
-        result = self.Read()
+        self.write(req)
+        result = self.read()
         return result
 
-    def offerSearch(self, offset, id):
+    def offer_search(self, offset, collection_id):
         req = rpc_request('offerSearch',
               offset=offset,
               count=25,
               namespace='trioserver',
               levelOfDetail='medium',
-              collectionId=id
+              collectionId=collection_id
         )
-        self.Write(req)
-        result = self.Read()
+        self.write(req)
+        result = self.read()
         return result
 
-    def Search(self, count, max, keywords):
+    def search(self, count, max_matches, keywords):
         matched = 0
-        #result = self.collectionSearch(count, 'as good as it gets')
-        result = self.collectionSearch(count, keywords)
+        #result = self.collection_search(count, 'as good as it gets')
+        result = self.collection_search(count, keywords)
         collection = result.get('collection')
         if collection:
             for c in collection:
@@ -242,89 +259,93 @@ class Remote(object):
                     stop = False
                     offset = 0
                     while not stop:
-                        result = self.offerSearch(offset, c.get('collectionId'))
+                        result = self.offer_search(offset, c.get('collectionId'))
                         offers = result.get('offer')
                         if offers:
                             for offer in offers:
                                 if not stop:
                                     matched += 1
-                                    #print json.dumps(offer, indent=4) + '\r\n-------------\r\n'
-                                    #print '{"offeritem": ' + json.dumps(offer) + '},'
+                                    #print(json.dumps(offer, indent=4) + '\r\n-------------\r\n')
+                                    #print('{"offeritem": ' + json.dumps(offer) + '},')
                                     print(json.dumps(offer) + ',')
-                                if matched > max:
+                                if matched > max_matches:
                                     stop = True
                         else:
                             stop = True
 
-    def seasonEpisodeSearch(self, title, season, ep):
+    def season_episode_search(self, title, season, episode):
         count = 25
-        collections = self.collectionSearchSeries(count, title)
+        collections = self.collection_search_series(count, title)
         collection = collections.get('collection')
         if collection:
             for c in collection:
                 if c.get('collectionId'):
-                    id = c.get('collectionId')
-                    #print '============='
-                    #print 'collectionId = ' + id
+                    collection_id = c.get('collectionId')
+                    #print('=============')
+                    #print('collectionId = ' + collection_id)
                     req = rpc_request('contentSearch',
-                        collectionId=id,
+                        collectionId=collection_id,
                         title=title,
                         seasonNumber=season,
-                        episodeNum=ep,
+                        episodeNum=episode,
                         count=1,
                     )
-                    self.Write(req)
-                    result = self.Read()
+                    self.write(req)
+                    result = self.read()
                     content = result.get('content')
                     if content:
-                        print(content[0].get('partnerCollectionId') + '%' + content[0].get('partnerContentId') + '^')
+                        print(content[0].get('partnerCollectionId') + '%' + \
+                                content[0].get('partnerContentId') + '^')
                     #if result.get('content').get('partnerCollectionId') == 'epgProvider:cl.SH016916':
-                        #print json.dumps(result)
+                        #print(json.dumps(result))
         #return result
 
 
-    def searchOneSeason(self, title, season, maxEp):
+    def search_one_season(self, title, season, max_episode):
         count = 25
         stop = False
-        collections = self.collectionSearchSeries(count, title)
+        collections = self.collection_search_series(count, title)
         collection = collections.get('collection')
         if collection:
             for c in collection:
-                if stop == True:
+                if stop:
                     return
                 if c.get('collectionId'):
-                    id = c.get('collectionId')
-                    #print '============='
-                    #print 'collectionId = ' + id
-                    for epn in range(1, int(maxEp)+1):
-                        ep = str(epn)
+                    collection_id = c.get('collectionId')
+                    #print('=============')
+                    #print('collectionId = ' + collection_id)
+                    for episode_num in range(1, int(max_episode)+1):
                         req = rpc_request('contentSearch',
-                            collectionId=id,
+                            collectionId=collection_id,
                             title=title,
                             seasonNumber=season,
-                            episodeNum=ep,
+                            episodeNum=str(episode_num),
                             count=1,
                         )
-                        self.Write(req)
-                        result = self.Read()
+                        self.write(req)
+                        result = self.read()
                         content = result.get('content')
                         if content:
                             stop = True
-                            print(ep + '%' + content[0].get('partnerCollectionId') + '%' + content[0].get('partnerContentId') + '^')
+                            print(str(episode_num) + '%' + \
+                                    content[0].get('partnerCollectionId') + \
+                                    '%' + content[0].get('partnerContentId') + \
+                                    '^'
+                                    )
 
 def main(argv):
     title = argv[1]
     username = argv[2]
     password = argv[3]
-    searchType = argv[5]
+    search_type = argv[5]
     subtitle = argv[6]
-    #print 'credentials = ' + username + ' (and) ' + password
+    #print('credentials = ' + username + ' (and) ' + password)
     remote = Remote(username, password)
-    if searchType == 'streaming':
-        remote.SearchEpisodes(25, 100, title) # test 100 was 25
-    elif searchType == 'linear':
+    if search_type == 'streaming':
+        remote.search_episodes(25, 100, title) # test 100 was 25
+    elif search_type == 'linear':
         body_id = 'tsn:' + argv[4]
-        result = remote.offerSearchLinear(title, subtitle, body_id)
+        result = remote.offer_search_linear(title, subtitle, body_id)
         offers = result.get('offer')
         if offers:
             for offer in offers:
@@ -334,41 +355,42 @@ def main(argv):
                 break
         else:
             print('error: no results')
-    elif searchType == 'linearplus':
+    elif search_type == 'linearplus':
         body_id = 'tsn:' + argv[4]
-        result = remote.offerSearchLinearPlus(title, body_id)
+        result = remote.offer_search_linear_plus(title, body_id)
         offers = result.get('offer')
         if offers:
             for offer in offers:
                 pid = str(offer.get('partnerContentId'))
                 cl = str(offer.get('partnerCollectionId'))
                 # TODO: figure out what this should be.  Was:
-                # st = str(unicode(offer.get('subtitle')).encode('utf8') )
-                st = str(str(offer.get('subtitle')).encode('utf8'))
-                s = str(offer.get('seasonNumber'))
+                # subtitle = str(unicode(offer.get('subtitle')).encode('utf8') )
+                subtitle = str(str(offer.get('subtitle')).encode('utf8'))
+                season_num = str(offer.get('seasonNumber'))
                 if offer.get('episodeNum'):
-                    e = str(offer.get('episodeNum'))
-                    print('S' + s + 'E' + e + ':' + pid + ' subTitle: ' + st + '^')
+                    episode_num = str(offer.get('episodeNum'))
+                    print('S' + season_num + 'E' + episode_num + ':' + pid + \
+                            ' subTitle: ' + subtitle + '^')
                 #break
         else:
             print('error: no results')
-    elif searchType == 'movie':
+    elif search_type == 'movie':
         count = 25
-        max = 10
+        max_matches = 10
         print('{ "movieoffer":  [')
-        remote.Search(count, max, argv[1])
+        remote.search(count, max_matches, argv[1])
         print('] }')
-    elif searchType == 'seasonep':
+    elif search_type == 'seasonep':
         season = argv[6]
-        ep = argv[7]
-        remote.seasonEpisodeSearch(title, season, ep)
-        #print json.dumps(remote.seasonEpisodeSearch(title, season, ep))
-    elif searchType == 'season':
+        episode = argv[7]
+        remote.season_episode_search(title, season, episode)
+        #print(json.dumps(remote.season_episode_search(title, season, episode)))
+    elif search_type == 'season':
         season = argv[6]
-        maxEp = argv[7]
-        remote.searchOneSeason(title, season, maxEp)
+        max_episode = argv[7]
+        remote.search_one_season(title, season, max_episode)
     else:
-        print('error: invalid search type: ' + searchType)
+        print('error: invalid search type: ' + search_type)
 
     # no error status
     return 0

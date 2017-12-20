@@ -50,7 +50,6 @@ or "s01e02", etc.)  Also, an air-date will allow an episode to be found.
 
 import argparse
 from datetime import datetime
-import json
 import os
 import os.path
 import re
@@ -58,8 +57,6 @@ import stat
 import sys
 import textwrap
 from time import strptime
-#import urllib.error
-import urllib.request
 
 # Import the IMDbPY package.
 try:
@@ -292,7 +289,9 @@ def format_episode_data(ep_data, meta_filepath):
     #       as metadata on TVDB
     pytivo_metadata = {
         # https://pytivo.sourceforge.io/wiki/index.php/Metadata
-        'time' : 'NOT_IN_TVDB_INFO', # pytivo wants either 'file' or 'oad' or time_str that works in: datetime(*uniso(time_str)[:6])
+        # for 'time', pytivo wants either 'file' or 'oad' or time_str
+        #   that works in: datetime(*uniso(time_str)[:6])
+        'time' : 'NOT_IN_TVDB_INFO',
         'originalAirDate' : 'firstAired',
         'seriesTitle' : 'seriesName',
         'episodeTitle' : 'episodeName',
@@ -542,8 +541,8 @@ def format_movie_data(movie_info, dir_, file_name, metadata_file_name, tags,
     companies', 'special effects department', 'stunt performer', 'thanks',
     'title', 'top 250 rank', 'transportation department', 'visual effects',
     'votes', 'writer', 'year']
-    
-    
+
+
     Description of movie tags from imbdpy
     https://github.com/alberanid/imdbpy/blob/master/docs/README.package.txt
     -------------------------------------------------------------------------

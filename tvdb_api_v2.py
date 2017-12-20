@@ -169,8 +169,17 @@ def tvdb_v2_get_series_info(tvdb_token, tvdb_series_id):
             tvdb_token=tvdb_token
             )
     series_info_actors = json_data_actors['data']
+
     # TODO: sort by last name after sortOrder
-    series_info_actors.sort(key=lambda x: x['sortOrder'])
+    def sortorder_then_lastname(item):
+        last_name_re = re.search(r'\s(\S+)$', item['name'])
+        if last_name_re:
+            return '%02d%s'%(item['sortOrder'],last_name_re.group(1))
+        else:
+            return '%02d'%item['sortOrder']
+
+    #series_info_actors.sort(key=lambda x: x['sortOrder'])
+    series_info_actors.sort(key=sortorder_then_lastname)
 
     actors = [actdata['name'] for actdata in series_info_actors]
     series_info['actors'] = actors
@@ -246,7 +255,10 @@ def tvdb_v2_get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, d
                         month = ep_date_re.group(2)
                         day = ep_date_re.group(3)
                         ep_date_num = int("%04d%02d%02d"%(int(year), int(month), int(day)))
-                        debug(2, "searching: episode date %d season %s episode %s"%(ep_date_num, episode_info['airedSeason'], episode_info['airedEpisodeNumber']))
+                        debug(2, "searching: episode date %d "%ep_date_num + \
+                                "season %s "%episode_info['airedSeason'] + \
+                                "episode %s"%episode_info['airedEpisodeNumber']
+                                )
                         if ep_date_num == search_date_num:
                             # found a match
                             season = episode_info['airedSeason']
@@ -269,4 +281,3 @@ def tvdb_v2_get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, d
         episode_info = None
 
     return episode_info
-

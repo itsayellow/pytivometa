@@ -59,19 +59,20 @@ class Remote(object):
         self.rpc_id = 0
         # read buffer is bytes
         self.buf = b''
+        # initialize SSL socket
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ssl_socket = ssl.wrap_socket(self.socket, certfile='cdata.pem')
         try:
             self.ssl_socket.connect((TIVO_ADDR, TIVO_PORT))
         except:
             print('connect error')
-            # re-raise so we know exact exception
+            # re-raise so we know exact exception to enumerate code
             raise
         try:
             self._auth(username, password)
         except:
             print('credential error')
-            # re-raise so we know exact exception
+            # re-raise so we know exact exception to enumerate code
             raise
 
     @debug_fxn
@@ -176,24 +177,70 @@ class Remote(object):
             sys.exit(1)
 
     @debug_fxn
-    def collection_search_series(self, count, keywords):
-        """
+    def rpc_req_generic(self, req_type, **kwargs):
+        req = self.rpc_request(req_type, **kwargs)
+        self._write(req)
+        result = self._read()
+        return result
+
+    @debug_fxn
+    def collection_search(self, count, keywords):
+        """Search collections for any results matching keywords
+
         Args:
-            count (): maximum records to fetch
+            count (int): maximum records to fetch
             keywords (str): strings to search for matching records
         """
         req = self.rpc_request('collectionSearch',
               keyword=keywords,
-              orderBy='strippedTitle',
+              count=count,
+              filterUnavailable='false',
               includeBroadcast='true',
               includeFree='true',
               includePaid='false',
               includeVod='false',
               levelOfDetail='medium',
-              count=count,
               mergeOverridingCollections='true',
+              orderBy='strippedTitle',
+        )
+        self._write(req)
+        result = self._read()
+        return result
+
+    @debug_fxn
+    def collection_search_series(self, count, keywords):
+        """Search collections for any TV series matching keywords
+
+        Args:
+            count (int): maximum records to fetch
+            keywords (str): strings to search for matching records
+        """
+        req = self.rpc_request('collectionSearch',
+              keyword=keywords,
+              collectionType='series',
+              count=count,
               filterUnavailable='false',
-              collectionType='series'
+              includeBroadcast='true',
+              includeFree='true',
+              includePaid='false',
+              includeVod='false',
+              levelOfDetail='medium',
+              mergeOverridingCollections='true',
+              orderBy='strippedTitle',
+        )
+        self._write(req)
+        result = self._read()
+        return result
+
+    @debug_fxn
+    def offer_search_episodes(self, offset, collection_id):
+        req = self.rpc_request('contentSearch',
+            offset=offset,
+            #filterUnavailable = 'false',
+            count=25,
+            orderBy=['seasonNumber', 'episodeNum'],
+            levelOfDetail='medium',
+            collectionId=collection_id
         )
         self._write(req)
         result = self._read()
@@ -223,14 +270,13 @@ class Remote(object):
         return result
 
     @debug_fxn
-    def offer_search_episodes(self, offset, collection_id):
-        req = self.rpc_request('contentSearch',
-            offset=offset,
-            #filterUnavailable = 'false',
-            count=25,
-            orderBy=['seasonNumber', 'episodeNum'],
-            levelOfDetail='medium',
-            collectionId=collection_id
+    def offer_search(self, offset, collection_id):
+        req = self.rpc_request('offerSearch',
+              offset=offset,
+              count=25,
+              namespace='trioserver',
+              levelOfDetail='medium',
+              collectionId=collection_id
         )
         self._write(req)
         result = self._read()
@@ -293,37 +339,6 @@ class Remote(object):
                             #print('max matches exceeded')
                             stop = True
 
-
-    @debug_fxn
-    def collection_search(self, count, keywords):
-        req = sefl.rpc_request('collectionSearch',
-              keyword=keywords,
-              orderBy='strippedTitle',
-              includeBroadcast='true',
-              includeFree='true',
-              includePaid='false',
-              includeVod='false',
-              levelOfDetail='medium',
-              count=count,
-              mergeOverridingCollections='true',
-              filterUnavailable='false'
-        )
-        self._write(req)
-        result = self._read()
-        return result
-
-    @debug_fxn
-    def offer_search(self, offset, collection_id):
-        req = self.rpc_request('offerSearch',
-              offset=offset,
-              count=25,
-              namespace='trioserver',
-              levelOfDetail='medium',
-              collectionId=collection_id
-        )
-        self._write(req)
-        result = self._read()
-        return result
 
     @debug_fxn
     def search(self, count, max_matches, keywords):
@@ -427,8 +442,8 @@ def main(argv):
     password = argv[3]
     search_type = argv[5]
     subtitle = argv[6]
-    #print('credentials = ' + username + ' (and) ' + password)
     remote = Remote(username, password)
+
     if search_type == 'streaming':
         remote.search_episodes(25, 100, title) # test 100 was 25
     elif search_type == 'linear':

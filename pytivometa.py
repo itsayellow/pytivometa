@@ -516,6 +516,10 @@ def get_series_id(tvdb_token, show_name, show_dir,
                 seriesidpath = os.path.join(show_dir, show_name + ".seriesID")
             debug(1, "Found seriesID: " + tvdb_series_id)
             debug(2, "Writing seriesID to file: " + seriesidpath)
+
+            # only when we are about to write file make metadata dir (e.g. .meta) if
+            #   we need to
+            mkdir_if_needed(os.path.dirname(seriesidpath))
             with open(seriesidpath, 'w') as seriesidfile:
                 seriesidfile.write(tvdb_series_id)
         else:
@@ -711,6 +715,9 @@ def format_episode_data(ep_data, meta_filepath):
             debug(3, "No data for " + tv_tag)
 
     if metadata_text:
+        # only when we are about to write file make metadata dir (e.g. .meta) if
+        #   we need to
+        mkdir_if_needed(os.path.dirname(meta_filepath))
         with open(meta_filepath, 'w') as out_file:
             out_file.write(metadata_text)
 
@@ -935,6 +942,10 @@ def format_movie_data(movie_info, dir_, file_name, metadata_file_name, tags,
             debug(3, "vActor : " + actor['name'])
 
     debug(2, "Writing to %s" % metadata_file_name)
+
+    # only when we are about to write file make metadata dir (e.g. .meta) if
+    #   we need to
+    mkdir_if_needed(os.path.dirname(metadata_file_name))
     with open(metadata_file_name, 'w') as out_file:
         out_file.writelines(line)
 
@@ -1296,7 +1307,6 @@ def process_dir(dir_proc, dir_files, tvdb_token, interactive=False,
     # dir to put metadata in is either dir_proc or dir_proc/META_DIR
     if use_metadir or os.path.isdir(os.path.join(dir_proc, META_DIR)):
         meta_dir = os.path.join(dir_proc, META_DIR)
-        mkdir_if_needed(meta_dir)
     else:
         meta_dir = dir_proc
 

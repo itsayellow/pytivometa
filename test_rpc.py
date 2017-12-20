@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import rpcSearch103
+import rpc_search103
 import pprint
 import json
 

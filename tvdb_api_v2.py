@@ -39,7 +39,7 @@ def tvdb_v2_get(url, tvdb_token, headers_extra=None):
 
     return json_data
 
-def tvdb_v2_get_session_token():
+def get_session_token():
     """Get a current session token for thetvdb.com, necessary for any
     future requests of data.
 
@@ -72,7 +72,7 @@ def tvdb_v2_get_session_token():
 
     return tvdb_sess_token
 
-def tvdb_v2_search_series(tvdb_token, search_string):
+def search_series(tvdb_token, search_string):
     """Given a search string, return a list from thetvdb.com of all possible
     television series matches.
 
@@ -108,7 +108,7 @@ def tvdb_v2_search_series(tvdb_token, search_string):
 
     return json_data['data']
 
-def tvdb_v2_get_series_info(tvdb_token, tvdb_series_id):
+def get_series_info(tvdb_token, tvdb_series_id):
     """Given a series ID, return info on the series
 
     Args:
@@ -186,7 +186,7 @@ def tvdb_v2_get_series_info(tvdb_token, tvdb_series_id):
 
     return series_info
 
-def tvdb_v2_get_episode_info(tvdb_token, tvdb_series_id, season, episode):
+def get_episode_info(tvdb_token, tvdb_series_id, season, episode):
     get_episode_id_url = TVDB_API_URL + "series/" + tvdb_series_id + \
             "/episodes/query?airedSeason=" + season + \
             "&airedEpisode=" + episode
@@ -208,7 +208,7 @@ def tvdb_v2_get_episode_info(tvdb_token, tvdb_series_id, season, episode):
     episode_info = json_data['data']
     return episode_info
 
-def tvdb_v2_get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, day):
+def get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, day):
     season = None
     episode = None
 
@@ -225,7 +225,7 @@ def tvdb_v2_get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, d
         # go through each page of episodes until match is found, or
         #   we run out of pages (HTTP Error 404)
         page_str = str(page)
-        debug(2, "tvdb_v2_get_episode_info_air_date page %s"%page_str)
+        debug(2, "get_episode_info_air_date page %s"%page_str)
         try:
             json_data = tvdb_v2_get(
                     get_episodes_url + page_str,
@@ -272,7 +272,7 @@ def tvdb_v2_get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, d
 
     if season is not None and episode is not None:
         debug(1, "Air date %d matches: Season %d, Episode %d"%(search_date_num, season, episode))
-        episode_info = tvdb_v2_get_episode_info(
+        episode_info = get_episode_info(
                 tvdb_token, tvdb_series_id,
                 str(season), str(episode)
                 )

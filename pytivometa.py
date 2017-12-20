@@ -208,7 +208,7 @@ def get_series_id(tvdb_token, show_name, show_dir,
     if not clobber and tvdb_series_id:
         tvdb_series_id = re.sub("\n", "", tvdb_series_id)
     else:
-        series = tvdb_api_v2.tvdb_v2_search_series(tvdb_token, bare_title)
+        series = tvdb_api_v2.search_series(tvdb_token, bare_title)
 
         if year and len(series) > 1:
             debug(2, "There are %d matching series, "%(len(series)) + \
@@ -268,7 +268,7 @@ def get_series_id(tvdb_token, show_name, show_dir,
             debug(1, "Unable to find tvdb_series_id.")
 
     if tvdb_series_id is not None:
-        series_info = tvdb_api_v2.tvdb_v2_get_series_info(tvdb_token, tvdb_series_id)
+        series_info = tvdb_api_v2.get_series_info(tvdb_token, tvdb_series_id)
     else:
         series_info = {}
 
@@ -1021,14 +1021,14 @@ def parse_tv(tvdb_token, tv_info, meta_filepath, show_dir,
         episode_info.update(series_info)
         if tv_info.get('season', None) and tv_info.get('episode', None):
             episode_info.update(
-                    tvdb_api_v2.tvdb_v2_get_episode_info(
+                    tvdb_api_v2.get_episode_info(
                         tvdb_token, tvdb_series_id,
                         tv_info['season'], tv_info['episode']
                         )
                     )
         else:
             episode_info.update(
-                    tvdb_api_v2.tvdb_v2_get_episode_info_air_date(
+                    tvdb_api_v2.get_episode_info_air_date(
                         tvdb_token, tvdb_series_id,
                         tv_info['year'], tv_info['month'], tv_info['day']
                         )
@@ -1292,7 +1292,7 @@ def main(argv):
     debug(2, "Metadata File Output encoding: %s\n" % FILE_ENCODING)
 
     # Initalize tvdb session token
-    tvdb_token = tvdb_api_v2.tvdb_v2_get_session_token()
+    tvdb_token = tvdb_api_v2.get_session_token()
 
     # create/set genre dir if specified and possible
     if config['genre']:

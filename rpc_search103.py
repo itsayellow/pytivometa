@@ -188,7 +188,7 @@ class Remote(object):
         """Search collections for any results matching keywords
 
         Args:
-            count (int): maximum records to fetch
+            count (int): maximum records to fetch (max. value of 50)
             keywords (str): strings to search for matching records
 
         Returns:
@@ -240,6 +240,16 @@ class Remote(object):
 
     @debug_fxn
     def offer_search_linear(self, title, subtitle, body_id):
+        """Search unit for works matching title and subtitle
+
+        Args:
+            title (str): title string to search for
+            subtitle (str): subtitle string to search for
+            body_id (str): 'tsn:' + <Tivo Service Number (no dashes)>
+
+        Returns:
+            list: offerList
+        """
         req = self.rpc_request('offerSearch',
               count=25,
               bodyId=body_id,
@@ -252,6 +262,15 @@ class Remote(object):
 
     @debug_fxn
     def offer_search_linear_plus(self, title, body_id):
+        """Search unit for works matching title
+
+        Args:
+            title (str): title string to search for
+            body_id (str): 'tsn:' + <Tivo Service Number (no dashes)>
+
+        Returns:
+            list: offerList
+        """
         req = self.rpc_request('offerSearch',
               count=25,
               bodyId=body_id,
@@ -353,7 +372,6 @@ class Remote(object):
                         if matched > max_matches:
                             #print('max matches exceeded')
                             stop = True
-
 
     @debug_fxn
     def search(self, count, max_matches, keywords):

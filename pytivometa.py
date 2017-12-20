@@ -39,12 +39,14 @@ parse and use.
 
 If the file name of a movie has a year in parentheses
 (e.g. "Old Movie (1934)"), then it will aid in the search for the proper movie.
+    Wild Strawberries (1957).m4v
 
 A filename will be considered a TV show if it has part of it with something
-like a season and episode specification as part of it.
-(e.g. "S01E02", or "s01e02", etc.)
+like a season and episode specification as part of it.  (e.g. "S01E02",
+or "s01e02", etc.)  Also, an air-date will allow an episode to be found.
+    Friends.s02e03.m4v
+    friends.2004.4.29.m4v
 """
-
 
 import argparse
 from datetime import datetime
@@ -52,6 +54,7 @@ import json
 import os
 import os.path
 import re
+import stat
 import sys
 import textwrap
 from time import strptime
@@ -82,6 +85,9 @@ HAS_TVDB = True
 TVDB_APIKEY = "22FF0E9C529331C6"
 
 TVDB_API_URL = "https://api.thetvdb.com/"
+
+# location of config file for pytivometa
+CONFIG_FILE_PATH = "~/.config/pytivometa/config"
 
 # When using a subdir for metadata files, what should it be called
 META_DIR = '.meta'
@@ -1367,8 +1373,11 @@ def process_command_line(argv):
     """
     argv = argv[1:]
 
-    # initialize the parser object:
+    # initialize the parser object
+    #   argument_default=SUPPRESS means do not add option to namespace
+    #       if it is not present (we use separate defaults fxn)
     parser = argparse.ArgumentParser(
+            argument_default=argparse.SUPPRESS,
             description="Retrieve information from TVDB and IMDB to add "\
                     "TiVo metadatada to all media files in the current "\
                     "directory.  TV info from http://www.thetvdb.com/ ."\
@@ -1384,7 +1393,11 @@ def process_command_line(argv):
 
     # switches/options:
     parser.add_argument(
-            "-d", "--debug", action="count", default=0,
+            "-c", "--createconfig", action="store_true", default=False,
+            help="Create default config file: " + CONFIG_FILE_PATH
+            )
+    parser.add_argument(
+            "-d", "--debug", action="count",
             help="Turn on debugging. More -d's increase debug level."
             )
     parser.add_argument(
@@ -1405,7 +1418,7 @@ def process_command_line(argv):
                     "organized by genre."
             )
     parser.add_argument(
-            "-w", "--wait", dest="timeout", type=int, default=5,
+            "-w", "--wait", dest="timeout", type=int,
             help="How many seconds to wait for a connection to thetvdb.com "\
                     "before giving up. (Default: 5s)"
             )
@@ -1414,13 +1427,109 @@ def process_command_line(argv):
 
     return args
 
+def get_config_file():
+    config_data = {}
+    config_filepath = os.path.expanduser(CONFIG_FILE_PATH)
+    if os.path.isfile(config_filepath):
+        with open(config_filepath, 'r') as config_fh:
+            for line in config_fh:
+                line = re.sub(r'^(\s*#.*)', '', line)
+                data_re = re.search(r'^(\S+)=(\S.*)$', line)
+                if data_re:
+                    config_data[data_re.group(1)] = data_re.group(2)
+
+    # convert 'true' or 'True' to True, else False
+    if 'metadir' in config_data:
+        config_data['metadir'] = 'true' in config_data['metadir'].lower()
+    if 'recursive' in config_data:
+        config_data['recursive'] = 'true' in config_data['recursive'].lower()
+    if 'clobber' in config_data:
+        config_data['clobber'] = 'true' in config_data['clobber'].lower()
+
+    # convert str number to int
+    if 'timeout' in config_data:
+        config_data['timeout'] = int(config_data['timeout'])
+    if 'debug' in config_data:
+        config_data['debug'] = int(config_data['debug'])
+
+    return config_data
+
+def default_config_values():
+    """Master location of all default config values
+    """
+    config_data = {
+            'clobber': False,
+            'createconfig': False,
+            'debug': 0,
+            'genre': None,
+            'metadir': False,
+            'recursive': False,
+            'timeout': 5,
+            }
+    return config_data
+
+def create_config_file():
+    def_config = default_config_values()
+    config_default_lines = [
+            "# pytivometa config file",
+            "# Command-line options will override these options.",
+            "\n# for RPC searches.  Leave blank to disable.",
+            "username=",
+            "password=",
+            "\n# How many seconds to wait for a connection to thetvdb.com",
+            "timeout=%d"%def_config['timeout'],
+            "\n# Save metadata files in .meta subdirectory if true.",
+            "metadir=%s"%def_config['metadir'],
+            "\n# Generate metadata for all files in sub dirs too if true.",
+            "recursive=%s"%def_config['recursive'],
+            "\n# Specify a directory in which to place symlinks to shows, ",
+            "#    organized by genre.  Leave blank to disable.",
+            "genre=",
+            "\n# Force overwrite of existing metadata if true.",
+            "clobber=%s"%def_config['clobber'],
+            "\n# Debug level: 0=no debug messages, 1=some, 2=more, 3=most.",
+            "debug=%d"%def_config['debug'],
+            ]
+    config_filepath = os.path.expanduser(CONFIG_FILE_PATH)
+
+    print("Creating default config file: " + CONFIG_FILE_PATH)
+    if os.path.isfile(config_filepath):
+        print("Config file exists.  Not default config file: " + CONFIG_FILE_PATH)
+        return
+    try:
+        os.makedirs(os.path.dirname(config_filepath), exist_ok=True)
+    except OSError:
+        print("Couldn't make config file, error creating directory: " +\
+                os.path.dirname(CONFIG_FILE_PATH))
+        return
+    try:
+        with open(config_filepath, 'w') as config_fh:
+            for line in config_default_lines:
+                print(line, file=config_fh)
+    except:
+        # TODO: find specific error, replace raise with return
+        print("Couldn't make config file: " + CONFIG_FILE_PATH)
+        raise
+    os.chmod(config_filepath, stat.S_IRUSR + stat.S_IWUSR)
+
 def main(argv):
     global DEBUG_LEVEL
 
-    args = process_command_line(argv)
+    # start with config default values
+    config = default_config_values()
+
+    # get config from config file if present
+    config.update(get_config_file())
+
+    # command-line arguments (overrides config file)
+    config.update(vars(process_command_line(argv)))
+
+    # create default config file in proper place if requested
+    if config['createconfig']:
+        create_config_file()
 
     # set master debug message level
-    DEBUG_LEVEL = args.debug
+    DEBUG_LEVEL = config['debug']
 
     # set interactive if we are in an interactive shell
     interactive = check_interactive()
@@ -1431,14 +1540,14 @@ def main(argv):
     tvdb_token = tvdb_v2_get_session_token()
 
     # create/set genre dir if specified and possible
-    if args.genre:
-        genre_dir = create_genre_dir(args.genre)
+    if config['genre']:
+        genre_dir = create_genre_dir(config['genre'])
     else:
         genre_dir = None
 
     # process all dirs
-    for search_dir in args.dir:
-        if args.recursive:
+    for search_dir in config['dir']:
+        if config['recursive']:
             for (dirpath, _, dir_files) in os.walk(search_dir):
                 dirname = os.path.basename(dirpath)
                 # only non-hidden dirs (no dirs starting with .)
@@ -1446,16 +1555,16 @@ def main(argv):
                 if not re.search(r'\..+', dirname):
                     process_dir(dirpath, dir_files, tvdb_token,
                             interactive=interactive,
-                            use_metadir=args.metadir,
-                            clobber=args.clobber,
+                            use_metadir=config['metadir'],
+                            clobber=config['clobber'],
                             genre_dir=genre_dir
                             )
         else:
             dir_files = os.listdir(search_dir)
             process_dir(search_dir, dir_files, tvdb_token,
                     interactive=interactive,
-                    use_metadir=args.metadir,
-                    clobber=args.clobber,
+                    use_metadir=config['metadir'],
+                    clobber=config['clobber'],
                     genre_dir=genre_dir
                     )
 

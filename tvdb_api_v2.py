@@ -18,6 +18,12 @@ def debug(level, text):
 
 
 def tvdb_get(url, tvdb_token, headers_extra=None):
+    """Basic function handling low-level tvdb data requests
+
+    Args:
+        url (str): full URL to access
+        tvdb_token (str): current tvdb session token
+    """
     headers = {
             'Authorization': 'Bearer '+ tvdb_token,
             'Accept': 'application/json'
@@ -187,6 +193,16 @@ def get_series_info(tvdb_token, tvdb_series_id):
     return series_info
 
 def get_episode_info(tvdb_token, tvdb_series_id, season, episode):
+    """Given a series ID, return info on a particular episode
+
+    Args:
+        tvdb_token (str): tvdb API session token
+        tvdb_series_id (str): TVDB series ID number for series
+        season (str): string of season number
+        episode (str): string of episode number
+
+    Returns:
+    """
     get_episode_id_url = TVDB_API_URL + "series/" + tvdb_series_id + \
             "/episodes/query?airedSeason=" + season + \
             "&airedEpisode=" + episode

@@ -17,7 +17,7 @@ def debug(level, text):
         print(text)
 
 
-def tvdb_v2_get(url, tvdb_token, headers_extra=None):
+def tvdb_get(url, tvdb_token, headers_extra=None):
     headers = {
             'Authorization': 'Bearer '+ tvdb_token,
             'Accept': 'application/json'
@@ -101,7 +101,7 @@ def search_series(tvdb_token, search_string):
     """
     tvdb_search_series_url = TVDB_API_URL + "search/series?name="+ search_string
 
-    json_data = tvdb_v2_get(
+    json_data = tvdb_get(
             tvdb_search_series_url,
             tvdb_token=tvdb_token
             )
@@ -158,13 +158,13 @@ def get_series_info(tvdb_token, tvdb_series_id):
     # TODO: can use /series/{id}/filter to get only desired tags
     tvdb_series_info_url = TVDB_API_URL + "series/" + tvdb_series_id
 
-    json_data = tvdb_v2_get(
+    json_data = tvdb_get(
             tvdb_series_info_url,
             tvdb_token=tvdb_token
             )
     series_info = json_data['data']
 
-    json_data_actors = tvdb_v2_get(
+    json_data_actors = tvdb_get(
             tvdb_series_info_url + "/actors",
             tvdb_token=tvdb_token
             )
@@ -190,7 +190,7 @@ def get_episode_info(tvdb_token, tvdb_series_id, season, episode):
     get_episode_id_url = TVDB_API_URL + "series/" + tvdb_series_id + \
             "/episodes/query?airedSeason=" + season + \
             "&airedEpisode=" + episode
-    json_data = tvdb_v2_get(
+    json_data = tvdb_get(
             get_episode_id_url,
             tvdb_token=tvdb_token
             )
@@ -201,7 +201,7 @@ def get_episode_info(tvdb_token, tvdb_series_id, season, episode):
     episode_id = str(episode_list_info[0]['id'])
 
     get_episode_info_url = TVDB_API_URL + "episodes/" + episode_id
-    json_data = tvdb_v2_get(
+    json_data = tvdb_get(
             get_episode_info_url,
             tvdb_token=tvdb_token
             )
@@ -227,7 +227,7 @@ def get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, day):
         page_str = str(page)
         debug(2, "get_episode_info_air_date page %s"%page_str)
         try:
-            json_data = tvdb_v2_get(
+            json_data = tvdb_get(
                     get_episodes_url + page_str,
                     tvdb_token=tvdb_token
                     )

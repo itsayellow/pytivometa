@@ -472,8 +472,8 @@ def get_movie_info(title, interactive=False, is_trailer=False):
     try:
         # Do the search, and get the results (a list of Movie objects).
         results = imdb_access.search_movie(title)
-    except imdb.IMDbError as e:
-        debug(0, "IMDb lookup error: " + str(e))
+    except imdb.IMDbError as error:
+        debug(0, "IMDb lookup error: " + str(error))
         sys.exit(3)
 
     if not results:
@@ -499,7 +499,7 @@ def get_movie_info(title, interactive=False, is_trailer=False):
         try:
             imdb_access.update(movie_info)
             #debug(3, movie_info.summary())
-        except Exception as e:
+        except Exception:
             debug(0, "Warning: unable to get extended details from IMDb for: " + str(movie_info))
             debug(0, "         You may need to update your imdbpy module.")
 
@@ -515,7 +515,7 @@ def get_movie_info(title, interactive=False, is_trailer=False):
             try:
                 # This slows down the process, so only do it for trailers
                 imdb_access.update(movie_info, 'release dates')
-            except Exception as e:
+            except Exception:
                 debug(1, "Warning: unable to get release date.")
 
     return movie_info

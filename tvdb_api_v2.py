@@ -170,13 +170,13 @@ def tvdb_v2_get_series_info(tvdb_token, tvdb_series_id):
             )
     series_info_actors = json_data_actors['data']
 
-    # TODO: sort by last name after sortOrder
+    # sort by last name after sortOrder
     def sortorder_then_lastname(item):
         last_name_re = re.search(r'\s(\S+)$', item['name'])
         if last_name_re:
-            return '%02d%s'%(item['sortOrder'],last_name_re.group(1))
-        else:
-            return '%02d'%item['sortOrder']
+            return '%02d%s'%(item['sortOrder'], last_name_re.group(1))
+
+        return '%02d'%item['sortOrder']
 
     #series_info_actors.sort(key=lambda x: x['sortOrder'])
     series_info_actors.sort(key=sortorder_then_lastname)

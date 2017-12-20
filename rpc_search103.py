@@ -190,6 +190,9 @@ class Remote(object):
         Args:
             count (int): maximum records to fetch
             keywords (str): strings to search for matching records
+
+        Returns:
+            list: collectionList
         """
         req = self.rpc_request('collectionSearch',
               keyword=keywords,
@@ -214,6 +217,9 @@ class Remote(object):
         Args:
             count (int): maximum records to fetch
             keywords (str): strings to search for matching records
+
+        Returns:
+            list: collectionList
         """
         req = self.rpc_request('collectionSearch',
               keyword=keywords,
@@ -227,20 +233,6 @@ class Remote(object):
               levelOfDetail='medium',
               mergeOverridingCollections='true',
               orderBy='strippedTitle',
-        )
-        self._write(req)
-        result = self._read()
-        return result
-
-    @debug_fxn
-    def offer_search_episodes(self, offset, collection_id):
-        req = self.rpc_request('contentSearch',
-            offset=offset,
-            #filterUnavailable = 'false',
-            count=25,
-            orderBy=['seasonNumber', 'episodeNum'],
-            levelOfDetail='medium',
-            collectionId=collection_id
         )
         self._write(req)
         result = self._read()
@@ -283,6 +275,29 @@ class Remote(object):
         return result
 
     @debug_fxn
+    def content_search_episodes(self, offset, collection_id):
+        """Search for TV episodes matching collection_id
+
+        Args:
+            offset (int): absolute episode number for results to start
+            collection_id (str): string of collectionId
+
+        Returns:
+            list: contentList list of episodes, 25 at a time
+        """
+        req = self.rpc_request('contentSearch',
+            offset=offset,
+            #filterUnavailable = 'false',
+            count=25,
+            orderBy=['seasonNumber', 'episodeNum'],
+            levelOfDetail='medium',
+            collectionId=collection_id
+        )
+        self._write(req)
+        result = self._read()
+        return result
+
+    @debug_fxn
     def search_episodes(self, count, max_matches, keywords):
         #matched = 0
         result = self.collection_search_series(count, keywords)
@@ -315,7 +330,7 @@ class Remote(object):
                     matched = 0
                     while not stop:
                         matched += 1
-                        result = self.offer_search_episodes(
+                        result = self.content_search_episodes(
                                 offset,
                                 c.get('collectionId')
                                 )

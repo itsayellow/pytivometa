@@ -177,15 +177,29 @@ def find_series_by_year(series, year):
     # Return all that matched the year (which may be an empty list)
     return matching_series
 
-def get_series_info(tvdb_token, show_name, show_dir, meta_dir,
-        interactive=False, clobber=False):
-    tvdb_series_id = None
+def get_series_file_info(show_name, show_dir, meta_dir):
+    series_file_info = {}
+
     series_id_files = [
             os.path.join(show_dir, show_name + ".seriesID"),
             os.path.join(meta_dir, show_name + ".seriesID")
             ]
     series_id_files = list(set(series_id_files))
 
+    # search possible paths for series info file
+    for series_id_path in series_id_files:
+        debug(2, "Looking for .seriesID file in " + series_id_path)
+        # Get tvdb_series_id
+        if os.path.exists(series_id_path):
+            debug(2, "Reading seriesID from file: " + series_id_path)
+            with open(series_id_path, 'r') as seriesidfile:
+                tvdb_series_id = seriesidfile.read()
+            # remove trailing whitespace (including \n)
+            series_file_info['tvdb_series_id'] = tvdb_series_id.rstrip()
+
+    return series_file_info
+
+def find_tvdb_series_id(tvdb_token, show_name, interactive=False):
     # See if there's a year in the name
     match = re.search(r'(.+?) *\(((?:19|20)\d\d)\)', show_name)
     if match:
@@ -195,60 +209,59 @@ def get_series_info(tvdb_token, show_name, show_dir, meta_dir,
         bare_title = show_name
         year = ''
 
-    # Prepare the seriesID file
-    for series_id_path in series_id_files:
-        debug(2, "Looking for .seriesID file in " + series_id_path)
-        # Get tvdb_series_id
-        if os.path.exists(series_id_path):
-            debug(2, "Reading seriesID from file: " + series_id_path)
-            with open(series_id_path, 'r') as seriesidfile:
-                tvdb_series_id = seriesidfile.read()
-            tvdb_series_id = re.sub("\n", "", tvdb_series_id)
+    series = tvdb_api_v2.search_series(tvdb_token, bare_title)
+
+    if year and len(series) > 1:
+        debug(2, "There are %d matching series, "%(len(series)) + \
+                "but we know what year to search for (%s)."%year
+                )
+        series = find_series_by_year(series, year)
+        debug(2, "Series that match by year: %d." % len(series))
+
+    if len(series) == 1:
+        debug(1, "Found exact match")
+        tvdb_series_id = series[0]['id']
+    elif interactive and len(series) > 1:
+        # Display all the shows found
+        print("\nMatches for TV series title '%s'"%show_name
+            )
+        print("------------------------------------")
+
+        options_text = []
+        for series_candidate in series:
+            series_name = series_candidate['seriesName']
+            series_overview = series_candidate['overview']
+            first_aired = series_candidate['firstAired']
+
+            text_option = "Series Name: %s\n"%series_name
+            if first_aired:
+                text_option += "1st Aired: %s\n"%first_aired
+            if series_overview is not None:
+                overview_text = " ".join(series_overview[0:239].split())
+                text_option += "Overview: %s\n"%overview_text
+            text_option += "-"*30
+            options_text.append(text_option)
+
+        tvdb_series_ids = [s['id'] for s in series]
+        tvdb_series_id = ask_user(
+                options_text, tvdb_series_ids, max_options=5
+                )
+        print("------------------------------------")
+
+def get_series_info(tvdb_token, show_name, show_dir, meta_dir,
+        interactive=False, clobber=False):
+
+    series_file_info = get_series_file_info(show_name, show_dir, meta_dir)
+    tvdb_series_id = series_file_info['tvdb_series_id']
 
     if tvdb_series_id and not clobber:
         debug(1, "Using stored seriesID: " + tvdb_series_id)
     else:
-        series = tvdb_api_v2.search_series(tvdb_token, bare_title)
+        tvdb_series_id = find_tvdb_series_id(
+                tvdb_token, show_name, interactive=False)
 
-        if year and len(series) > 1:
-            debug(2, "There are %d matching series, "%(len(series)) + \
-                    "but we know what year to search for (%s)."%year
-                    )
-            series = find_series_by_year(series, year)
-            debug(2, "Series that match by year: %d." % len(series))
-
-        if len(series) == 1:
-            debug(1, "Found exact match")
-            tvdb_series_id = series[0]['id']
-        elif interactive and len(series) > 1:
-            # Display all the shows found
-            print("\nMatches for TV series title '%s'"%show_name
-                )
-            print("------------------------------------")
-
-            options_text = []
-            for series_candidate in series:
-                series_name = series_candidate['seriesName']
-                series_overview = series_candidate['overview']
-                first_aired = series_candidate['firstAired']
-
-                text_option = "Series Name: %s\n"%series_name
-                if first_aired:
-                    text_option += "1st Aired: %s\n"%first_aired
-                if series_overview is not None:
-                    overview_text = " ".join(series_overview[0:239].split())
-                    text_option += "Overview: %s\n"%overview_text
-                text_option += "-"*30
-                options_text.append(text_option)
-
-            tvdb_series_ids = [s['id'] for s in series]
-            tvdb_series_id = ask_user(
-                    options_text, tvdb_series_ids, max_options=5
-                    )
-            print("------------------------------------")
-
-        # Did we find any matches
-        if series and tvdb_series_id is not None:
+        # write out series info file
+        if tvdb_series_id is not None:
             tvdb_series_id = str(tvdb_series_id)
             # creating series ID file from scratch, so pick best path
             seriesidpath = os.path.join(meta_dir, show_name + ".seriesID")
@@ -896,7 +909,7 @@ def parse_tv(tvdb_token, tv_info, meta_filepath, show_dir,
         clobber (boolean): should we overwrite existing metadata?
 
     Returns:
-        dict: 
+        dict: containing tvdb keys and values
 
     Tags we need in episode_info if possible:
         'Actors',
@@ -925,8 +938,8 @@ def parse_tv(tvdb_token, tv_info, meta_filepath, show_dir,
         'zap2it_id',
     """
     if not HAS_TVDB:
-        debug(1, "Metadata service for TV shows is " + \
-                "unavailable, skipping this show.")
+        debug(1, "Metadata service for TV shows is unavailable, skipping " + \
+                "this show.")
         return
 
     episode_info = {}
@@ -967,10 +980,8 @@ def process_dir(dir_proc, dir_files, tvdb_token, interactive=False,
 
     video_files = get_video_files(dir_proc, dir_files)
 
-    is_trailer = False
     # See if we're in a "Trailer" folder.
-    if 'trailer' in os.path.abspath(dir_proc).lower():
-        is_trailer = True
+    is_trailer = 'trailer' in os.path.abspath(dir_proc).lower()
 
     # dir to put metadata in is either dir_proc or dir_proc/META_DIR
     if use_metadir or os.path.isdir(os.path.join(dir_proc, META_DIR)):
@@ -998,7 +1009,8 @@ def process_dir(dir_proc, dir_files, tvdb_token, interactive=False,
             else:
                 # assume movie if filename not matching tv
                 parse_movie(dir_proc, filename, meta_filepath,
-                        interactive=interactive, is_trailer=is_trailer, genre_dir=genre_dir
+                        interactive=interactive, is_trailer=is_trailer,
+                        genre_dir=genre_dir
                         )
 
 def check_interactive():

@@ -7,7 +7,10 @@ import sys
 import textwrap
 from time import strptime
 
+
+import common
 import tvdb_api_v2
+
 
 # Flag to track if TV lookups are enabled.
 HAS_TVDB = True
@@ -18,80 +21,10 @@ SERIES_INFO_CACHE = {}
 # debug level for messages of entire file
 DEBUG_LEVEL = 0
 
-# should be in common py file, duplicate for now ------------------------------
 def debug(level, text):
     if level <= DEBUG_LEVEL:
         print(text)
 
-def ask_user(options_text, option_returns, max_options=5):
-    indent = " "*4
-
-    # Get number of movies found
-    num_choices = len(option_returns)
-
-    debug(2, "Found " + str(num_choices) + " matches.")
-    # Show max max_options titles
-    num_choices = min(num_choices, max_options)
-
-    for i in range(num_choices):
-        option_text = ""
-        option_text_lines = options_text[i].splitlines()
-        for line in option_text_lines:
-            option_text += textwrap.fill(
-                    line,
-                    width=75,
-                    initial_indent=indent,
-                    subsequent_indent=indent
-                    ) + "\n"
-        option_text = option_text.strip()
-        if num_choices < 10:
-            print("%d   %s"%(i, option_text))
-        else:
-            print("%2d  %s"%(i, option_text))
-    print("")
-    try:
-        choice_num = input(
-                "Please choose the correct option, or 's' to skip [0]: "
-                )
-    except KeyboardInterrupt:
-        print("\nCaught interrupt, exiting.")
-        sys.exit(1)
-
-    if not choice_num:
-        # Empty string, default to the top choice
-        choice_num = 0
-    else:
-        # Check for non-numeric input
-        try:
-            choice_num = int(choice_num)
-        except ValueError:
-            choice_num = None
-        else:
-            # Check for out-of-range input
-            if choice_num < 0 or choice_num > num_choices:
-                choice_num = None
-
-    if choice_num is not None:
-        print("Option %d chosen."%choice_num)
-        returnval = option_returns[choice_num]
-    else:
-        print("No choice recorded, skipping...")
-        returnval = None
-
-    return returnval
-
-def mkdir_if_needed(dirname):
-    if not os.path.exists(dirname):
-        # Don't use os.makedirs() because that would only matter if -p named a
-        #   non-existant dir (which we don't want to create)
-        os.mkdir(dirname, 0o755)
-    elif not os.path.isdir(dirname):
-        raise OSError(
-                'Can\'t create "' + dirname + '" as a dir, a file already ' +\
-                        'exists with that name.'
-                )
-
-# TV DATA ---------------------------------------------------------------------
 def find_series_by_year(series, year):
     matching_series = []
     for series_candidate in series:
@@ -169,7 +102,7 @@ def search_tvdb_series_id(tvdb_token, show_name, interactive=False):
             options_text.append(text_option)
 
         tvdb_series_ids = [s['id'] for s in series]
-        tvdb_series_id = ask_user(
+        tvdb_series_id = common.ask_user(
                 options_text, tvdb_series_ids, max_options=5
                 )
         print("------------------------------------")
@@ -198,7 +131,7 @@ def get_series_info(tvdb_token, show_name, show_dir, meta_dir,
 
             # only when we are about to write file make metadata dir (e.g. .meta) if
             #   we need to
-            mkdir_if_needed(os.path.dirname(seriesidpath))
+            common.mkdir_if_needed(os.path.dirname(seriesidpath))
             with open(seriesidpath, 'w') as seriesidfile:
                 seriesidfile.write(tvdb_series_id)
         else:
@@ -397,7 +330,7 @@ def format_episode_data(ep_data, meta_filepath):
     if metadata_text:
         # only when we are about to write file make metadata dir (e.g. .meta) if
         #   we need to
-        mkdir_if_needed(os.path.dirname(meta_filepath))
+        common.mkdir_if_needed(os.path.dirname(meta_filepath))
         with open(meta_filepath, 'w') as out_file:
             out_file.write(metadata_text)
 

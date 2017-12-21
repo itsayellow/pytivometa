@@ -6,6 +6,7 @@ import re
 import sys
 import textwrap
 
+
 # Import the IMDbPY package.
 try:
     import imdb
@@ -17,6 +18,10 @@ else:
     # no exceptions, so set IMDB flag
     HAS_IMDB = True
 
+
+import common
+
+
 # Which country's release date do we want to see:
 #   Also as another way to search for an "Also Known As" title
 COUNTRY = 'USA'
@@ -27,81 +32,10 @@ LANG = 'English'
 # debug level for messages of entire file
 DEBUG_LEVEL = 0
 
-
-# should be in common py file, duplicate for now ------------------------------
 def debug(level, text):
     if level <= DEBUG_LEVEL:
         print(text)
 
-def ask_user(options_text, option_returns, max_options=5):
-    indent = " "*4
-
-    # Get number of movies found
-    num_choices = len(option_returns)
-
-    debug(2, "Found " + str(num_choices) + " matches.")
-    # Show max max_options titles
-    num_choices = min(num_choices, max_options)
-
-    for i in range(num_choices):
-        option_text = ""
-        option_text_lines = options_text[i].splitlines()
-        for line in option_text_lines:
-            option_text += textwrap.fill(
-                    line,
-                    width=75,
-                    initial_indent=indent,
-                    subsequent_indent=indent
-                    ) + "\n"
-        option_text = option_text.strip()
-        if num_choices < 10:
-            print("%d   %s"%(i, option_text))
-        else:
-            print("%2d  %s"%(i, option_text))
-    print("")
-    try:
-        choice_num = input(
-                "Please choose the correct option, or 's' to skip [0]: "
-                )
-    except KeyboardInterrupt:
-        print("\nCaught interrupt, exiting.")
-        sys.exit(1)
-
-    if not choice_num:
-        # Empty string, default to the top choice
-        choice_num = 0
-    else:
-        # Check for non-numeric input
-        try:
-            choice_num = int(choice_num)
-        except ValueError:
-            choice_num = None
-        else:
-            # Check for out-of-range input
-            if choice_num < 0 or choice_num > num_choices:
-                choice_num = None
-
-    if choice_num is not None:
-        print("Option %d chosen."%choice_num)
-        returnval = option_returns[choice_num]
-    else:
-        print("No choice recorded, skipping...")
-        returnval = None
-
-    return returnval
-
-def mkdir_if_needed(dirname):
-    if not os.path.exists(dirname):
-        # Don't use os.makedirs() because that would only matter if -p named a
-        #   non-existant dir (which we don't want to create)
-        os.mkdir(dirname, 0o755)
-    elif not os.path.isdir(dirname):
-        raise OSError(
-                'Can\'t create "' + dirname + '" as a dir, a file already ' +\
-                        'exists with that name.'
-                )
-
-# MOVIE DATA ------------------------------------------------------------------
 def clean_title(title):
     # strip a variety of common junk from torrented avi filenames
     striplist = (
@@ -160,7 +94,7 @@ def get_movie_info(title, interactive=False, is_trailer=False):
         options_text = []
         for result in results:
             options_text.append(result['long imdb title'])
-        movie_info = ask_user(options_text, results, max_options=5)
+        movie_info = common.ask_user(options_text, results, max_options=5)
         print("------------------------------------")
     else:
         # automatically pick first match
@@ -363,14 +297,14 @@ def format_movie_data(movie_info, dir_, file_name, metadata_file_name, tags,
 
     # only when we are about to write file make metadata dir (e.g. .meta) if
     #   we need to
-    mkdir_if_needed(os.path.dirname(metadata_file_name))
+    common.mkdir_if_needed(os.path.dirname(metadata_file_name))
     with open(metadata_file_name, 'w') as out_file:
         out_file.writelines(line)
 
 def link_genres(work_dir, genre_dir, file_name, metadata_path, genres):
     for this_genre in genres:
         genrepath = os.path.join(genre_dir, this_genre)
-        mkdir_if_needed(genrepath)
+        common.mkdir_if_needed(genrepath)
         # Create a symlink to the video
         link = os.path.join(genrepath, file_name)
         file_path = os.path.join(work_dir, file_name)

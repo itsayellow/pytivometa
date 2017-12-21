@@ -58,7 +58,6 @@ import sys
 
 import movie_data
 import tv_data
-import tvdb_api_v2
 
 
 # location of config file for pytivometa

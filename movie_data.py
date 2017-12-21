@@ -456,4 +456,3 @@ def parse_movie(search_dir, filename, metadata_file_name,
         format_movie_data(movie_info, search_dir, filename, metadata_file_name,
                 tags, genre_dir=genre_dir
                 )
-

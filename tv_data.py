@@ -3,6 +3,7 @@
 from datetime import datetime
 import os.path
 import re
+import sys
 import textwrap
 from time import strptime
 
@@ -476,4 +477,3 @@ def parse_tv(tvdb_token, tv_info, meta_filepath, show_dir,
 
         if episode_info is not None:
             format_episode_data(episode_info, meta_filepath)
-

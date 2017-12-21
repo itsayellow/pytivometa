@@ -166,6 +166,7 @@ def ask_user(options_text, option_returns, max_options=5):
 
     return returnval
 
+# TV DATA ---------------------------------------------------------------------
 def find_series_by_year(series, year):
     matching_series = []
     for series_candidate in series:
@@ -475,6 +476,7 @@ def format_episode_data(ep_data, meta_filepath):
         with open(meta_filepath, 'w') as out_file:
             out_file.write(metadata_text)
 
+# MOVIE DATA ------------------------------------------------------------------
 def get_movie_info(title, interactive=False, is_trailer=False):
     debug(1, "Searching IMDb for: " + title)
     # IMDB access object
@@ -736,6 +738,32 @@ def report_match(movie_info, num_results):
     else:
         debug(1, matchtype + str(movie_info))
 
+def fix_spaces(title):
+    placeholders = ['[-._]', '  +']
+    for place_holder in placeholders:
+        title = re.sub(place_holder, ' ', title)
+    # Remove leftover spaces before/after the year
+    title = re.sub(r'\( ', '(', title)
+    title = re.sub(r' \)', ')', title)
+    title = re.sub(r'\(\)', '', title)
+    return title
+
+# -----------------------------------------------------------------------------
+
+def clean_title(title):
+    # strip a variety of common junk from torrented avi filenames
+    striplist = (
+            r'crowbone', r'joox-dot-net', r'DOMiNiON', r'LiMiTED',
+            r'aXXo', r'DoNE', r'ViTE', r'BaLD', r'COCAiNE', r'NoGRP',
+            r'leetay', r'AC3', r'BluRay', r'DVD', r'VHS', r'Screener',
+            r'(?i)DVD SCR', r'\[.*\]', r'(?i)swesub', r'(?i)dvdrip',
+            r'(?i)dvdscr', r'(?i)xvid', r'(?i)divx'
+            )
+    for strip in striplist:
+        title = re.sub(strip, '', title)
+    debug(3, "After stripping keywords, title is: " + title)
+    return title
+
 def get_video_files(dirname, dir_files):
     """Get list of file info objects for files of particular extensions, and
     subdirectories for recursive search
@@ -752,30 +780,6 @@ def get_video_files(dirname, dir_files):
     debug(2, "video_files after cull: %s" % str(video_files))
 
     return video_files
-
-def fix_spaces(title):
-    placeholders = ['[-._]', '  +']
-    for place_holder in placeholders:
-        title = re.sub(place_holder, ' ', title)
-    # Remove leftover spaces before/after the year
-    title = re.sub(r'\( ', '(', title)
-    title = re.sub(r' \)', ')', title)
-    title = re.sub(r'\(\)', '', title)
-    return title
-
-def clean_title(title):
-    # strip a variety of common junk from torrented avi filenames
-    striplist = (
-            r'crowbone', r'joox-dot-net', r'DOMiNiON', r'LiMiTED',
-            r'aXXo', r'DoNE', r'ViTE', r'BaLD', r'COCAiNE', r'NoGRP',
-            r'leetay', r'AC3', r'BluRay', r'DVD', r'VHS', r'Screener',
-            r'(?i)DVD SCR', r'\[.*\]', r'(?i)swesub', r'(?i)dvdrip',
-            r'(?i)dvdscr', r'(?i)xvid', r'(?i)divx'
-            )
-    for strip in striplist:
-        title = re.sub(strip, '', title)
-    debug(3, "After stripping keywords, title is: " + title)
-    return title
 
 def extract_tags(title):
     # Look for tags that we want to show on the tivo, but not include in

@@ -73,10 +73,6 @@ VIDEO_FILE_EXTS = [
         ".mov", ".wmv", ".vob", ".m4v", ".flv"
         ]
 
-# string encoding for output to metadata files.  Tivo is UTF8 compatible so use
-#   that for file output
-FILE_ENCODING = 'UTF-8'
-
 # debug level for messages of entire file
 DEBUG_LEVEL = 0
 
@@ -395,8 +391,6 @@ def main(argv):
 
     # set interactive if we are in an interactive shell
     interactive = check_interactive()
-
-    debug(2, "Metadata File Output encoding: %s\n" % FILE_ENCODING)
 
     # Initalize tvdb session token
     tvdb_token = tvdb_api_v2.get_session_token()

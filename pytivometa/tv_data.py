@@ -19,6 +19,7 @@ SERIES_INFO_CACHE = {}
 # debug level for messages of entire file
 DEBUG_LEVEL = 0
 
+
 def debug(level, text):
     if level <= DEBUG_LEVEL:
         print(text)

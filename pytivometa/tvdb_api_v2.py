@@ -100,8 +100,8 @@ import urllib.request
 
 TVDB_APIKEY = "22FF0E9C529331C6"
 TVDB_API_URL = "https://api.thetvdb.com/"
-
 DEBUG_LEVEL = 0
+
 
 def debug(level, text):
     if level <= DEBUG_LEVEL:

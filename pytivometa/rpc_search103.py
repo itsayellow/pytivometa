@@ -20,12 +20,14 @@ import sys
 import json
 import pprint
 
+
 TIVO_ADDR = 'middlemind.tivo.com'
 TIVO_PORT = 443
 
 PP = pprint.PrettyPrinter(indent=4)
 #logging.basicConfig(level=logging.DEBUG)
 #logging.basicConfig(level=logging.INFO)
+
 
 # debug decorator that announces function call/entry and lists args
 def debug_fxn(func):
@@ -43,6 +45,7 @@ def debug_fxn(func):
         logging.info(log_string)
         return func(*args, **kwargs)
     return func_wrapper
+
 
 class Remote(object):
     @debug_fxn

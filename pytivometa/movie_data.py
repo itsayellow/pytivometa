@@ -4,7 +4,6 @@ import os
 import os.path
 import re
 import sys
-import textwrap
 
 
 # Import the IMDbPY package.
@@ -82,6 +81,7 @@ def get_movie_info(title, interactive=False, is_trailer=False):
         results = imdb_access.search_movie(title)
     except imdb.IMDbError as error:
         debug(0, "IMDb lookup error: " + str(error))
+        # TODO: raise Exception
         sys.exit(3)
 
     if not results:

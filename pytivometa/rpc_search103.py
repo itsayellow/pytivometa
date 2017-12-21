@@ -174,6 +174,7 @@ class Remote(object):
         result = self._read()
         if result['status'] != 'success':
             logging.error('Authentication failed!  Got: %s', result)
+            # TODO: change this to raise exception
             sys.exit(1)
 
     @debug_fxn

@@ -54,7 +54,6 @@ import os.path
 import re
 import stat
 import sys
-import textwrap
 
 
 import movie_data

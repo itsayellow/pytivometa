@@ -177,14 +177,14 @@ def find_series_by_year(series, year):
     # Return all that matched the year (which may be an empty list)
     return matching_series
 
-def get_series_id(tvdb_token, show_name, show_dir,
-        interactive=False, use_metadir=False, clobber=False):
+def get_series_info(tvdb_token, show_name, show_dir, meta_dir,
+        interactive=False, clobber=False):
     tvdb_series_id = None
-    series_id_files = [os.path.join(show_dir, show_name + ".seriesID")]
-    if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
-        series_id_files.append(
-                os.path.join(show_dir, META_DIR, show_name + ".seriesID")
-                )
+    series_id_files = [
+            os.path.join(show_dir, show_name + ".seriesID"),
+            os.path.join(meta_dir, show_name + ".seriesID")
+            ]
+    series_id_files = list(set(series_id_files))
 
     # See if there's a year in the name
     match = re.search(r'(.+?) *\(((?:19|20)\d\d)\)', show_name)
@@ -196,17 +196,17 @@ def get_series_id(tvdb_token, show_name, show_dir,
         year = ''
 
     # Prepare the seriesID file
-    for seriesidpath in series_id_files:
-        debug(2, "Looking for .seriesID file in " + seriesidpath)
+    for series_id_path in series_id_files:
+        debug(2, "Looking for .seriesID file in " + series_id_path)
         # Get tvdb_series_id
-        if os.path.exists(seriesidpath):
-            debug(2, "Reading seriesID from file: " + seriesidpath)
-            with open(seriesidpath, 'r') as seriesidfile:
+        if os.path.exists(series_id_path):
+            debug(2, "Reading seriesID from file: " + series_id_path)
+            with open(series_id_path, 'r') as seriesidfile:
                 tvdb_series_id = seriesidfile.read()
-            debug(1, "Using stored seriesID: " + tvdb_series_id)
+            tvdb_series_id = re.sub("\n", "", tvdb_series_id)
 
-    if not clobber and tvdb_series_id:
-        tvdb_series_id = re.sub("\n", "", tvdb_series_id)
+    if tvdb_series_id and not clobber:
+        debug(1, "Using stored seriesID: " + tvdb_series_id)
     else:
         series = tvdb_api_v2.search_series(tvdb_token, bare_title)
 
@@ -251,11 +251,7 @@ def get_series_id(tvdb_token, show_name, show_dir,
         if series and tvdb_series_id is not None:
             tvdb_series_id = str(tvdb_series_id)
             # creating series ID file from scratch, so pick best path
-            if use_metadir or os.path.isdir(os.path.join(show_dir, META_DIR)):
-                seriesidpath = os.path.join(
-                        show_dir, META_DIR, show_name + ".seriesID")
-            else:
-                seriesidpath = os.path.join(show_dir, show_name + ".seriesID")
+            seriesidpath = os.path.join(meta_dir, show_name + ".seriesID")
             debug(1, "Found seriesID: " + tvdb_series_id)
             debug(2, "Writing seriesID to file: " + seriesidpath)
 
@@ -267,12 +263,11 @@ def get_series_id(tvdb_token, show_name, show_dir,
         else:
             debug(1, "Unable to find tvdb_series_id.")
 
+    series_info = {}
     if tvdb_series_id is not None:
-        series_info = tvdb_api_v2.get_series_info(tvdb_token, tvdb_series_id)
-    else:
-        series_info = {}
+        series_info['tvdb'] = tvdb_api_v2.get_series_info(tvdb_token, tvdb_series_id)
 
-    return series_info, tvdb_series_id
+    return series_info
 
 def format_episode_data(ep_data, meta_filepath):
     # Takes a dict ep_data of XML elements, the series title, the Zap2It ID (aka
@@ -801,6 +796,47 @@ def mkdir_if_needed(dirname):
                         'exists with that name.'
                 )
 
+def tvinfo_from_filename(filename):
+    # Regexes for filenames that match TV shows.
+    #   group 1: series search string (i.e. series name)
+    # ?P<name> at the beginning of a group calls the group 'name'
+    tv_res = [
+            r'(.+)[Ss](?P<season>\d\d?)[Ee](?P<episode>\d+)',
+            r'(.+?)(?: -)? ?(?P<season>\d+)[Xx](?P<episode>\d+)',
+            r'(.*).(?P<year>\d\d\d\d).(?P<month>\d+).(?P<day>\d+).*',
+            r'(.*).(?P<month>\d+).(?P<day>\d+).(?P<year>\d\d\d\d).*',
+            r'(?i)(.+)(?P<season>\d?\d)(?P<episode>\d\d).*sitv' # (?i) == re.I
+            ]
+
+    for tv_re in tv_res:
+        match = re.search(tv_re, filename)
+        if match:
+            # Looks like a TV show
+            break
+
+    tv_info = {}
+    if match:
+        # fill in tv_info if we matched this filename to a regex
+        tv_info['series'] = re.sub(r'[._]', ' ', match.group(1)).strip()
+        if match.lastindex >= 4:
+            # str(int()) strips out leading zeroes
+            tv_info['year'] = str(int(match.group('year')))
+            tv_info['month'] = str(int(match.group('month')))
+            tv_info['day'] = str(int(match.group('day')))
+        else:
+            tv_info['season'] = str(int(match.group('season')))
+            tv_info['episode'] = str(int(match.group('episode')))
+
+        debug(2, "    Series: %s\n"%tv_info['series'] + \
+                "    Season: %s\n"%tv_info.get('season', '') + \
+                "    Episode: %s\n"%tv_info.get('episode', '') + \
+                "    Year: %s\n"%tv_info.get('year', '') + \
+                "    Month: %s\n"%tv_info.get('month', '') + \
+                "    Day: %s"%tv_info.get('day', '')
+                )
+
+    return tv_info
+
 def parse_movie(search_dir, filename, metadata_file_name,
         interactive=False, is_trailer=False, genre_dir=None):
     if not HAS_IMDB:
@@ -848,50 +884,20 @@ def parse_movie(search_dir, filename, metadata_file_name,
                 tags, genre_dir=genre_dir
                 )
 
-def tvinfo_from_filename(filename):
-    # Regexes for filenames that match TV shows.
-    #   group 1: series search string (i.e. series name)
-    # ?P<name> at the beginning of a group calls the group 'name'
-    tv_res = [
-            r'(.+)[Ss](?P<season>\d\d?)[Ee](?P<episode>\d+)',
-            r'(.+?)(?: -)? ?(?P<season>\d+)[Xx](?P<episode>\d+)',
-            r'(.*).(?P<year>\d\d\d\d).(?P<month>\d+).(?P<day>\d+).*',
-            r'(.*).(?P<month>\d+).(?P<day>\d+).(?P<year>\d\d\d\d).*',
-            r'(?i)(.+)(?P<season>\d?\d)(?P<episode>\d\d).*sitv' # (?i) == re.I
-            ]
-
-    for tv_re in tv_res:
-        match = re.search(tv_re, filename)
-        if match:
-            # Looks like a TV show
-            break
-
-    tv_info = {}
-    if match:
-        # fill in tv_info if we matched this filename to a regex
-        tv_info['series'] = re.sub(r'[._]', ' ', match.group(1)).strip()
-        if match.lastindex >= 4:
-            # str(int()) strips out leading zeroes
-            tv_info['year'] = str(int(match.group('year')))
-            tv_info['month'] = str(int(match.group('month')))
-            tv_info['day'] = str(int(match.group('day')))
-        else:
-            tv_info['season'] = str(int(match.group('season')))
-            tv_info['episode'] = str(int(match.group('episode')))
-
-        debug(2, "    Series: %s\n"%tv_info['series'] + \
-                "    Season: %s\n"%tv_info.get('season', '') + \
-                "    Episode: %s\n"%tv_info.get('episode', '') + \
-                "    Year: %s\n"%tv_info.get('year', '') + \
-                "    Month: %s\n"%tv_info.get('month', '') + \
-                "    Day: %s"%tv_info.get('day', '')
-                )
-
-    return tv_info
-
 def parse_tv(tvdb_token, tv_info, meta_filepath, show_dir,
-        interactive=False, use_metadir=False, clobber=False):
+        interactive=False, clobber=False):
     """
+    Args:
+        tvdb_token (str): tvdb session token
+        tv_info (dict): info gathered from video filename
+        meta_filepath (str): filepath of output metadata file
+        show_dir (str): directory containing video_file being processed
+        interactive (boolean): can we ask the user to select proper series?
+        clobber (boolean): should we overwrite existing metadata?
+
+    Returns:
+        dict: 
+
     Tags we need in episode_info if possible:
         'Actors',
         'Choreographer'
@@ -917,119 +923,37 @@ def parse_tv(tvdb_token, tv_info, meta_filepath, show_dir,
         'time',
         'tvRating',
         'zap2it_id',
-
-    Tags in TVDB /series/{id}
-        {
-            "added": "string",
-            "airsDayOfWeek": "string",
-            "airsTime": "string",
-            "aliases": ["string",]
-            "banner": "string",
-            "firstAired": "string",
-            "genre": ["string",]
-            "id": 0,
-            "imdbId": "string",
-            "lastUpdated": 0,
-            "network": "string",
-            "networkId": "string",
-            "overview": "string",
-            "rating": "string",
-            "runtime": "string",
-            "seriesId": 0,
-            "seriesName": "string",
-            "siteRating": 0,
-            "siteRatingCount": 0,
-            "status": "string",
-            "zap2itId": "string"
-        }
-
-    Tags in TVDB /series/{id}/actors
-        [
-            {
-                "id": 0,
-                "image": "string",
-                "imageAdded": "string",
-                "imageAuthor": 0,
-                "lastUpdated": "string",
-                "name": "string",
-                "role": "string",
-                "seriesId": 0,
-                "sortOrder": 0
-            },
-        ]
-
-    Tags in TVDB /series/{id}/episodes/query or /series/{id}/episodes
-        [
-            {
-                "absoluteNumber": 0,
-                "airedEpisodeNumber": 0,
-                "airedSeason": 0,
-                "dvdEpisodeNumber": 0,
-                "dvdSeason": 0,
-                "episodeName": "string",
-                "firstAired": "string",
-                "id": 0,
-                "lastUpdated": 0,
-                "overview": "string"
-            }
-        ]
-
-    Tags in TVDB /episodes/{id}
-    {
-        "absoluteNumber": 0,
-        "airedEpisodeNumber": 0,
-        "airedSeason": 0,
-        "airsAfterSeason": 0,
-        "airsBeforeEpisode": 0,
-        "airsBeforeSeason": 0,
-        "director": "string",
-        "directors": [ "string" ],
-        "dvdChapter": 0,
-        "dvdDiscid": "string",
-        "dvdEpisodeNumber": 0,
-        "dvdSeason": 0,
-        "episodeName": "string",
-        "filename": "string",
-        "firstAired": "string",
-        "guestStars": [ "string" ],
-        "id": 0,
-        "imdbId": "string",
-        "lastUpdated": 0,
-        "lastUpdatedBy": "string",
-        "overview": "string",
-        "productionCode": "string",
-        "seriesId": "string",
-        "showUrl": "string",
-        "siteRating": 0,
-        "siteRatingCount": 0,
-        "thumbAdded": "string",
-        "thumbAuthor": 0,
-        "thumbHeight": "string",
-        "thumbWidth": "string",
-        "writers": [ "string" ]
-    }
     """
+    if not HAS_TVDB:
+        debug(1, "Metadata service for TV shows is " + \
+                "unavailable, skipping this show.")
+        return
+
     episode_info = {}
+
+    meta_dir = os.path.dirname(meta_filepath)
+
     if tv_info['series'] not in SERIES_INFO_CACHE:
-        SERIES_INFO_CACHE[tv_info['series']] = get_series_id(
-                tvdb_token, tv_info['series'], show_dir,
-                interactive=interactive, use_metadir=use_metadir,
-                clobber=clobber
+        SERIES_INFO_CACHE[tv_info['series']] = get_series_info(
+                tvdb_token, tv_info['series'], show_dir, meta_dir,
+                interactive=interactive, clobber=clobber
                 )
-    (series_info, tvdb_series_id) = SERIES_INFO_CACHE[tv_info['series']]
-    if tvdb_series_id and series_info:
-        episode_info.update(series_info)
+    series_info = SERIES_INFO_CACHE[tv_info['series']]
+
+    if series_info.get('tvdb', {}).get('id', None):
+        episode_info.update(series_info['tvdb'])
+
         if tv_info.get('season', None) and tv_info.get('episode', None):
             episode_info.update(
                     tvdb_api_v2.get_episode_info(
-                        tvdb_token, tvdb_series_id,
+                        tvdb_token, str(series_info['tvdb']['id']),
                         tv_info['season'], tv_info['episode']
                         )
                     )
         else:
             episode_info.update(
                     tvdb_api_v2.get_episode_info_air_date(
-                        tvdb_token, tvdb_series_id,
+                        tvdb_token, str(series_info['tvdb']['id']),
                         tv_info['year'], tv_info['month'], tv_info['day']
                         )
                     )
@@ -1067,14 +991,10 @@ def process_dir(dir_proc, dir_files, tvdb_token, interactive=False,
             tv_info = tvinfo_from_filename(filename)
 
             if tv_info:
-                if HAS_TVDB:
-                    parse_tv(tvdb_token, tv_info, meta_filepath, dir_proc,
-                            interactive=interactive, use_metadir=use_metadir,
-                            clobber=clobber
-                            )
-                else:
-                    debug(1, "Metadata service for TV shows is " + \
-                            "unavailable, skipping this show.")
+                # assume tv if filename matches tv format
+                parse_tv(tvdb_token, tv_info, meta_filepath, dir_proc,
+                        interactive=interactive, clobber=clobber
+                        )
             else:
                 # assume movie if filename not matching tv
                 parse_movie(dir_proc, filename, meta_filepath,

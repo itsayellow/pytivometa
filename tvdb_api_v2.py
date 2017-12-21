@@ -1,5 +1,96 @@
 #!/usr/bin/env/python3
+"""
+    Tags in TVDB /series/{id}
+        {
+            "added": "string",
+            "airsDayOfWeek": "string",
+            "airsTime": "string",
+            "aliases": ["string",]
+            "banner": "string",
+            "firstAired": "string",
+            "genre": ["string",]
+            "id": 0,
+            "imdbId": "string",
+            "lastUpdated": 0,
+            "network": "string",
+            "networkId": "string",
+            "overview": "string",
+            "rating": "string",
+            "runtime": "string",
+            "seriesId": 0,
+            "seriesName": "string",
+            "siteRating": 0,
+            "siteRatingCount": 0,
+            "status": "string",
+            "zap2itId": "string"
+        }
 
+    Tags in TVDB /series/{id}/actors
+        [
+            {
+                "id": 0,
+                "image": "string",
+                "imageAdded": "string",
+                "imageAuthor": 0,
+                "lastUpdated": "string",
+                "name": "string",
+                "role": "string",
+                "seriesId": 0,
+                "sortOrder": 0
+            },
+        ]
+
+    Tags in TVDB /series/{id}/episodes/query or /series/{id}/episodes
+        [
+            {
+                "absoluteNumber": 0,
+                "airedEpisodeNumber": 0,
+                "airedSeason": 0,
+                "dvdEpisodeNumber": 0,
+                "dvdSeason": 0,
+                "episodeName": "string",
+                "firstAired": "string",
+                "id": 0,
+                "lastUpdated": 0,
+                "overview": "string"
+            }
+        ]
+
+    Tags in TVDB /episodes/{id}
+    {
+        "absoluteNumber": 0,
+        "airedEpisodeNumber": 0,
+        "airedSeason": 0,
+        "airsAfterSeason": 0,
+        "airsBeforeEpisode": 0,
+        "airsBeforeSeason": 0,
+        "director": "string",
+        "directors": [ "string" ],
+        "dvdChapter": 0,
+        "dvdDiscid": "string",
+        "dvdEpisodeNumber": 0,
+        "dvdSeason": 0,
+        "episodeName": "string",
+        "filename": "string",
+        "firstAired": "string",
+        "guestStars": [ "string" ],
+        "id": 0,
+        "imdbId": "string",
+        "lastUpdated": 0,
+        "lastUpdatedBy": "string",
+        "overview": "string",
+        "productionCode": "string",
+        "seriesId": "string",
+        "showUrl": "string",
+        "siteRating": 0,
+        "siteRatingCount": 0,
+        "thumbAdded": "string",
+        "thumbAuthor": 0,
+        "thumbHeight": "string",
+        "thumbWidth": "string",
+        "writers": [ "string" ]
+    }
+"""
 
 import json
 import re
@@ -37,6 +128,7 @@ def tvdb_get(url, tvdb_token, headers_extra=None):
         json_reply_raw = urllib.request.urlopen(request)
     except urllib.error.HTTPError as http_error:
         print(http_error)
+        print("url: " + url)
         # TODO: do something better than re-raise
         raise
 

@@ -188,8 +188,11 @@ class Remote(object):
         """Search collections for any results matching keywords
 
         Args:
-            count (int): maximum records to fetch
+            count (int): maximum records to fetch (max. value of 50)
             keywords (str): strings to search for matching records
+
+        Returns:
+            list: collectionList
         """
         req = self.rpc_request('collectionSearch',
               keyword=keywords,
@@ -214,6 +217,9 @@ class Remote(object):
         Args:
             count (int): maximum records to fetch
             keywords (str): strings to search for matching records
+
+        Returns:
+            list: collectionList
         """
         req = self.rpc_request('collectionSearch',
               keyword=keywords,
@@ -233,21 +239,17 @@ class Remote(object):
         return result
 
     @debug_fxn
-    def offer_search_episodes(self, offset, collection_id):
-        req = self.rpc_request('contentSearch',
-            offset=offset,
-            #filterUnavailable = 'false',
-            count=25,
-            orderBy=['seasonNumber', 'episodeNum'],
-            levelOfDetail='medium',
-            collectionId=collection_id
-        )
-        self._write(req)
-        result = self._read()
-        return result
-
-    @debug_fxn
     def offer_search_linear(self, title, subtitle, body_id):
+        """Search unit for works matching title and subtitle
+
+        Args:
+            title (str): title string to search for
+            subtitle (str): subtitle string to search for
+            body_id (str): 'tsn:' + <Tivo Service Number (no dashes)>
+
+        Returns:
+            list: offerList
+        """
         req = self.rpc_request('offerSearch',
               count=25,
               bodyId=body_id,
@@ -260,6 +262,15 @@ class Remote(object):
 
     @debug_fxn
     def offer_search_linear_plus(self, title, body_id):
+        """Search unit for works matching title
+
+        Args:
+            title (str): title string to search for
+            body_id (str): 'tsn:' + <Tivo Service Number (no dashes)>
+
+        Returns:
+            list: offerList
+        """
         req = self.rpc_request('offerSearch',
               count=25,
               bodyId=body_id,
@@ -277,6 +288,29 @@ class Remote(object):
               namespace='trioserver',
               levelOfDetail='medium',
               collectionId=collection_id
+        )
+        self._write(req)
+        result = self._read()
+        return result
+
+    @debug_fxn
+    def content_search_episodes(self, offset, collection_id):
+        """Search for TV episodes matching collection_id
+
+        Args:
+            offset (int): absolute episode number for results to start
+            collection_id (str): string of collectionId
+
+        Returns:
+            list: contentList list of episodes, 25 at a time
+        """
+        req = self.rpc_request('contentSearch',
+            offset=offset,
+            #filterUnavailable = 'false',
+            count=25,
+            orderBy=['seasonNumber', 'episodeNum'],
+            levelOfDetail='medium',
+            collectionId=collection_id
         )
         self._write(req)
         result = self._read()
@@ -315,7 +349,7 @@ class Remote(object):
                     matched = 0
                     while not stop:
                         matched += 1
-                        result = self.offer_search_episodes(
+                        result = self.content_search_episodes(
                                 offset,
                                 c.get('collectionId')
                                 )
@@ -338,7 +372,6 @@ class Remote(object):
                         if matched > max_matches:
                             #print('max matches exceeded')
                             stop = True
-
 
     @debug_fxn
     def search(self, count, max_matches, keywords):

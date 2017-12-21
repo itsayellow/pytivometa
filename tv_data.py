@@ -17,11 +17,10 @@ SERIES_INFO_CACHE = {}
 # debug level for messages of entire file
 DEBUG_LEVEL = 0
 
+# should be in common py file, duplicate for now ------------------------------
 def debug(level, text):
     if level <= DEBUG_LEVEL:
         print(text)
-
-# should be in common py file, duplicate for now ------------------------------
 
 def ask_user(options_text, option_returns, max_options=5):
     indent = " "*4

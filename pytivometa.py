@@ -199,7 +199,7 @@ def get_series_file_info(show_name, show_dir, meta_dir):
 
     return series_file_info
 
-def find_tvdb_series_id(tvdb_token, show_name, interactive=False):
+def search_tvdb_series_id(tvdb_token, show_name, interactive=False):
     # See if there's a year in the name
     match = re.search(r'(.+?) *\(((?:19|20)\d\d)\)', show_name)
     if match:
@@ -248,17 +248,19 @@ def find_tvdb_series_id(tvdb_token, show_name, interactive=False):
                 )
         print("------------------------------------")
 
+    return tvdb_series_id
+
 def get_series_info(tvdb_token, show_name, show_dir, meta_dir,
         interactive=False, clobber=False):
 
     series_file_info = get_series_file_info(show_name, show_dir, meta_dir)
-    tvdb_series_id = series_file_info['tvdb_series_id']
+    tvdb_series_id = series_file_info.get('tvdb_series_id', None)
 
-    if tvdb_series_id and not clobber:
+    if tvdb_series_id is not None and not clobber:
         debug(1, "Using stored seriesID: " + tvdb_series_id)
     else:
-        tvdb_series_id = find_tvdb_series_id(
-                tvdb_token, show_name, interactive=False)
+        tvdb_series_id = search_tvdb_series_id(
+                tvdb_token, show_name, interactive=interactive)
 
         # write out series info file
         if tvdb_series_id is not None:
@@ -954,6 +956,7 @@ def parse_tv(tvdb_token, tv_info, meta_filepath, show_dir,
     series_info = SERIES_INFO_CACHE[tv_info['series']]
 
     if series_info.get('tvdb', {}).get('id', None):
+        print("got series_info")
         episode_info.update(series_info['tvdb'])
 
         if tv_info.get('season', None) and tv_info.get('episode', None):

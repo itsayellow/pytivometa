@@ -175,7 +175,7 @@ def create_genre_dir(genre_dir):
                     )
     return genre_dir
 
-def process_dir(dir_proc, dir_files, tvdb_token, interactive=False,
+def process_dir(dir_proc, dir_files, tv_data_acc, interactive=False,
         use_metadir=False, clobber=False, genre_dir=None):
     debug(1, "\n## Looking for videos in: " + dir_proc)
 
@@ -204,9 +204,7 @@ def process_dir(dir_proc, dir_files, tvdb_token, interactive=False,
 
             if tv_info:
                 # assume tv if filename matches tv format
-                tv_data.parse_tv(tvdb_token, tv_info, meta_filepath, dir_proc,
-                        interactive=interactive, clobber=clobber
-                        )
+                tv_data_acc.parse_tv(tv_info, meta_filepath, dir_proc)
             else:
                 # assume movie if filename not matching tv
                 movie_data.parse_movie(dir_proc, filename, meta_filepath,
@@ -383,18 +381,18 @@ def main(argv):
     # set master debug message level for all modules
     # TODO: such a hack
     DEBUG_LEVEL = config['debug']
-    tvdb_api_v2.DEBUG_LEVEL = config['debug']
-    tv_data.DEBUG_LEVEL = config['debug']
-    tv_data.common.DEBUG_LEVEL = config['debug']
     movie_data.DEBUG_LEVEL = config['debug']
     movie_data.common.DEBUG_LEVEL = config['debug']
 
     # set interactive if we are in an interactive shell
     interactive = check_interactive()
 
-    # Initalize tvdb session token
-    # TODO: should be encapsulated in tv_data
-    tvdb_token = tvdb_api_v2.get_session_token()
+    # Initalize tv_data access
+    tv_data_acc = tv_data.TvData(
+            interactive=interactive,
+            clobber=config['clobber'],
+            debug_level=config['debug']
+            )
 
     # create/set genre dir if specified and possible
     if config['genre']:
@@ -410,7 +408,7 @@ def main(argv):
                 # only non-hidden dirs (no dirs starting with .)
                 #   but '.' dir is OK
                 if not re.search(r'\..+', dirname):
-                    process_dir(dirpath, dir_files, tvdb_token,
+                    process_dir(dirpath, dir_files, tv_data_acc,
                             interactive=interactive,
                             use_metadir=config['metadir'],
                             clobber=config['clobber'],
@@ -418,7 +416,7 @@ def main(argv):
                             )
         else:
             dir_files = os.listdir(search_dir)
-            process_dir(search_dir, dir_files, tvdb_token,
+            process_dir(search_dir, dir_files, tv_data_acc,
                     interactive=interactive,
                     use_metadir=config['metadir'],
                     clobber=config['clobber'],

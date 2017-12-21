@@ -393,6 +393,7 @@ def main(argv):
     interactive = check_interactive()
 
     # Initalize tvdb session token
+    # TODO: should be encapsulated in tv_data
     tvdb_token = tvdb_api_v2.get_session_token()
 
     # create/set genre dir if specified and possible

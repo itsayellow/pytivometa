@@ -385,11 +385,14 @@ def main(argv):
     if config['createconfig']:
         create_config_file()
 
-    # set master debug message level
+    # set master debug message level for all modules
+    # TODO: such a hack
     DEBUG_LEVEL = config['debug']
     tvdb_api_v2.DEBUG_LEVEL = config['debug']
     tv_data.DEBUG_LEVEL = config['debug']
+    tv_data.common.DEBUG_LEVEL = config['debug']
     movie_data.DEBUG_LEVEL = config['debug']
+    movie_data.common.DEBUG_LEVEL = config['debug']
 
     # set interactive if we are in an interactive shell
     interactive = check_interactive()

@@ -145,6 +145,41 @@ def tvinfo_from_filename(filename):
 
     return tv_info
 
+def check_interactive():
+    if sys.platform not in ['win32', 'cygwin']:
+        # On unix-like platforms, set interactive mode when running from a
+        #   terminal
+        if os.isatty(sys.stdin.fileno()):
+            return True
+    # On windows systems set interactive when running from a console
+    elif 'PROMPT' in list(os.environ.keys()):
+        return True
+    return False
+
+def create_genre_dir(genre_dir):
+    # Python doesn't support making symlinks on Windows.
+    if sys.platform in ['win32', 'cygwin']:
+        debug(0, "The genre feature doesn't work on Windows as symlinks " +\
+                "aren't well supported."
+                )
+        genre_dir = None
+    else:
+        if not os.path.exists(genre_dir):
+            os.makedirs(genre_dir, 0o755)
+        elif not os.path.isdir(genre_dir):
+            raise OSError(
+                    'Can\'t create "' + genre_dir + '" as a dir, a ' + \
+                            'file already exists with that name.'
+                    )
+        else:
+            debug(0, "Note: If you've removed videos, there may be old " +\
+                    "symlinks in '" + genre_dir + "'.  If there's " +\
+                    "nothing else in there, you can just remove the " +\
+                    "whole thing first, then run this again (e.g. " +\
+                    "rm -rf '" + genre_dir + "'), but be careful."
+                    )
+    return genre_dir
+
 def process_dir(dir_proc, dir_files, tvdb_token, interactive=False,
         use_metadir=False, clobber=False, genre_dir=None):
     debug(1, "\n## Looking for videos in: " + dir_proc)
@@ -183,41 +218,6 @@ def process_dir(dir_proc, dir_files, tvdb_token, interactive=False,
                         interactive=interactive, is_trailer=is_trailer,
                         genre_dir=genre_dir
                         )
-
-def check_interactive():
-    if sys.platform not in ['win32', 'cygwin']:
-        # On unix-like platforms, set interactive mode when running from a
-        #   terminal
-        if os.isatty(sys.stdin.fileno()):
-            return True
-    # On windows systems set interactive when running from a console
-    elif 'PROMPT' in list(os.environ.keys()):
-        return True
-    return False
-
-def create_genre_dir(genre_dir):
-    # Python doesn't support making symlinks on Windows.
-    if sys.platform in ['win32', 'cygwin']:
-        debug(0, "The genre feature doesn't work on Windows as symlinks " +\
-                "aren't well supported."
-                )
-        genre_dir = None
-    else:
-        if not os.path.exists(genre_dir):
-            os.makedirs(genre_dir, 0o755)
-        elif not os.path.isdir(genre_dir):
-            raise OSError(
-                    'Can\'t create "' + genre_dir + '" as a dir, a ' + \
-                            'file already exists with that name.'
-                    )
-        else:
-            debug(0, "Note: If you've removed videos, there may be old " +\
-                    "symlinks in '" + genre_dir + "'.  If there's " +\
-                    "nothing else in there, you can just remove the " +\
-                    "whole thing first, then run this again (e.g. " +\
-                    "rm -rf '" + genre_dir + "'), but be careful."
-                    )
-    return genre_dir
 
 def process_command_line(argv):
     """Process command line invocation arguments and switches.

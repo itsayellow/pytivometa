@@ -28,12 +28,6 @@ import common
 import tvdb_api_v2
 
 
-# Flag to track if TV lookups are enabled.
-HAS_TVDB = True
-
-# Cache for series info.
-SERIES_INFO_CACHE = {}
-
 # debug level for messages of entire file
 DEBUG_LEVEL = 0
 
@@ -251,6 +245,8 @@ class TvData():
         self.tvdb_token = tvdb_api_v2.get_session_token()
         self.interactive = interactive
         self.clobber = clobber
+        # Cache for series info.
+        self.series_info_cache = {}
 
         # TODO: DEBUG_LEVEL hack
         global DEBUG_LEVEL
@@ -377,20 +373,15 @@ class TvData():
             'tvRating',
             'zap2it_id',
         """
-        if not HAS_TVDB:
-            debug(1, "Metadata service for TV shows is unavailable, skipping " + \
-                    "this show.")
-            return
-
         episode_info = {}
 
         meta_dir = os.path.dirname(meta_filepath)
 
-        if tv_info['series'] not in SERIES_INFO_CACHE:
-            SERIES_INFO_CACHE[tv_info['series']] = self.get_series_info(
+        if tv_info['series'] not in self.series_info_cache:
+            self.series_info_cache[tv_info['series']] = self.get_series_info(
                     tv_info['series'], show_dir, meta_dir
                     )
-        series_info = SERIES_INFO_CACHE[tv_info['series']]
+        series_info = self.series_info_cache[tv_info['series']]
 
         if series_info.get('tvdb', {}).get('id', None):
             episode_info.update(series_info['tvdb'])

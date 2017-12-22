@@ -195,8 +195,8 @@ def create_genre_dir(genre_dir):
                     )
     return genre_dir
 
-def process_dir(dir_proc, dir_files, tv_data_acc, interactive=False,
-        use_metadir=False, clobber=False, genre_dir=None):
+def process_dir(dir_proc, dir_files, tv_data_acc, movie_data_acc,
+        use_metadir=False, clobber=False):
     debug(1, "\n## Looking for videos in: " + dir_proc)
 
     video_files = get_video_files(dir_proc, dir_files)
@@ -227,9 +227,8 @@ def process_dir(dir_proc, dir_files, tv_data_acc, interactive=False,
                 tv_data_acc.parse_tv(tv_info, meta_filepath, dir_proc)
             else:
                 # assume movie if filename not matching tv
-                movie_data.parse_movie(dir_proc, filename, meta_filepath,
-                        interactive=interactive, is_trailer=is_trailer,
-                        genre_dir=genre_dir
+                movie_data_acc.parse_movie(dir_proc, filename, meta_filepath,
+                        is_trailer=is_trailer,
                         )
 
 def process_command_line(argv):
@@ -407,18 +406,26 @@ def main(argv):
     # set interactive if we are in an interactive shell
     interactive = check_interactive()
 
+    # create/set genre dir if specified and possible
+    if config['genre']:
+        genre_dir = create_genre_dir(config['genre'])
+    else:
+        genre_dir = None
+
     # Initalize tv_data access
     tv_data_acc = tv_data.TvData(
             interactive=interactive,
             clobber=config['clobber'],
             debug_level=config['debug']
             )
-
-    # create/set genre dir if specified and possible
-    if config['genre']:
-        genre_dir = create_genre_dir(config['genre'])
-    else:
-        genre_dir = None
+    # Initalize movie_data access
+    movie_data_acc = movie_data.MovieData(
+            interactive=interactive,
+            genre_dir=genre_dir,
+            country='USA',
+            lang='English',
+            debug_level=config['debug']
+            )
 
     # process all dirs
     for search_dir in config['dir']:
@@ -428,19 +435,15 @@ def main(argv):
                 # only non-hidden dirs (no dirs starting with .)
                 #   but '.' dir is OK
                 if not re.search(r'\..+', dirname):
-                    process_dir(dirpath, dir_files, tv_data_acc,
-                            interactive=interactive,
+                    process_dir(dirpath, dir_files, tv_data_acc, movie_data_acc,
                             use_metadir=config['metadir'],
                             clobber=config['clobber'],
-                            genre_dir=genre_dir
                             )
         else:
             dir_files = os.listdir(search_dir)
-            process_dir(search_dir, dir_files, tv_data_acc,
-                    interactive=interactive,
+            process_dir(search_dir, dir_files, tv_data_acc, movie_data_acc,
                     use_metadir=config['metadir'],
                     clobber=config['clobber'],
-                    genre_dir=genre_dir
                     )
 
     # exit status 0 if everything's ok

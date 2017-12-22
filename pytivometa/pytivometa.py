@@ -382,8 +382,6 @@ def create_config_file():
     os.chmod(config_filepath, stat.S_IRUSR + stat.S_IWUSR)
 
 def main(argv):
-    global DEBUG_LEVEL
-
     # start with config default values
     config = default_config_values()
 
@@ -399,9 +397,8 @@ def main(argv):
 
     # set master debug message level for all modules
     # TODO: such a hack
+    global DEBUG_LEVEL
     DEBUG_LEVEL = config['debug']
-    movie_data.DEBUG_LEVEL = config['debug']
-    movie_data.common.DEBUG_LEVEL = config['debug']
 
     # set interactive if we are in an interactive shell
     interactive = check_interactive()

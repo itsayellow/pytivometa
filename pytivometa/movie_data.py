@@ -86,6 +86,26 @@ def fix_spaces(title):
     title = re.sub(r'\(\)', '', title)
     return title
 
+def mk_link(link_name, file_path):
+    target = os.path.relpath(file_path, os.path.dirname(link_name))
+    debug(2, "Linking " + link_name + " -> " + target)
+    if os.path.islink(link_name):
+        os.unlink(link_name)
+        os.symlink(target, link_name)
+    elif os.path.exists(link_name):
+        debug(0, "Unable to create link '" + link_name + "', a file already exists with that name.")
+    else:
+        os.symlink(target, link_name)
+
+def report_match(movie_info, num_results):
+    matchtype = 'Using best match: '
+    if num_results == 1:
+        matchtype = 'Found exact match: '
+    if 'long imdb title' in list(movie_info.keys()):
+        debug(1, matchtype + movie_info['long imdb title'])
+    else:
+        debug(1, matchtype + str(movie_info))
+
 
 class MovieData():
     def __init__(self, interactive=False, genre_dir=None, country='USA',
@@ -133,7 +153,7 @@ class MovieData():
         else:
             # automatically pick first match
             movie_info = results[0]
-            self.report_match(movie_info, len(results))
+            report_match(movie_info, len(results))
 
         if movie_info is not None:
             # So far the movie_info object only contains basic information like the
@@ -142,7 +162,8 @@ class MovieData():
                 imdb_access.update(movie_info)
                 #debug(3, movie_info.summary())
             except Exception:
-                debug(0, "Warning: unable to get extended details from IMDb for: " + str(movie_info))
+                debug(0, "Warning: unable to get extended details from " + \
+                        "IMDb for: " + str(movie_info))
                 debug(0, "         You may need to update your imdbpy module.")
 
             try:
@@ -341,31 +362,11 @@ class MovieData():
             # Create a symlink to the video
             link = os.path.join(genrepath, file_name)
             file_path = os.path.join(work_dir, file_name)
-            self.mk_link(link, file_path)
+            mk_link(link, file_path)
             # Create a symlink to the metadata
             metadata_dir = os.path.basename(metadata_path)
             link = os.path.join(genrepath, metadata_dir)
-            self.mk_link(link, metadata_path)
-
-    def mk_link(self, link_name, file_path):
-        target = os.path.relpath(file_path, os.path.dirname(link_name))
-        debug(2, "Linking " + link_name + " -> " + target)
-        if os.path.islink(link_name):
-            os.unlink(link_name)
-            os.symlink(target, link_name)
-        elif os.path.exists(link_name):
-            debug(0, "Unable to create link '" + link_name + "', a file already exists with that name.")
-        else:
-            os.symlink(target, link_name)
-
-    def report_match(self, movie_info, num_results):
-        matchtype = 'Using best match: '
-        if num_results == 1:
-            matchtype = 'Found exact match: '
-        if 'long imdb title' in list(movie_info.keys()):
-            debug(1, matchtype + movie_info['long imdb title'])
-        else:
-            debug(1, matchtype + str(movie_info))
+            mk_link(link, metadata_path)
 
     def parse_movie(self, search_dir, filename, metadata_file_name,
             is_trailer=False):

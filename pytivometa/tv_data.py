@@ -26,6 +26,7 @@ from time import strptime
 
 import common
 import tvdb_api_v2
+import rpc_search103
 
 
 # debug level for messages of entire file
@@ -241,8 +242,26 @@ class TvData():
     """TV Data access object storing persistent state (e.g. tvdb_token)
     and various options.
     """
-    def __init__(self, interactive=False, clobber=False, debug_level=0):
+    def __init__(self, userpass=None, interactive=False, clobber=False,
+            debug_level=0):
+        """Initialize TV Access object and config
+
+        Args:
+            userpass (list): [<username>, <password>] for rpc access
+            interactive (bool): are we able to interact with user
+            clobber (bool): should we overwrite all metadata
+            debug_level (int): code debug level for this module
+
+        Returns:
+            TvData object
+        """
         self.tvdb_token = tvdb_api_v2.get_session_token()
+
+        if userpass is not None:
+            self.rpc_remote = rpc_search103.Remote(*userpass)
+        else:
+            self.rpc_remote = None
+
         self.interactive = interactive
         self.clobber = clobber
         # Cache for series info.

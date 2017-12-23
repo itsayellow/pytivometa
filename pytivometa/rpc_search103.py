@@ -12,6 +12,7 @@
 #   }
 
 import logging
+import os.path
 import random
 import re
 import socket
@@ -64,7 +65,10 @@ class Remote(object):
         self.buf = b''
         # initialize SSL socket
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.ssl_socket = ssl.wrap_socket(self.socket, certfile='cdata.pem')
+        self.ssl_socket = ssl.wrap_socket(
+                self.socket,
+                certfile=os.path.join(os.path.dirname(os.path.realpath(__file__)),'cdata.pem')
+                )
         try:
             self.ssl_socket.connect((TIVO_ADDR, TIVO_PORT))
         except:
@@ -186,6 +190,69 @@ class Remote(object):
         self._write(req)
         result = self._read()
         return result
+
+    @debug_fxn
+    def get_series_info(self, collection_id):
+        resp_template = [
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': ['collection'],
+                    'typeName': 'collectionList'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'category',
+                        'collectionId',
+                        'credit',
+                        'title',
+                        'partnerCollectionId',
+                        'description',
+                        'descriptionLanguage',
+                        'episodic',
+                        'internalRating',
+                        'rating',
+                        'tvRating'
+                        ],
+                    'typeName': 'collection'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'categoryId',
+                        'displayRank',
+                        'label',
+                        'topLevel',
+                        ],
+                    'typeName': 'category'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'personId',
+                        'role',
+                        'last',
+                        'first',
+                        'characterName',
+                        'fullName',
+                        ],
+                    'typeName': 'credit'
+                    },
+                ]
+        results = self.mind_remote.rpc_req_generic(
+                'collectionSearch',
+                collectionId=collection_id,
+                responseTemplate=resp_template,
+                count=10,
+                filterUnavailable='false',
+                includeBroadcast='true',
+                includeFree='true',
+                includePaid='false',
+                includeVod='false',
+                mergeOverridingCollections='true',
+                orderBy='strippedTitle',
+                )
+        return results
 
     @debug_fxn
     def collection_search(self, count, keywords):

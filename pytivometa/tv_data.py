@@ -19,6 +19,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import datetime
+import json
 import os.path
 import re
 from time import strptime
@@ -52,22 +53,32 @@ def find_series_by_year(series, year):
 def get_series_file_info(show_name, show_dir, meta_dir):
     series_file_info = {}
 
+    # prefer .pytivometa files but fall back to reading .seriesID
     series_id_files = [
+            os.path.join(show_dir, show_name + ".pytivometa"),
+            os.path.join(meta_dir, show_name + ".pytivometa"),
             os.path.join(show_dir, show_name + ".seriesID"),
-            os.path.join(meta_dir, show_name + ".seriesID")
+            os.path.join(meta_dir, show_name + ".seriesID"),
             ]
     series_id_files = list(set(series_id_files))
 
-    # search possible paths for series info file
+    # search possible paths for .pytivometa or .seriesID info file
     for series_id_path in series_id_files:
-        debug(2, "Looking for .seriesID file in " + series_id_path)
+        debug(2, "Looking for .pytivometa file in " + series_id_path)
         # Get tvdb_series_id
         if os.path.exists(series_id_path):
             debug(2, "Reading seriesID from file: " + series_id_path)
-            with open(series_id_path, 'r') as seriesidfile:
-                tvdb_series_id = seriesidfile.read()
-            # remove trailing whitespace (including \n)
-            series_file_info['tvdb_series_id'] = tvdb_series_id.rstrip()
+            if series_id_path.endswith(".pytivometa"):
+                with open(series_id_path, 'r') as series_id_fh:
+                    for line in series_id_fh:
+                        (key, data) = line.split(':', maxsplit=1)
+                        print("key: %s, data: %s"%(key, data))
+                        series[key] = data
+            else:
+                with open(series_id_path, 'r') as series_id_fh:
+                    tvdb_series_id = series_id_fh.read()
+                # remove trailing whitespace (including \n)
+                series_file_info['tvdb_series_id'] = tvdb_series_id.rstrip()
 
     return series_file_info
 
@@ -253,7 +264,7 @@ class TvData():
             debug_level (int): code debug level for this module
 
         Returns:
-            TvData object
+            TvData object instance
         """
         self.tvdb_token = tvdb_api_v2.get_session_token()
 
@@ -322,37 +333,71 @@ class TvData():
                     )
             print("------------------------------------")
 
-        return tvdb_series_id
+        return str(tvdb_series_id)
+
+    def write_series_file_info(self, series_file_info, filepath):
+        # creating series ID file from scratch, so pick best path
+        debug(2, "Writing series info to file: " + filepath)
+
+        # only when we are about to write file make metadata dir (e.g. .meta) if
+        #   we need to
+        common.mkdir_if_needed(os.path.dirname(filepath))
+        with open(filepath, 'w') as series_id_fh:
+            for key in series_file_info:
+                print(key + ":" + str(series_file_info[key]), file=series_id_fh)
+
+    def search_rpc_series_id(self, show_name):
+        # TODO: placeholder
+        rpc_series_id = ''
+        return rpc_series_id
 
     def get_series_info(self, show_name, show_dir, meta_dir):
+        series_info = {}
+
+        # TODO: rpc and tvdb, how to merge?
+        #   Ideally only ask user once.
+        #   Data that both tvdb and rpc have to cross-index:
+        #       title
+        #       cast
+        #       original air date
 
         series_file_info = get_series_file_info(show_name, show_dir, meta_dir)
-        tvdb_series_id = series_file_info.get('tvdb_series_id', None)
 
-        if tvdb_series_id is not None and not self.clobber:
-            debug(1, "Using stored seriesID: " + tvdb_series_id)
+        # TODO: proper check for this
+        series_file_info_len = len(series_file_info.keys())
+
+        # Get TVDB info
+        if series_file_info.get('tvdb_series_id', None):
+            tvdb_series_id = series_file_info.get('tvdb_series_id', '')
+            debug(1, "Using stored TVDB series info: " + tvdb_series_id)
         else:
             tvdb_series_id = self.search_tvdb_series_id(show_name)
-
-            # write out series info file
-            if tvdb_series_id is not None:
-                tvdb_series_id = str(tvdb_series_id)
-                # creating series ID file from scratch, so pick best path
-                seriesidpath = os.path.join(meta_dir, show_name + ".seriesID")
-                debug(1, "Found seriesID: " + tvdb_series_id)
-                debug(2, "Writing seriesID to file: " + seriesidpath)
-
-                # only when we are about to write file make metadata dir (e.g. .meta) if
-                #   we need to
-                common.mkdir_if_needed(os.path.dirname(seriesidpath))
-                with open(seriesidpath, 'w') as seriesidfile:
-                    seriesidfile.write(tvdb_series_id)
-            else:
+            series_file_info['tvdb_series_id'] = tvdb_series_id
+            if not tvdb_series_id:
                 debug(1, "Unable to find tvdb_series_id.")
-
-        series_info = {}
         if tvdb_series_id is not None:
             series_info['tvdb'] = tvdb_api_v2.get_series_info(self.tvdb_token, tvdb_series_id)
+
+        # Get rpc info
+        if self.rpc_remote is not None:
+            if series_file_info.get('rpc_series_id', None):
+                rpc_series_id = series_file_info.get('rpc_series_id', '')
+                debug(1, "Using stored TVDB series info: " + rpc_series_id)
+            else:
+                rpc_series_id = self.search_rpc_series_id(show_name)
+                series_file_info['rpc_series_id'] = tvdb_series_id
+                if not rpc_series_id:
+                    debug(1, "Unable to find rpc_series_id.")
+            if rpc_series_id is not None:
+                series_info['rpc'] = self.rpc_remote.get_series_info(rpc_series_id)
+
+        have_more_info = len(series_info.keys()) > series_file_info_len
+        if have_more_info or self.clobber:
+            # write out series info file
+            self.write_series_file_info(
+                    series_file_info,
+                    os.path.join(meta_dir, show_name + ".pytivometa")
+                    )
 
         return series_info
 

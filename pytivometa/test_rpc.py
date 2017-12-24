@@ -4,12 +4,12 @@ import rpc_search103
 import pprint
 import json
 
-PP = pprint.PrettyPrinter(indent=4)
+PP = pprint.PrettyPrinter(indent=4, depth=3)
 
 with open('test_rpc.conf', 'r') as conf_fh:
     conf_data = json.loads(conf_fh.read())
 
-mind_remote = rpcSearch103.Remote(
+mind_remote = rpc_search103.Remote(
         conf_data['username'],
         conf_data['password']
         )

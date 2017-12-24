@@ -55,16 +55,16 @@ def get_series_file_info(show_name, show_dir, meta_dir):
 
     # prefer .pytivometa files but fall back to reading .seriesID
     series_id_files = [
-            os.path.join(show_dir, show_name + ".pytivometa"),
             os.path.join(meta_dir, show_name + ".pytivometa"),
-            os.path.join(show_dir, show_name + ".seriesID"),
+            os.path.join(show_dir, show_name + ".pytivometa"),
             os.path.join(meta_dir, show_name + ".seriesID"),
+            os.path.join(show_dir, show_name + ".seriesID"),
             ]
     series_id_files = list(set(series_id_files))
 
     # search possible paths for .pytivometa or .seriesID info file
     for series_id_path in series_id_files:
-        debug(2, "Looking for .pytivometa file in " + series_id_path)
+        debug(2, "Looking for pytivometa file in path " + series_id_path)
         # Get tvdb_series_id
         if os.path.exists(series_id_path):
             debug(2, "Reading seriesID from file: " + series_id_path)
@@ -284,6 +284,17 @@ class TvData():
         common.DEBUG_LEVEL = debug_level
         tvdb_api_v2.DEBUG_LEVEL = debug_level
 
+    def write_series_file_info(self, series_file_info, filepath):
+        # creating series ID file from scratch, so pick best path
+        debug(2, "Writing series info to file: " + filepath)
+
+        # only when we are about to write file make metadata dir (e.g. .meta) if
+        #   we need to
+        common.mkdir_if_needed(os.path.dirname(filepath))
+        with open(filepath, 'w') as series_id_fh:
+            for key in series_file_info:
+                print(key + ":" + str(series_file_info[key]), file=series_id_fh)
+
     def search_tvdb_series_id(self, show_name):
         # See if there's a year in the name
         match = re.search(r'(.+?) *\(((?:19|20)\d\d)\)', show_name)
@@ -335,20 +346,32 @@ class TvData():
 
         return str(tvdb_series_id)
 
-    def write_series_file_info(self, series_file_info, filepath):
-        # creating series ID file from scratch, so pick best path
-        debug(2, "Writing series info to file: " + filepath)
-
-        # only when we are about to write file make metadata dir (e.g. .meta) if
-        #   we need to
-        common.mkdir_if_needed(os.path.dirname(filepath))
-        with open(filepath, 'w') as series_id_fh:
-            for key in series_file_info:
-                print(key + ":" + str(series_file_info[key]), file=series_id_fh)
-
-    def search_rpc_series_id(self, show_name):
+    def search_rpc_series_id(self, show_name, first_aired=''):
         # TODO: placeholder
+        # use to search:
+        #   title
+        #   air date of season 1 episode 1
+        #   cast
+        #
+        # get:
+        #   title
+        #   air date of season 1 episode 1
+        #   cast
+        results = self.rpc_remote.search_series(show_name)
+
+        #import pprint
+        #pp = pprint.PrettyPrinter(indent=4, depth=3)
+        #pp.pprint(results)
+
         rpc_series_id = ''
+        for series in results:
+            print(series.get('title', '') + " - " + series.get('description', '') + "\n")
+            print(" "*4 + series.get('firstAired', ''))
+            if series['firstAired'] == first_aired:
+                rpc_series_id = series['partnerCollectionId']
+                break
+        rpc_series_id = re.sub(r'epgProvider:cl\.', '', rpc_series_id)
+
         return rpc_series_id
 
     def get_series_info(self, show_name, show_dir, meta_dir):
@@ -379,17 +402,24 @@ class TvData():
             series_info['tvdb'] = tvdb_api_v2.get_series_info(self.tvdb_token, tvdb_series_id)
 
         # Get rpc info
+        # NOTE: TVDB and RPC can disagree on first airdate, e.g. Fleabag
+        #   Friends works with same first airdate
         if self.rpc_remote is not None:
+            print("self.rpc_remote is not None")
             if series_file_info.get('rpc_series_id', None):
                 rpc_series_id = series_file_info.get('rpc_series_id', '')
-                debug(1, "Using stored TVDB series info: " + rpc_series_id)
+                debug(1, "Using stored RPC series info: " + rpc_series_id)
             else:
-                rpc_series_id = self.search_rpc_series_id(show_name)
+                rpc_series_id = self.search_rpc_series_id(
+                        show_name,
+                        first_aired=series_info['tvdb'].get('firstAired', '')
+                        )
                 series_file_info['rpc_series_id'] = tvdb_series_id
-                if not rpc_series_id:
-                    debug(1, "Unable to find rpc_series_id.")
-            if rpc_series_id is not None:
-                series_info['rpc'] = self.rpc_remote.get_series_info(rpc_series_id)
+            if rpc_series_id:
+                print("rpc_series_id = "+rpc_series_id)
+                #series_info['rpc'] = self.rpc_remote.get_series_info(rpc_series_id)
+            else:
+                debug(1, "Unable to find rpc_series_id.")
 
         have_more_info = len(series_info.keys()) > series_file_info_len
         if have_more_info or self.clobber:

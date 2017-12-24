@@ -2,7 +2,7 @@
 # Modified by KenV99
 # Modified by Matthew Clapp for python3, style updates, some functionality
 
-# TODO: catch HTTP errors of rpc_request
+# TODO: catch HTTP errors of _rpc_request
 #   HTTP 5xx server error
 # TODO: catch RPC error dictionary error
 #   {
@@ -25,7 +25,7 @@ import pprint
 TIVO_ADDR = 'middlemind.tivo.com'
 TIVO_PORT = 443
 
-PP = pprint.PrettyPrinter(indent=4)
+PP = pprint.PrettyPrinter(indent=4, depth=3)
 #logging.basicConfig(level=logging.DEBUG)
 #logging.basicConfig(level=logging.INFO)
 
@@ -50,13 +50,22 @@ def debug_fxn(func):
 
 class Remote(object):
     @debug_fxn
-    def __init__(self, username, password):
+    def __init__(self, username, password, lang='English'):
         """Initialize Remote TiVo mind SSL socket connection
 
         Args:
             username (str): tivo.com username
             password (str): tivo.com password
+            lang (str): what language of description to look for (default is
+                'English') Set to '' if all languages should be searched
+
+        Returns:
+            dict: one key 'collection' is collection list, other key
+                'type' is 'collectionList'
         """
+        # language to search for descriptions in descriptionLanguage
+        self.lang = lang
+
         # unique ID for entire session
         self.session_id = random.randrange(0x26c000, 0x27dc20)
         # unique ID for each request
@@ -91,7 +100,7 @@ class Remote(object):
         return rpc_id
 
     @debug_fxn
-    def rpc_request(self, req_type, monitor=False, **kwargs):
+    def _rpc_request(self, req_type, monitor=False, **kwargs):
         """Direct RPC request to TiVo Mind
 
         Args:
@@ -171,7 +180,7 @@ class Remote(object):
             username (str): tivo.com username
             password (str): tivo.com password
         """
-        self._write(self.rpc_request('bodyAuthenticate',
+        self._write(self._rpc_request('bodyAuthenticate',
                 credential={
                         'type': 'mmaCredential',
                         'username': username,
@@ -186,10 +195,133 @@ class Remote(object):
 
     @debug_fxn
     def rpc_req_generic(self, req_type, **kwargs):
-        req = self.rpc_request(req_type, **kwargs)
+        req = self._rpc_request(req_type, **kwargs)
         self._write(req)
         result = self._read()
         return result
+
+    @debug_fxn
+    def search_series(self, title_keywords):
+        """
+        Returns:
+            list: of series collection dict objects
+        """
+        resp_template = [
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': ['collection'],
+                    'typeName': 'collectionList'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'category',
+                        'collectionId',
+                        'credit',
+                        'title',
+                        'partnerCollectionId',
+                        'description',
+                        'descriptionLanguage',
+                        'episodic',
+                        'internalRating',
+                        'rating',
+                        'tvRating'
+                        ],
+                    'typeName': 'collection'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'categoryId',
+                        'displayRank',
+                        'label',
+                        'topLevel',
+                        ],
+                    'typeName': 'category'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'personId',
+                        'role',
+                        'last',
+                        'first',
+                        'characterName',
+                        'fullName',
+                        ],
+                    'typeName': 'credit'
+                    },
+                ]
+        results = self.rpc_req_generic(
+                'collectionSearch',
+                titleKeyword=title_keywords,
+                collectionType='series',
+                responseTemplate=resp_template,
+                count=25,
+                filterUnavailable='false',
+                includeBroadcast='true',
+                includeFree='true',
+                includePaid='false',
+                includeVod='false',
+                mergeOverridingCollections='true',
+                orderBy='strippedTitle',
+                )
+
+        collection_list = results['collection']
+        # TODO: filter by language
+        #   do this by hand because 'English' needs to be able to match e.g.
+        #   'English' or 'English GB' and no way to do this using rpc filter
+        collection_list = [
+                x
+                for x in collection_list
+                if self.lang in x.get('descriptionLanguage', '')
+                ]
+        for collection in collection_list:
+            season1ep1 = self.get_first_aired(collection['collectionId'])
+            collection['firstAired'] = season1ep1.get('originalAirdate', '')
+        return collection_list
+
+    @debug_fxn
+    def get_first_aired(self, collection_id):
+        resp_template = [
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'content',
+                        ],
+                    'typeName': 'contentList'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'originalAirdate',
+                        'originalAirYear',
+                        'releaseDate',
+                        ],
+                    'typeName': 'content'
+                    },
+                ]
+        results = self.rpc_req_generic(
+                'contentSearch',
+                collectionId=collection_id,
+                seasonNumber=1,
+                episodeNum=1,
+                count=1,
+                responseTemplate=resp_template,
+                )
+        print("----------------------")
+        print("collectionId: " + collection_id)
+        PP.pprint(results)
+        print(results.keys())
+        print("----------------------")
+
+        returnval = {}
+        if results.get('content', None) is not None:
+            returnval['originalAirdate'] = results['content'][0]['originalAirdate']
+            returnval['originalAirYear'] = results['content'][0]['originalAirYear']
+            returnval['releaseDate'] = results['content'][0]['releaseDate']
+
+        return returnval
 
     @debug_fxn
     def get_series_info(self, collection_id):
@@ -239,7 +371,7 @@ class Remote(object):
                     'typeName': 'credit'
                     },
                 ]
-        results = self.mind_remote.rpc_req_generic(
+        results = self.rpc_req_generic(
                 'collectionSearch',
                 collectionId=collection_id,
                 responseTemplate=resp_template,
@@ -265,7 +397,7 @@ class Remote(object):
         Returns:
             list: collectionList
         """
-        req = self.rpc_request('collectionSearch',
+        req = self._rpc_request('collectionSearch',
               keyword=keywords,
               count=count,
               filterUnavailable='false',
@@ -292,7 +424,7 @@ class Remote(object):
         Returns:
             list: collectionList
         """
-        req = self.rpc_request('collectionSearch',
+        req = self._rpc_request('collectionSearch',
               keyword=keywords,
               collectionType='series',
               count=count,
@@ -321,7 +453,7 @@ class Remote(object):
         Returns:
             list: offerList
         """
-        req = self.rpc_request('offerSearch',
+        req = self._rpc_request('offerSearch',
               count=25,
               bodyId=body_id,
               title=title,
@@ -342,7 +474,7 @@ class Remote(object):
         Returns:
             list: offerList
         """
-        req = self.rpc_request('offerSearch',
+        req = self._rpc_request('offerSearch',
               count=25,
               bodyId=body_id,
               title=title
@@ -353,7 +485,7 @@ class Remote(object):
 
     @debug_fxn
     def offer_search(self, offset, collection_id):
-        req = self.rpc_request('offerSearch',
+        req = self._rpc_request('offerSearch',
               offset=offset,
               count=25,
               namespace='trioserver',
@@ -375,7 +507,7 @@ class Remote(object):
         Returns:
             list: contentList list of episodes, 25 at a time
         """
-        req = self.rpc_request('contentSearch',
+        req = self._rpc_request('contentSearch',
             offset=offset,
             #filterUnavailable = 'false',
             count=25,
@@ -481,7 +613,7 @@ class Remote(object):
                     collection_id = c.get('collectionId')
                     #print('=============')
                     #print('collectionId = ' + collection_id)
-                    req = self.rpc_request('contentSearch',
+                    req = self._rpc_request('contentSearch',
                         collectionId=collection_id,
                         title=title,
                         seasonNumber=season,
@@ -521,7 +653,7 @@ class Remote(object):
                     #print('=============')
                     #print('collectionId = ' + collection_id)
                     for episode_num in range(1, int(max_episode)+1):
-                        req = self.rpc_request('contentSearch',
+                        req = self._rpc_request('contentSearch',
                             collectionId=collection_id,
                             title=title,
                             seasonNumber=season,

@@ -409,11 +409,18 @@ def main(argv):
     else:
         genre_dir = None
 
+    # get RPC username and password if it exists
+    if config.get('username', None) and config.get('password', None):
+        userpass = [config['username'], config['password']]
+    else:
+        userpass = None
+
     # Initalize tv_data access
     tv_data_acc = tv_data.TvData(
             interactive=interactive,
             clobber=config['clobber'],
-            debug_level=config['debug']
+            debug_level=config['debug'],
+            userpass=userpass
             )
     # Initalize movie_data access
     movie_data_acc = movie_data.MovieData(

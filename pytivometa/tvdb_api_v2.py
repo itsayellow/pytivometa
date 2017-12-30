@@ -113,7 +113,7 @@ import json
 import re
 #import urllib.error
 import urllib.request
-
+import urllib.parse
 
 TVDB_APIKEY = "22FF0E9C529331C6"
 TVDB_API_URL = "https://api.thetvdb.com/"
@@ -144,6 +144,8 @@ def tvdb_get(url, tvdb_token, headers_extra=None):
     try:
         json_reply_raw = urllib.request.urlopen(request)
     except urllib.error.HTTPError as http_error:
+        # accidentally putting a real space into URL:
+        #   HTTP Error 400: Bad request 
         print(http_error)
         print("url: " + url)
         # TODO: do something better than re-raise
@@ -214,6 +216,9 @@ def search_series(tvdb_token, search_string):
             }
         ]
     """
+    print(search_string)
+    search_string = urllib.parse.quote(search_string)
+    print(search_string)
     tvdb_search_series_url = TVDB_API_URL + "search/series?name="+ search_string
 
     json_data = tvdb_get(
@@ -283,6 +288,8 @@ def get_series_info(tvdb_token, tvdb_series_id):
             tvdb_series_info_url + "/actors",
             tvdb_token=tvdb_token
             )
+    #http.client.BadStatusLine: <html>
+    #   when I accidentally erroneously gave <cr> in tvdb_series_id
     series_info_actors = json_data_actors['data']
 
     # sort by last name after sortOrder

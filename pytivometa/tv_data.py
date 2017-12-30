@@ -71,9 +71,10 @@ def get_series_file_info(show_name, show_dir, meta_dir):
             if series_id_path.endswith(".pytivometa"):
                 with open(series_id_path, 'r') as series_id_fh:
                     for line in series_id_fh:
+                        line = line.strip()
                         (key, data) = line.split(':', maxsplit=1)
                         print("key: %s, data: %s"%(key, data))
-                        series[key] = data
+                        series_file_info[key] = data
             else:
                 with open(series_id_path, 'r') as series_id_fh:
                     tvdb_series_id = series_id_fh.read()
@@ -271,6 +272,7 @@ class TvData():
         if userpass is not None:
             self.rpc_remote = rpc_search103.Remote(*userpass)
         else:
+            debug(1, "No self.rpc_remote")
             self.rpc_remote = None
 
         self.interactive = interactive
@@ -399,10 +401,11 @@ class TvData():
             if not tvdb_series_id:
                 debug(1, "Unable to find tvdb_series_id.")
         if tvdb_series_id is not None:
+            print("'" + tvdb_series_id + "'")
             series_info['tvdb'] = tvdb_api_v2.get_series_info(self.tvdb_token, tvdb_series_id)
 
-        # Get rpc info
-        # NOTE: TVDB and RPC can disagree on first airdate, e.g. Fleabag
+        # Get RPC info
+        # NOTE: TVDB and RPC can disagree on first airdate, e.g. Fleabag.
         #   Friends works with same first airdate
         if self.rpc_remote is not None:
             print("self.rpc_remote is not None")
@@ -414,7 +417,7 @@ class TvData():
                         show_name,
                         first_aired=series_info['tvdb'].get('firstAired', '')
                         )
-                series_file_info['rpc_series_id'] = tvdb_series_id
+                series_file_info['rpc_series_id'] = rpc_series_id
             if rpc_series_id:
                 print("rpc_series_id = "+rpc_series_id)
                 #series_info['rpc'] = self.rpc_remote.get_series_info(rpc_series_id)

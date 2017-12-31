@@ -1,0 +1,21 @@
+seriesTitle : Fleabag
+title : Episode 3
+episodeTitle : Episode 3
+originalAirDate : 2016-08-04T00:00:00Z
+description : Fleabag helps her inappropriate brother-in-law buy a present for Claire, who is organising her own surprise birthday party. Meanwhile, on the hunt for a date, Fleabag reconnects with a toothy friend.
+isEpisode : true
+seriesId : SH0349154325
+episodeNumber : 103
+vProgramGenre : Comedy
+vSeriesGenre : Comedy
+vActor : Phoebe Waller-Bridge|
+vActor : Ben Aldridge|
+vActor : Sian Clifford|
+vActor : Brett Gelman|
+vActor : Bill Paterson|
+vActor : Olivia Colman|
+vActor : Jenny Rainsford|
+vActor : Hugh Skinner|
+vActor : Jamie Demetriou|
+vActor : Hugh Dennis|
+programId : EP0349154325-0362464246

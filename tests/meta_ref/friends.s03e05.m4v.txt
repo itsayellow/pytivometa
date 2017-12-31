@@ -1,0 +1,25 @@
+seriesTitle : Friends
+title : The One With Frank Jr.
+episodeTitle : The One With Frank Jr.
+originalAirDate : 1996-10-17T00:00:00Z
+description : Phoebe's half-brother visits and she offers to give him a massage, but they have trouble bonding. Joey attempts to build an entertainment center. Ross is challenged to name the five celebrities he'd like to sleep with most.
+isEpisode : true
+seriesId : SH0000016645
+episodeNumber : 305
+vProgramGenre : Comedy
+vProgramGenre : Romance
+vSeriesGenre : Comedy
+vSeriesGenre : Romance
+vActor : Jennifer Aniston|
+vActor : Courteney Cox|
+vActor : Lisa Kudrow|
+vActor : Matt LeBlanc|
+vActor : Matthew Perry|
+vActor : David Schwimmer|
+vGuestStar : Giovanni Ribisi|
+vGuestStar : Cynthia Mann|
+vGuestStar : Isabella Rossellini|
+vWriter : Shana Goldberg-Meehan|
+vWriter : Scott Silveri|
+vDirector : Steve Zuckerman|
+programId : EP0000016645-0000039224

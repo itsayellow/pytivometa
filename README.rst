@@ -7,7 +7,7 @@ computer to a TiVo.  It fetches metadata from https://www.thetvdb.com/ and
 http://www.imdb.com to create text files and put them in the proper place (near
 the associated video files) for pytivo to find them.
 
-To install dependency modules (imdpy and its dependencies), execute the
+To install required modules (imdpy and its dependencies), execute the
 following command::
 
     pip3 install -r requirements.txt

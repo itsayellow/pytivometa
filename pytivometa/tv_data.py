@@ -110,7 +110,7 @@ def format_episode_data(ep_data, meta_filepath):
         'title' : 'episodeName', # seriesTitle - episodeTitle
         'description' : 'overview',
         'isEpisode' : 'isEpisode',
-        'seriesId' : 'zap2itId',
+        'seriesId' : 'tivoSeriesId',
         'episodeNumber' : 'airedEpisodeNumber', # airedSeason + airedEpisodeNumber
         'displayMajorNumber' : 'NOT_IN_TVDB_INFO', # channel number (e.g. 10-1)
         'displayMinorNumber' : 'NOT_IN_TVDB_INFO', # unused by tivo
@@ -204,21 +204,6 @@ def format_episode_data(ep_data, meta_filepath):
 
             if tv_tag == 'originalAirDate':
                 text = datetime(*strptime(text, "%Y-%m-%d")[0:6]).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-            if tv_tag == 'seriesId':
-                # TODO: this is WRONG for current tivo
-                #   we need Rovi/NewTivo seriesid
-                text = text.strip()
-                # Look for either SH or EP followed by a number
-                sh_ep_match = re.match(r'(?:SH|EP)(\d+)$', text)
-                # Things like 'MV" won't match and will be left unchanged
-                if sh_ep_match:
-                    number = int(sh_ep_match.group(1))
-                    # Pad to 6 or 8 digits as needed
-                    if number < 1000000:
-                        text = "SH%06d" % number
-                    else:
-                        text = "SH%08d" % number
 
             # Only check to see if Season is > 0, allow EpNum to be 0 for
             #   things like "1x00 - Bonus content"
@@ -348,7 +333,7 @@ class TvData():
 
         return str(tvdb_series_id)
 
-    def search_rpc_series_id(self, show_name, first_aired=''):
+    def search_rpc_series_id(self, show_name, first_aired='', actors=None):
         # TODO: placeholder
         # use to search:
         #   title
@@ -359,20 +344,51 @@ class TvData():
         #   title
         #   air date of season 1 episode 1
         #   cast
+        if actors is None:
+            actors = []
+
         results = self.rpc_remote.search_series(show_name)
 
-        #import pprint
-        #pp = pprint.PrettyPrinter(indent=4, depth=3)
-        #pp.pprint(results)
-
+        # First, search for original air date match between argument (TVDB)
+        #   and RPC series.  If found, designate as positive match
         rpc_series_id = ''
         for series in results:
             print(series.get('title', '') + " - " + series.get('description', '') + "\n")
-            print(" "*4 + series.get('firstAired', ''))
+            print(" "*4 + "first aired:" + series.get('firstAired', ''))
             if series['firstAired'] == first_aired:
-                rpc_series_id = series['partnerCollectionId']
+                #rpc_series_id = series['partnerCollectionId']
+                rpc_series_id = series['collectionId']
                 break
-        rpc_series_id = re.sub(r'epgProvider:cl\.', '', rpc_series_id)
+        # Second, if no original air date match, find the series with the most
+        #   matching cast members, and call that the match
+        if not rpc_series_id:
+            print("looking for cast")
+            series_actor_match = []
+            for (i,series) in enumerate(results):
+                print(series.get('title', '') + " - " + series.get('description', '') + "\n")
+                if 'credit' in series:
+                    rpc_cast = [
+                            x['fullName']
+                            for x in series['credit']
+                            if x['role']=='actor'
+                            ]
+                    print(" "*4 + repr(rpc_cast))
+                    actor_match = 0
+                    for actor in actors:
+                        if actor in rpc_cast:
+                            actor_match += 1
+                    series_actor_match.append(actor_match)
+                    print(" "*4 + "actor match: " + str(actor_match))
+                else:
+                    series_actor_match.append(-1)
+
+            i_max = series_actor_match.index(max(series_actor_match))
+
+            assert len(series_actor_match) == len(results)
+
+            if series_actor_match[i_max] > 0:
+                #rpc_series_id = results[i_max]['partnerCollectionId']
+                rpc_series_id = results[i_max]['collectionId']
 
         return rpc_series_id
 
@@ -401,26 +417,33 @@ class TvData():
             if not tvdb_series_id:
                 debug(1, "Unable to find tvdb_series_id.")
         if tvdb_series_id is not None:
-            print("'" + tvdb_series_id + "'")
+            debug(1, "tvdb series id: '" + tvdb_series_id + "'")
             series_info['tvdb'] = tvdb_api_v2.get_series_info(self.tvdb_token, tvdb_series_id)
 
         # Get RPC info
         # NOTE: TVDB and RPC can disagree on first airdate, e.g. Fleabag.
-        #   Friends works with same first airdate
+        # Search RPC for show that 1.) matches first airdate of TVDB series,
+        #   and if that fails 2.) matches the most cast members of TVDB series
         if self.rpc_remote is not None:
             print("self.rpc_remote is not None")
             if series_file_info.get('rpc_series_id', None):
-                rpc_series_id = series_file_info.get('rpc_series_id', '')
+                rpc_series_id = series_file_info['rpc_series_id']
                 debug(1, "Using stored RPC series info: " + rpc_series_id)
-            else:
+            elif 'tvdb' in series_info:
                 rpc_series_id = self.search_rpc_series_id(
                         show_name,
-                        first_aired=series_info['tvdb'].get('firstAired', '')
+                        first_aired=series_info['tvdb'].get('firstAired', ''),
+                        actors=series_info['tvdb'].get('actors', None)
                         )
                 series_file_info['rpc_series_id'] = rpc_series_id
+            else:
+                # TODO: fxn to ask user about multiple matching rpc series
+                #   in case of no tvdb series
+                pass
+
             if rpc_series_id:
-                print("rpc_series_id = "+rpc_series_id)
-                #series_info['rpc'] = self.rpc_remote.get_series_info(rpc_series_id)
+                debug(1, "rpc_series_id: " + rpc_series_id)
+                series_info['rpc'] = self.rpc_remote.get_series_info(rpc_series_id)['collection'][0]
             else:
                 debug(1, "Unable to find rpc_series_id.")
 
@@ -478,7 +501,12 @@ class TvData():
             self.series_info_cache[tv_info['series']] = self.get_series_info(
                     tv_info['series'], show_dir, meta_dir
                     )
+
         series_info = self.series_info_cache[tv_info['series']]
+
+        import pprint
+        pp = pprint.PrettyPrinter(indent=4, depth=3)
+        pp.pprint(series_info)
 
         if series_info.get('tvdb', {}).get('id', None):
             episode_info.update(series_info['tvdb'])
@@ -497,6 +525,11 @@ class TvData():
                             tv_info['year'], tv_info['month'], tv_info['day']
                             )
                         )
+        if series_info.get('rpc', {}).get('partnerCollectionId', ''):
+            tivo_series_id = series_info['rpc']['partnerCollectionId']
+            # format series_id properly
+            tivo_series_id = re.sub(r'epgProvider:cl\.', '', tivo_series_id)
+            episode_info['tivoSeriesId'] = tivo_series_id
 
-            if episode_info is not None:
-                format_episode_data(episode_info, meta_filepath)
+        if episode_info:
+            format_episode_data(episode_info, meta_filepath)

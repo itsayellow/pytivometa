@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Modified by KenV99
-# Modified by Matthew Clapp for python3, style updates, some functionality
+# Modified by Matthew Clapp
 
 # TODO: catch HTTP errors of _rpc_request
 #   HTTP 5xx server error
@@ -47,6 +47,8 @@ def debug_fxn(func):
         return func(*args, **kwargs)
     return func_wrapper
 
+class RpcAuthError(Exception):
+    pass
 
 class Remote(object):
     @debug_fxn
@@ -62,6 +64,10 @@ class Remote(object):
         Returns:
             dict: one key 'collection' is collection list, other key
                 'type' is 'collectionList'
+
+        Raises:
+            RpcAuthError: in case unable to auth, possibly bad password and/or
+                username
         """
         # language to search for descriptions in descriptionLanguage
         self.lang = lang
@@ -84,16 +90,16 @@ class Remote(object):
             print('connect error')
             # re-raise so we know exact exception to enumerate code
             raise
-        try:
-            self._auth(username, password)
-        except:
-            print('credential error')
-            # re-raise so we know exact exception to enumerate code
-            raise
+
+        # may raise RpcAuthError, calling code should catch
+        self._auth(username, password)
 
     @debug_fxn
     def _get_rpc_id(self):
         """Fetches and then increments self.rpc_id for RPC requests
+
+        Returns:
+            int: rpc_id to use now
         """
         rpc_id = self.rpc_id
         self.rpc_id = self.rpc_id + 1
@@ -101,13 +107,16 @@ class Remote(object):
 
     @debug_fxn
     def _rpc_request(self, req_type, monitor=False, **kwargs):
-        """Direct RPC request to TiVo Mind
+        """Format key=value pairs into string for RPC request to TiVo Mind
 
         Args:
             req_type (str):
             monitor (boolean): ResponseCount = 'multiple' if True, 'single' if False
             **kwargs: keys need to be in camelCase because they are passed on
                 directly to JSON request body
+
+        Returns:
+            str: actual json-formatted request with headers, body, etc.
         """
         if 'bodyId' in kwargs:
             body_id = kwargs['bodyId']
@@ -168,6 +177,11 @@ class Remote(object):
 
     @debug_fxn
     def _write(self, data):
+        """Send string to established SSL RPC socket
+
+        Args:
+            data (str): raw string to send to RPC SSL socket
+        """
         logging.debug('SEND %s', data)
         bytes_written = self.ssl_socket.send(data.encode('utf-8'))
         logging.debug("%d bytes written", bytes_written)
@@ -179,6 +193,9 @@ class Remote(object):
         Args:
             username (str): tivo.com username
             password (str): tivo.com password
+
+        Raises:
+            RpcAuthError: for any failure to authenticate SSL RPC connection
         """
         self._write(self._rpc_request('bodyAuthenticate',
                 credential={
@@ -188,13 +205,75 @@ class Remote(object):
                         }
                 ))
         result = self._read()
-        if result['status'] != 'success':
-            logging.error('Authentication failed!  Got: %s', result)
-            # TODO: change this to raise exception
-            sys.exit(1)
+        # Successful response:
+        #   {
+        #       'message': '',
+        #       'status': 'success',
+        #       'deviceId': [
+        #           {
+        #               'friendlyName': "XXXXXXXX",
+        #               'id': 'tsn:00000000000000A',
+        #               'capabilities': {
+        #                   'features': ['promptToExtendLive', 'overlapProtection'],
+        #                   'type': 'bodyCapabilities'
+        #                   },
+        #               'serviceLocation': {
+        #                   'port': 443,
+        #                   'server': 'mm3.tivoservice.com',
+        #                   'type': 'serviceLocationInstruction',
+        #                   'serviceLocationType': 'secureApi'
+        #                   },
+        #               'type': 'anyBody',
+        #               'deviceType': 'stb'
+        #           },
+        #           {
+        #               'friendlyName': "XXXXXXXX",
+        #               'id': 'tsn:00000000000000B',
+        #               'capabilities': {
+        #                   'features': [
+        #                       'middlemind',
+        #                       'supportsOnePass',
+        #                       'promptToExtendLive',
+        #                       'overlapProtection',
+        #                       'middlemind-xmppActions',
+        #                       'middlemindRouteBack'
+        #                       ],
+        #                   'type': 'bodyCapabilities'
+        #                   },
+        #               'serviceLocation': {
+        #                   'port': 443,
+        #                   'server': 'mm1.tivoservice.com',
+        #                   'type': 'serviceLocationInstruction',
+        #                   'serviceLocationType': 'secureApi'
+        #                   },
+        #               'type': 'anyBody',
+        #               'deviceType': 'stb'
+        #           }
+        #           ],
+        #       'type': 'bodyAuthenticateResponse',
+        #       'mediaAccessKey': '0000000000'
+        #   }
+        #
+        # Bad password response:
+        #   {
+        #       'code': 'authenticationFailed',
+        #       'text': "error response from IT code: 'usernamePasswordError' text: 'Authentication Failed'",
+        #       'type': 'error'
+        #   }
+        if result['type'] == 'error':
+            logging.error('Authentication failed!  RPC response: %s', result['text'])
+            raise RpcAuthError
 
     @debug_fxn
     def rpc_req_generic(self, req_type, **kwargs):
+        """Send specified RPC request and accept returned value
+        Args:
+            req_type (str):
+            **kwargs: key=value pairs sent directly as part of RPC request
+
+        Returns:
+            dict: key=value pairs representing all fields of RPC return val
+        """
         req = self._rpc_request(req_type, **kwargs)
         self._write(req)
         result = self._read()
@@ -309,11 +388,6 @@ class Remote(object):
                 count=1,
                 responseTemplate=resp_template,
                 )
-        print("----------------------")
-        print("collectionId: " + collection_id)
-        PP.pprint(results)
-        print(results.keys())
-        print("----------------------")
 
         returnval = {}
         if results.get('content', None) is not None:
@@ -375,7 +449,7 @@ class Remote(object):
                 'collectionSearch',
                 collectionId=collection_id,
                 responseTemplate=resp_template,
-                count=10,
+                count=1,
                 filterUnavailable='false',
                 includeBroadcast='true',
                 includeFree='true',
@@ -384,7 +458,7 @@ class Remote(object):
                 mergeOverridingCollections='true',
                 orderBy='strippedTitle',
                 )
-        return results
+        return results['collection'][0]
 
     @debug_fxn
     def get_program_id(self, collection_id, season_num=None, episode_num=None,
@@ -415,23 +489,19 @@ class Remote(object):
                     responseTemplate=resp_template,
                     )
         elif year is not None and month is not None and day is not None:
-            year = int(year)
-            month = int(month)
-            day = int(day)
-            print("%04d-%02d-%02d"%(year, month, day))
-            results = self.rpc_req_generic(
-                    'contentSearch',
-                    collectionId=collection_id,
-                    originalAirdate="%04d-%02d-%02d"%(year, month, day),
-                    count=1,
-                    responseTemplate=resp_template,
-                    )
+            air_date = "%04d-%02d-%02d"%(int(year), int(month), int(day))
+            print(air_date)
+            # TODO: search through all episodes, looking for air_date
+            #   match
         else:
             print("Error, not enough info to find specific episode")
             results = {}
 
-        #PP.pprint(results)
         return results['content'][0]['partnerContentId']
+
+
+# -----------------------------------------------------------------------------
+
 
     @debug_fxn
     def collection_search(self, count, keywords):

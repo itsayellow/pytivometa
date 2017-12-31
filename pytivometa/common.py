@@ -57,13 +57,9 @@ def ask_user(options_text, option_returns, max_options=5):
         else:
             print("%2d  %s"%(i, option_text))
     print("")
-    try:
-        choice_num = input(
-                "Please choose the correct option, or 's' to skip [0]: "
-                )
-    except KeyboardInterrupt:
-        print("\nCaught interrupt, exiting.")
-        sys.exit(1)
+    choice_num = input(
+            "Please choose the correct option, or 's' to skip [0]: "
+            )
 
     if not choice_num:
         # Empty string, default to the top choice

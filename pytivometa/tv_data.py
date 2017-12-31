@@ -257,7 +257,14 @@ class TvData():
         self.tvdb_token = tvdb_api_v2.get_session_token()
 
         if userpass is not None:
-            self.rpc_remote = rpc_search103.Remote(*userpass)
+            try:
+                self.rpc_remote = rpc_search103.Remote(*userpass)
+            except rpc_search103.RpcAuthError:
+                print("Bad password or username for RPC.")
+                print("    Unable to use RPC search capability")
+                debug(1, "No self.rpc_remote")
+                self.rpc_remote = None
+
         else:
             debug(1, "No self.rpc_remote")
             self.rpc_remote = None
@@ -444,7 +451,7 @@ class TvData():
 
             if rpc_series_id:
                 debug(1, "rpc_series_id: " + rpc_series_id)
-                series_info['rpc'] = self.rpc_remote.get_series_info(rpc_series_id)['collection'][0]
+                series_info['rpc'] = self.rpc_remote.get_series_info(rpc_series_id)
             else:
                 debug(1, "Unable to find rpc_series_id.")
 

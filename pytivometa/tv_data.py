@@ -73,7 +73,7 @@ def get_series_file_info(show_name, show_dir, meta_dir):
                     for line in series_id_fh:
                         line = line.strip()
                         (key, data) = line.split(':', maxsplit=1)
-                        print("key: %s, data: %s"%(key, data))
+                        debug(2, "key: %s, data: %s"%(key, data))
                         series_file_info[key] = data
             else:
                 with open(series_id_path, 'r') as series_id_fh:
@@ -354,9 +354,10 @@ class TvData():
         # First, search for original air date match between argument (TVDB)
         #   and RPC series.  If found, designate as positive match
         rpc_series_id = ''
+        debug(1, "Searching for RPC series by matching orig. air date...")
         for series in results:
-            print(series.get('title', '') + " - " + series.get('description', '') + "\n")
-            print(" "*4 + "first aired:" + series.get('firstAired', ''))
+            debug(2, series.get('title', '') + " - " + series.get('description', '') + "\n")
+            debug(2, " "*4 + "first aired:" + series.get('firstAired', ''))
             if series['firstAired'] == first_aired:
                 #rpc_series_id = series['partnerCollectionId']
                 rpc_series_id = series['collectionId']
@@ -364,23 +365,22 @@ class TvData():
         # Second, if no original air date match, find the series with the most
         #   matching cast members, and call that the match
         if not rpc_series_id:
-            print("looking for cast")
+            debug(1, "Searching for RPC series by matching cast...")
             series_actor_match = []
             for (i,series) in enumerate(results):
-                print(series.get('title', '') + " - " + series.get('description', '') + "\n")
+                debug(2, series.get('title', '') + " - " + series.get('description', '') + "\n")
                 if 'credit' in series:
                     rpc_cast = [
                             x['fullName']
                             for x in series['credit']
                             if x['role']=='actor'
                             ]
-                    print(" "*4 + repr(rpc_cast))
                     actor_match = 0
                     for actor in actors:
                         if actor in rpc_cast:
                             actor_match += 1
                     series_actor_match.append(actor_match)
-                    print(" "*4 + "actor match: " + str(actor_match))
+                    debug(2, " "*4 + "actor match: " + str(actor_match))
                 else:
                     series_actor_match.append(-1)
 
@@ -427,7 +427,6 @@ class TvData():
         # Search RPC for show that 1.) matches first airdate of TVDB series,
         #   and if that fails 2.) matches the most cast members of TVDB series
         if self.rpc_remote is not None:
-            print("self.rpc_remote is not None")
             if series_file_info.get('rpc_series_id', None):
                 rpc_series_id = series_file_info['rpc_series_id']
                 debug(1, "Using stored RPC series info: " + rpc_series_id)
@@ -506,9 +505,9 @@ class TvData():
 
         series_info = self.series_info_cache[tv_info['series']]
 
-        import pprint
-        pp = pprint.PrettyPrinter(indent=4, depth=3)
-        pp.pprint(series_info)
+        #import pprint
+        #pp = pprint.PrettyPrinter(indent=4, depth=3)
+        #pp.pprint(series_info)
 
         if series_info.get('tvdb', {}).get('id', None):
             episode_info.update(series_info['tvdb'])

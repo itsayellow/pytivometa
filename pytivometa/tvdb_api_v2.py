@@ -216,9 +216,7 @@ def search_series(tvdb_token, search_string):
             }
         ]
     """
-    print(search_string)
     search_string = urllib.parse.quote(search_string)
-    print(search_string)
     tvdb_search_series_url = TVDB_API_URL + "search/series?name="+ search_string
 
     json_data = tvdb_get(

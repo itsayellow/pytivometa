@@ -430,7 +430,7 @@ class Remote(object):
             print("Error, not enough info to find specific episode")
             results = {}
 
-        PP.pprint(results)
+        #PP.pprint(results)
         return results['content'][0]['partnerContentId']
 
     @debug_fxn

@@ -519,31 +519,31 @@ class TvData():
         if series_info.get('tvdb', {}).get('id', None):
             episode_info.update(series_info['tvdb'])
 
-            if tv_info.get('season', None) and tv_info.get('episode', None):
-                episode_info.update(
-                        tvdb_api_v2.get_episode_info(
-                            self.tvdb_token, str(series_info['tvdb']['id']),
-                            tv_info['season'], tv_info['episode']
-                            )
+            episode_info.update(
+                    tvdb_api_v2.get_episode_info(
+                        self.tvdb_token, str(series_info['tvdb']['id']),
+                        season=tv_info.get('season', None),
+                        episode=tv_info.get('episode', None),
+                        year=tv_info.get('year', None),
+                        month=tv_info.get('month', None),
+                        day=tv_info.get('day', None)
                         )
-            else:
-                # TODO: what if no (year, month, day) ?
-                episode_info.update(
-                        tvdb_api_v2.get_episode_info_air_date(
-                            self.tvdb_token, str(series_info['tvdb']['id']),
-                            tv_info['year'], tv_info['month'], tv_info['day']
-                            )
-                        )
-                tv_info['season'] = episode_info['airedSeason']
-                tv_info['episode'] = episode_info['airedEpisodeNumber']
+                    )
+
+            # make sure tv_info now has season, episode, in case it did not
+            #tv_info['season'] = episode_info['airedSeason']
+            #tv_info['episode'] = episode_info['airedEpisodeNumber']
+
         if series_info.get('rpc', {}).get('collectionId', ''):
             tivo_series_id = series_info['rpc'].get('partnerCollectionId', '')
-            if tv_info.get('season', None) and tv_info.get('episode', None):
-                tivo_program_id = self.rpc_remote.get_program_id(
-                        series_info['rpc']['collectionId'],
-                        season_num = tv_info['season'],
-                        episode_num = tv_info['episode'],
-                        )
+            tivo_program_id = self.rpc_remote.get_program_id(
+                    series_info['rpc']['collectionId'],
+                    season_num = tv_info.get('season', None),
+                    episode_num = tv_info.get('episode', None),
+                    year=tv_info.get('year', None),
+                    month=tv_info.get('month', None),
+                    day=tv_info.get('day', None),
+                    )
 
             # format series_id properly
             tivo_series_id = re.sub(r'epgProvider:cl\.', '', tivo_series_id)

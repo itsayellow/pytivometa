@@ -145,7 +145,7 @@ def tvdb_get(url, tvdb_token, headers_extra=None):
         json_reply_raw = urllib.request.urlopen(request)
     except urllib.error.HTTPError as http_error:
         # accidentally putting a real space into URL:
-        #   HTTP Error 400: Bad request 
+        #   HTTP Error 400: Bad request
         print(http_error)
         print("url: " + url)
         # TODO: do something better than re-raise
@@ -306,7 +306,8 @@ def get_series_info(tvdb_token, tvdb_series_id):
 
     return series_info
 
-def get_episode_info(tvdb_token, tvdb_series_id, season, episode):
+def get_episode_info(tvdb_token, tvdb_series_id, season=None, episode=None,
+        year=None, month=None, day=None):
     """Given a series ID, return info on a particular episode
 
     Args:
@@ -317,6 +318,11 @@ def get_episode_info(tvdb_token, tvdb_series_id, season, episode):
 
     Returns:
     """
+    if season is None or episode is None:
+        (season, episode) = get_season_ep_from_airdate(
+                tvdb_token, tvdb_series_id, year, month, day
+                )
+
     get_episode_id_url = TVDB_API_URL + "series/" + tvdb_series_id + \
             "/episodes/query?airedSeason=" + season + \
             "&airedEpisode=" + episode
@@ -338,7 +344,7 @@ def get_episode_info(tvdb_token, tvdb_series_id, season, episode):
     episode_info = json_data['data']
     return episode_info
 
-def get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, day):
+def get_season_ep_from_airdate(tvdb_token, tvdb_series_id, year, month, day):
     season = None
     episode = None
 
@@ -400,14 +406,4 @@ def get_episode_info_air_date(tvdb_token, tvdb_series_id, year, month, day):
 
         page += 1
 
-    if season is not None and episode is not None:
-        debug(1, "Air date %d matches: Season %d, Episode %d"%(search_date_num, season, episode))
-        episode_info = get_episode_info(
-                tvdb_token, tvdb_series_id,
-                str(season), str(episode)
-                )
-    else:
-        debug(0, "!! Error looking up data for this episode, skipping.")
-        episode_info = None
-
-    return episode_info
+    return (str(season), str(episode))

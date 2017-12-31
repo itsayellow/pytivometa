@@ -238,7 +238,7 @@ def format_episode_data(ep_data, meta_filepath):
 
 
 class TvData():
-    """TV Data access object storing persistent state (e.g. tvdb_token)
+    """TV Data access object storing persistent state (e.g. tvdb_access)
     and various options.
     """
     def __init__(self, userpass=None, interactive=False, clobber=False,
@@ -254,8 +254,10 @@ class TvData():
         Returns:
             TvData object instance
         """
-        self.tvdb_token = tvdb_api_v2.get_session_token()
+        # TVDB access
+        self.tvdb_access = tvdb_api_v2.Tvdb()
 
+        # RPC access
         if userpass is not None:
             try:
                 self.rpc_remote = rpc_search103.Remote(*userpass)
@@ -301,7 +303,7 @@ class TvData():
             bare_title = show_name
             year = ''
 
-        series = tvdb_api_v2.search_series(self.tvdb_token, bare_title)
+        series = self.tvdb_access.search_series(bare_title)
 
         if year and len(series) > 1:
             debug(2, "There are %d matching series, "%(len(series)) + \
@@ -427,7 +429,7 @@ class TvData():
                 debug(1, "Unable to find tvdb_series_id.")
         if tvdb_series_id is not None:
             debug(1, "tvdb series id: '" + tvdb_series_id + "'")
-            series_info['tvdb'] = tvdb_api_v2.get_series_info(self.tvdb_token, tvdb_series_id)
+            series_info['tvdb'] = self.tvdb_access.get_series_info(tvdb_series_id)
 
         # Get RPC info
         # NOTE: TVDB and RPC can disagree on first airdate, e.g. Fleabag.
@@ -520,8 +522,8 @@ class TvData():
             episode_info.update(series_info['tvdb'])
 
             episode_info.update(
-                    tvdb_api_v2.get_episode_info(
-                        self.tvdb_token, str(series_info['tvdb']['id']),
+                    self.tvdb_access.get_episode_info(
+                        str(series_info['tvdb']['id']),
                         season=tv_info.get('season', None),
                         episode=tv_info.get('episode', None),
                         year=tv_info.get('year', None),

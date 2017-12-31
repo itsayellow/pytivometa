@@ -12,6 +12,10 @@ following command::
 
     pip3 install -r requirements.txt
 
+To run, execute ``pytivometa.py`` in the ``pytivometa`` directory from the
+command line.  Be sure to keep all the files in the ``pytivometa`` directory
+together in the same directory.
+
 Based on the original pytivometathis by Graham Dunn and later Josh Harding
 (https://sourceforge.net/projects/pytivometathis/).  This version has been
 ported to python3 and extensively revised.

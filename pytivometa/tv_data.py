@@ -111,6 +111,7 @@ def format_episode_data(ep_data, meta_filepath):
         'description' : 'overview',
         'isEpisode' : 'isEpisode',
         'seriesId' : 'tivoSeriesId',
+        'programId' : 'tivoProgramId',
         'episodeNumber' : 'airedEpisodeNumber', # airedSeason + airedEpisodeNumber
         'displayMajorNumber' : 'NOT_IN_TVDB_INFO', # channel number (e.g. 10-1)
         'displayMinorNumber' : 'NOT_IN_TVDB_INFO', # unused by tivo
@@ -160,7 +161,8 @@ def format_episode_data(ep_data, meta_filepath):
         'vProducer',
         'vExecProducer',
         'vHost',
-        'vChoreographer'
+        'vChoreographer',
+        'programId'
     ]
 
     # Metadata name fields
@@ -519,17 +521,30 @@ class TvData():
                             )
                         )
             else:
+                # TODO: what if no (year, month, day) ?
                 episode_info.update(
                         tvdb_api_v2.get_episode_info_air_date(
                             self.tvdb_token, str(series_info['tvdb']['id']),
                             tv_info['year'], tv_info['month'], tv_info['day']
                             )
                         )
-        if series_info.get('rpc', {}).get('partnerCollectionId', ''):
-            tivo_series_id = series_info['rpc']['partnerCollectionId']
+                tv_info['season'] = episode_info['airedSeason']
+                tv_info['episode'] = episode_info['airedEpisodeNumber']
+        if series_info.get('rpc', {}).get('collectionId', ''):
+            tivo_series_id = series_info['rpc'].get('partnerCollectionId', '')
+            if tv_info.get('season', None) and tv_info.get('episode', None):
+                tivo_program_id = self.rpc_remote.get_program_id(
+                        series_info['rpc']['collectionId'],
+                        season_num = tv_info['season'],
+                        episode_num = tv_info['episode'],
+                        )
+
             # format series_id properly
             tivo_series_id = re.sub(r'epgProvider:cl\.', '', tivo_series_id)
+            tivo_program_id = re.sub(r'epgProvider:ct\.', '', tivo_program_id)
+
             episode_info['tivoSeriesId'] = tivo_series_id
+            episode_info['tivoProgramId'] = tivo_program_id
 
         if episode_info:
             format_episode_data(episode_info, meta_filepath)

@@ -387,6 +387,53 @@ class Remote(object):
         return results
 
     @debug_fxn
+    def get_program_id(self, collection_id, season_num=None, episode_num=None,
+            year=None, month=None, day=None):
+        resp_template = [
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'content',
+                        ],
+                    'typeName': 'contentList'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'partnerContentId',
+                        ],
+                    'typeName': 'content'
+                    },
+                ]
+        if season_num is not None and episode_num is not None:
+            results = self.rpc_req_generic(
+                    'contentSearch',
+                    collectionId=collection_id,
+                    seasonNumber=season_num,
+                    episodeNum=episode_num,
+                    count=1,
+                    responseTemplate=resp_template,
+                    )
+        elif year is not None and month is not None and day is not None:
+            year = int(year)
+            month = int(month)
+            day = int(day)
+            print("%04d-%02d-%02d"%(year, month, day))
+            results = self.rpc_req_generic(
+                    'contentSearch',
+                    collectionId=collection_id,
+                    originalAirdate="%04d-%02d-%02d"%(year, month, day),
+                    count=1,
+                    responseTemplate=resp_template,
+                    )
+        else:
+            print("Error, not enough info to find specific episode")
+            results = {}
+
+        PP.pprint(results)
+        return results['content'][0]['partnerContentId']
+
+    @debug_fxn
     def collection_search(self, count, keywords):
         """Search collections for any results matching keywords
 

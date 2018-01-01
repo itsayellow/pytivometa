@@ -364,7 +364,8 @@ def create_config_file():
 
     print("Creating default config file: " + CONFIG_FILE_PATH)
     if os.path.isfile(config_filepath):
-        print("Config file exists.  Not default config file: " + CONFIG_FILE_PATH)
+        print(CONFIG_FILE_PATH)
+        print("    Config file exists.  Not writing default config file.")
         return
     try:
         os.makedirs(os.path.dirname(config_filepath), exist_ok=True)
@@ -381,6 +382,24 @@ def create_config_file():
         print("Couldn't make config file: " + CONFIG_FILE_PATH)
         raise
     os.chmod(config_filepath, stat.S_IRUSR + stat.S_IWUSR)
+
+def get_rpc(username=None, password=None):
+    # get RPC username and password if it exists
+    if username is not None and password is None:
+        password = getpass.getpass("tivo.com password: ")
+
+    if username and password:
+        try:
+            rpc_remote = rpc_search103.Remote(username, password)
+        except rpc_search103.RpcAuthError:
+            print("Bad password or username for RPC.")
+            print("    Unable to use RPC search capability")
+            debug(1, "No rpc_remote")
+            rpc_remote = None
+    else:
+        rpc_remote = None
+
+    return rpc_remote
 
 def main(argv):
     # start with config default values
@@ -410,26 +429,11 @@ def main(argv):
     else:
         genre_dir = None
 
-    # get RPC username and password if it exists
-    if config.get('username', None) and config.get('password', None):
-        username = config['username']
-        password = config['password']
-    elif config.get('username', None):
-        username = config['username']
-        password = getpass.getpass("tivo.com password: ")
-    else:
-        userpass = None
-
-    if username and password:
-        try:
-            rpc_remote = rpc_search103.Remote(username, password)
-        except rpc_search103.RpcAuthError:
-            print("Bad password or username for RPC.")
-            print("    Unable to use RPC search capability")
-            debug(1, "No rpc_remote")
-            rpc_remote = None
-    else:
-        rpc_remote = None
+    # get rpc_remote if possible
+    rpc_remote = get_rpc(
+            username=config.get('username', None),
+            password=config.get('password', None)
+            )
 
     # Initalize tv_data access
     tv_data_acc = tv_data.TvData(

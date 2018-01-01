@@ -483,6 +483,7 @@ class Remote(object):
                     },
                 ]
         if season_num is not None and episode_num is not None:
+            logging.debug("rpc: season episode")
             results = self.rpc_req_generic(
                     'contentSearch',
                     collectionId=collection_id,
@@ -494,6 +495,7 @@ class Remote(object):
             program_id = results['content'][0]['partnerContentId']
 
         elif year is not None and month is not None and day is not None:
+            logging.debug("rpc: year month day")
             # search through all episodes, looking for air_date match
             result = self.get_program_id_airdate(
                     collection_id,

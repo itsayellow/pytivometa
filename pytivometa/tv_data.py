@@ -520,8 +520,8 @@ class TvData():
                     )
 
             # make sure tv_info now has season, episode, in case it did not
-            #tv_info['season'] = episode_info['airedSeason']
-            #tv_info['episode'] = episode_info['airedEpisodeNumber']
+            tv_info['season'] = episode_info['airedSeason']
+            tv_info['episode'] = episode_info['airedEpisodeNumber']
 
         if series_info.get('rpc', {}).get('collectionId', ''):
             tivo_series_id = series_info['rpc'].get('partnerCollectionId', '')

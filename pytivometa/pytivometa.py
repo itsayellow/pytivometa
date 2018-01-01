@@ -478,7 +478,7 @@ if __name__ == "__main__":
     try:
         status = main(sys.argv)
     except KeyboardInterrupt:
-        print("Stopped by Keyboard Interrupt", file=sys.stderr)
+        print("\nStopped by Keyboard Interrupt", file=sys.stderr)
         # exit error code for Ctrl-C
         status = 130
 

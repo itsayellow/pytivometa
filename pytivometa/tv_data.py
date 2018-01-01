@@ -26,7 +26,6 @@ from time import strptime
 
 import common
 import tvdb_api_v2
-import rpc_search103
 
 
 # debug level for messages of entire file
@@ -251,7 +250,7 @@ class TvData():
     """TV Data access object storing persistent state (e.g. tvdb_access)
     and various options.
     """
-    def __init__(self, userpass=None, interactive=False, clobber=False,
+    def __init__(self, rpc_remote=None, interactive=False, clobber=False,
             debug_level=0):
         """Initialize TV Access object and config
 
@@ -268,18 +267,7 @@ class TvData():
         self.tvdb_access = tvdb_api_v2.Tvdb()
 
         # RPC access
-        if userpass is not None:
-            try:
-                self.rpc_remote = rpc_search103.Remote(*userpass)
-            except rpc_search103.RpcAuthError:
-                print("Bad password or username for RPC.")
-                print("    Unable to use RPC search capability")
-                debug(1, "No self.rpc_remote")
-                self.rpc_remote = None
-
-        else:
-            debug(1, "No self.rpc_remote")
-            self.rpc_remote = None
+        self.rpc_remote = rpc_remote
 
         self.interactive = interactive
         self.clobber = clobber

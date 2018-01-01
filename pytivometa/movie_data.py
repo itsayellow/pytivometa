@@ -108,8 +108,8 @@ def report_match(movie_info, num_results):
 
 
 class MovieData():
-    def __init__(self, interactive=False, genre_dir=None, country='USA',
-            lang='English', debug_level=0):
+    def __init__(self, rpc_remote=None, interactive=False, genre_dir=None,
+            country='USA', lang='English', debug_level=0):
         self.interactive = interactive
 
         self.genre_dir = genre_dir
@@ -120,6 +120,9 @@ class MovieData():
 
         # What language to use for "Also Known As" title?
         self.lang = lang
+
+        # RPC access
+        self.rpc_remote = rpc_remote
 
         # TODO: DEBUG_LEVEL hack
         global DEBUG_LEVEL

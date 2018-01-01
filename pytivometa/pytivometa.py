@@ -70,6 +70,7 @@ or "s01e02", etc.)  Also, an air-date will allow an episode to be found.
 """
 
 import argparse
+import getpass
 import os
 import os.path
 import re
@@ -79,7 +80,7 @@ import sys
 
 import movie_data
 import tv_data
-
+import rpc_search103
 
 # location of config file for pytivometa
 CONFIG_FILE_PATH = "~/.config/pytivometa/config"
@@ -411,16 +412,31 @@ def main(argv):
 
     # get RPC username and password if it exists
     if config.get('username', None) and config.get('password', None):
-        userpass = [config['username'], config['password']]
+        username = config['username']
+        password = config['password']
+    elif config.get('username', None):
+        username = config['username']
+        password = getpass.getpass("tivo.com password: ")
     else:
         userpass = None
+
+    if username and password:
+        try:
+            rpc_remote = rpc_search103.Remote(username, password)
+        except rpc_search103.RpcAuthError:
+            print("Bad password or username for RPC.")
+            print("    Unable to use RPC search capability")
+            debug(1, "No rpc_remote")
+            rpc_remote = None
+    else:
+        rpc_remote = None
 
     # Initalize tv_data access
     tv_data_acc = tv_data.TvData(
             interactive=interactive,
             clobber=config['clobber'],
             debug_level=config['debug'],
-            userpass=userpass
+            rpc_remote=rpc_remote
             )
     # Initalize movie_data access
     movie_data_acc = movie_data.MovieData(
@@ -428,7 +444,8 @@ def main(argv):
             genre_dir=genre_dir,
             country='USA',
             lang='English',
-            debug_level=config['debug']
+            debug_level=config['debug'],
+            rpc_remote=rpc_remote
             )
 
     # process all dirs

@@ -350,7 +350,7 @@ class Remote(object):
                 )
 
         collection_list = results['collection']
-        # TODO: filter by language
+        # filter by language
         #   do this by hand because 'English' needs to be able to match e.g.
         #   'English' or 'English GB' and no way to do this using rpc filter
         collection_list = [
@@ -556,6 +556,95 @@ class Remote(object):
             i += 1
 
         return returnval
+
+    @debug_fxn
+    def search_movie(self, title_keywords, year=None):
+        """
+        Returns:
+            list: of series collection dict objects
+        """
+        resp_template = [
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': ['collection'],
+                    'typeName': 'collectionList'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'category',
+                        'collectionId',
+                        'credit',
+                        'title',
+                        'partnerCollectionId',
+                        'description',
+                        'descriptionLanguage',
+                        'internalRating',
+                        'movieYear',
+                        'mpaaRating',
+                        'partnerCollectionId',
+                        'rating',
+                        'starRating',
+                        'tvRating'
+                        ],
+                    'typeName': 'collection'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'categoryId',
+                        'displayRank',
+                        'label',
+                        'topLevel',
+                        ],
+                    'typeName': 'category'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'personId',
+                        'role',
+                        'last',
+                        'first',
+                        'characterName',
+                        'fullName',
+                        ],
+                    'typeName': 'credit'
+                    },
+                ]
+        results = self.rpc_req_generic(
+                'collectionSearch',
+                titleKeyword=title_keywords,
+                collectionType='movie',
+                responseTemplate=resp_template,
+                count=25,
+                filterUnavailable='false',
+                includeBroadcast='true',
+                includeFree='true',
+                includePaid='false',
+                includeVod='false',
+                mergeOverridingCollections='true',
+                orderBy='strippedTitle',
+                )
+
+        collection_list = results['collection']
+        # filter by language
+        #   do this by hand because 'English' needs to be able to match e.g.
+        #   'English' or 'English GB' and no way to do this using rpc filter
+        collection_list = [
+                x
+                for x in collection_list
+                if self.lang in x.get('descriptionLanguage', '')
+                ]
+
+        if year is not None:
+            collection_list = [
+                    x
+                    for x in collection_list
+                    if str(year) in x.get('movieYear', '')
+                    ]
+
+        return collection_list
 
 
 

@@ -140,7 +140,7 @@ class MovieData():
 
         if not results:
             debug(0, title + ": No IMDB matches found.")
-            return
+            return None
 
         if len(results) > 1 and self.interactive:
             print("\nMatches for movie title '%s'"%title)

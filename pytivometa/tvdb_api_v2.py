@@ -124,11 +124,44 @@ def debug(level, text):
     if level <= DEBUG_LEVEL:
         print(text)
 
+def get_session_token():
+    """Get a current session token for thetvdb.com, necessary for any
+    future requests of data.
+
+    Returns:
+        str: TVDB session token, used for all future requests in http header
+    """
+    # execute POST: send apikey, receive session token
+    tvdb_api_login_url = TVDB_API_URL + "login"
+    post_fields = {'apikey': TVDB_APIKEY}
+    headers = {
+            'Content-type': 'application/json',
+            'Accept': 'application/json'
+            }
+
+    request = urllib.request.Request(
+            tvdb_api_login_url,
+            data=json.dumps(post_fields).encode('ascii'),
+            headers=headers
+            )
+    try:
+        json_reply_raw = urllib.request.urlopen(request)
+    except urllib.error.HTTPError as http_error:
+        print(http_error)
+        # TODO: do something better than re-raise
+        raise
+
+    json_reply = json_reply_raw.read().decode()
+    json_data = json.loads(json_reply)
+    tvdb_sess_token = json_data['token']
+
+    return tvdb_sess_token
+
 class Tvdb:
     def __init__(self):
-        self.session_token = self.get_session_token()
+        self.session_token = get_session_token()
 
-    def tvdb_get(self, url, headers_extra=None):
+    def _tvdb_get(self, url, headers_extra=None):
         """Basic function handling low-level tvdb data requests
 
         Args:
@@ -157,39 +190,6 @@ class Tvdb:
         json_data = json.loads(json_reply)
 
         return json_data
-
-    def get_session_token(self):
-        """Get a current session token for thetvdb.com, necessary for any
-        future requests of data.
-
-        Returns:
-            str: TVDB session token, used for all future requests in http header
-        """
-        # execute POST: send apikey, receive session token
-        tvdb_api_login_url = TVDB_API_URL + "login"
-        post_fields = {'apikey': TVDB_APIKEY}
-        headers = {
-                'Content-type': 'application/json',
-                'Accept': 'application/json'
-                }
-
-        request = urllib.request.Request(
-                tvdb_api_login_url,
-                data=json.dumps(post_fields).encode('ascii'),
-                headers=headers
-                )
-        try:
-            json_reply_raw = urllib.request.urlopen(request)
-        except urllib.error.HTTPError as http_error:
-            print(http_error)
-            # TODO: do something better than re-raise
-            raise
-
-        json_reply = json_reply_raw.read().decode()
-        json_data = json.loads(json_reply)
-        tvdb_sess_token = json_data['token']
-
-        return tvdb_sess_token
 
     def search_series(self, search_string):
         """Given a search string, return a list from thetvdb.com of all possible
@@ -220,7 +220,7 @@ class Tvdb:
         search_string = urllib.parse.quote(search_string)
         tvdb_search_series_url = TVDB_API_URL + "search/series?name="+ search_string
 
-        json_data = self.tvdb_get(tvdb_search_series_url)
+        json_data = self._tvdb_get(tvdb_search_series_url)
 
         return json_data['data']
 
@@ -273,10 +273,10 @@ class Tvdb:
         # TODO: can use /series/{id}/filter to get only desired tags
         tvdb_series_info_url = TVDB_API_URL + "series/" + tvdb_series_id
 
-        json_data = self.tvdb_get(tvdb_series_info_url)
+        json_data = self._tvdb_get(tvdb_series_info_url)
         series_info = json_data['data']
 
-        json_data_actors = self.tvdb_get(tvdb_series_info_url + "/actors")
+        json_data_actors = self._tvdb_get(tvdb_series_info_url + "/actors")
         #http.client.BadStatusLine: <html>
         #   when I accidentally erroneously gave <cr> in tvdb_series_id
         series_info_actors = json_data_actors['data']
@@ -316,7 +316,7 @@ class Tvdb:
         get_episode_id_url = TVDB_API_URL + "series/" + tvdb_series_id + \
                 "/episodes/query?airedSeason=" + season + \
                 "&airedEpisode=" + episode
-        json_data = self.tvdb_get(get_episode_id_url)
+        json_data = self._tvdb_get(get_episode_id_url)
         episode_list_info = json_data['data']
 
         assert len(episode_list_info) == 1
@@ -324,7 +324,7 @@ class Tvdb:
         episode_id = str(episode_list_info[0]['id'])
 
         get_episode_info_url = TVDB_API_URL + "episodes/" + episode_id
-        json_data = self.tvdb_get(get_episode_info_url)
+        json_data = self._tvdb_get(get_episode_info_url)
         episode_info = json_data['data']
         return episode_info
 
@@ -347,7 +347,7 @@ class Tvdb:
             page_str = str(page)
             debug(2, "get_episode_info_air_date page %s"%page_str)
             try:
-                json_data = self.tvdb_get(get_episodes_url + page_str)
+                json_data = self._tvdb_get(get_episodes_url + page_str)
             except urllib.error.HTTPError as http_error:
                 if http_error.code == 404:
                     episode_list = []

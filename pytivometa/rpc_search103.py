@@ -82,7 +82,10 @@ class Remote(object):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ssl_socket = ssl.wrap_socket(
                 self.socket,
-                certfile=os.path.join(os.path.dirname(os.path.realpath(__file__)),'cdata.pem')
+                certfile=os.path.join(
+                    os.path.dirname(os.path.realpath(__file__)),
+                    'cdata.pem'
+                    )
                 )
         try:
             self.ssl_socket.connect((TIVO_ADDR, TIVO_PORT))
@@ -491,7 +494,6 @@ class Remote(object):
             program_id = results['content'][0]['partnerContentId']
 
         elif year is not None and month is not None and day is not None:
-            air_date = "%04d-%02d-%02d"%(int(year), int(month), int(day))
             # search through all episodes, looking for air_date match
             result = self.get_program_id_airdate(
                     collection_id,
@@ -499,18 +501,18 @@ class Remote(object):
                     month=month,
                     day=day,
                     )
-            program_id = result['partnerContentId']
+            program_id = result.get('partnerContentId', None)
         else:
             # TODO: real error handling
             print("Error, not enough info to find specific episode")
             program_id = None
 
-        return program_id 
+        return program_id
 
     @debug_fxn
     def get_program_id_airdate(self, collection_id,
             year=None, month=None, day=None):
-        returnval = None
+        returnval = {}
         air_date = "%04d-%02d-%02d"%(int(year), int(month), int(day))
         resp_template = [
                 {
@@ -534,7 +536,7 @@ class Remote(object):
                     },
                 ]
         results_per_req = 25
-        i=0
+        i = 0
         done = False
         while not done:
             results = self.rpc_req_generic(

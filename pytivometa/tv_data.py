@@ -19,7 +19,6 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import datetime
-import json
 import os.path
 import re
 from time import strptime
@@ -236,6 +235,17 @@ def format_episode_data(ep_data, meta_filepath):
         with open(meta_filepath, 'w') as out_file:
             out_file.write(metadata_text)
 
+def write_series_file_info(series_file_info, filepath):
+    # creating series ID file from scratch, so pick best path
+    debug(2, "Writing series info to file: " + filepath)
+
+    # only when we are about to write file make metadata dir (e.g. .meta) if
+    #   we need to
+    common.mkdir_if_needed(os.path.dirname(filepath))
+    with open(filepath, 'w') as series_id_fh:
+        for key in series_file_info:
+            print(key + ":" + str(series_file_info[key]), file=series_id_fh)
+
 
 class TvData():
     """TV Data access object storing persistent state (e.g. tvdb_access)
@@ -281,17 +291,6 @@ class TvData():
         DEBUG_LEVEL = debug_level
         common.DEBUG_LEVEL = debug_level
         tvdb_api_v2.DEBUG_LEVEL = debug_level
-
-    def write_series_file_info(self, series_file_info, filepath):
-        # creating series ID file from scratch, so pick best path
-        debug(2, "Writing series info to file: " + filepath)
-
-        # only when we are about to write file make metadata dir (e.g. .meta) if
-        #   we need to
-        common.mkdir_if_needed(os.path.dirname(filepath))
-        with open(filepath, 'w') as series_id_fh:
-            for key in series_file_info:
-                print(key + ":" + str(series_file_info[key]), file=series_id_fh)
 
     def search_tvdb_series_id(self, show_name):
         # See if there's a year in the name
@@ -376,13 +375,13 @@ class TvData():
         if not rpc_series_id:
             debug(1, "Searching for RPC series by matching cast...")
             series_actor_match = []
-            for (i,series) in enumerate(results):
+            for series in results:
                 debug(2, series.get('title', '') + " - " + series.get('description', '') + "\n")
                 if 'credit' in series:
                     rpc_cast = [
                             x['fullName']
                             for x in series['credit']
-                            if x['role']=='actor'
+                            if x['role'] == 'actor'
                             ]
                     actor_match = 0
                     for actor in actors:
@@ -460,7 +459,7 @@ class TvData():
         have_more_info = len(series_info.keys()) > series_file_info_len
         if have_more_info or self.clobber:
             # write out series info file
-            self.write_series_file_info(
+            write_series_file_info(
                     series_file_info,
                     os.path.join(meta_dir, show_name + ".pytivometa")
                     )
@@ -540,8 +539,8 @@ class TvData():
             tivo_series_id = series_info['rpc'].get('partnerCollectionId', '')
             tivo_program_id = self.rpc_remote.get_program_id(
                     series_info['rpc']['collectionId'],
-                    season_num = tv_info.get('season', None),
-                    episode_num = tv_info.get('episode', None),
+                    season_num=tv_info.get('season', None),
+                    episode_num=tv_info.get('episode', None),
                     year=tv_info.get('year', None),
                     month=tv_info.get('month', None),
                     day=tv_info.get('day', None),

@@ -158,6 +158,15 @@ class MovieData():
             movie_info = results[0]
             report_match(movie_info, len(results))
 
+        # TODO: actually get this to work
+        #if self.rpc_remote is not None:
+        #    print(movie_info['title'])
+        #    rpc_info = self.rpc_remote.search_movie(
+        #            movie_info['title'],
+        #            year=movie_info.get('year', None)
+        #            )
+        #    print(rpc_info)
+
         if movie_info is not None:
             # So far the movie_info object only contains basic information like the
             # title and the year; retrieve main information:

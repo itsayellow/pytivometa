@@ -641,7 +641,7 @@ class Remote(object):
             collection_list = [
                     x
                     for x in collection_list
-                    if str(year) in x.get('movieYear', '')
+                    if int(year)==x.get('movieYear', 0)
                     ]
 
         return collection_list

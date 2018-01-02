@@ -9,7 +9,7 @@ type
 one of ['offerSearch', 'contentSearch', 'collectionSearch', 'categorySearch']
 
 contentSearch
-    Search for a TV epsidoe.  Episode of a TV series is content.  Independent
+    Search for a TV epsiode.  Episode of a TV series is content.  Independent
     of unit.
 collectionSearch
     Search for a TV series. Series is represented by a collection.  Independent

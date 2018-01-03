@@ -29,17 +29,9 @@ import common
 import tvdb_api_v2
 
 
-# debug level for messages of entire file
-DEBUG_LEVEL = 0
-
 # Set up logger
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
-
-
-def debug(level, text):
-    if level <= DEBUG_LEVEL:
-        LOGGER.debug(text)
 
 
 def find_series_by_year(series, year):
@@ -67,16 +59,16 @@ def get_series_file_info(show_name, show_dir, meta_dir):
 
     # search possible paths for .pytivometa or .seriesID info file
     for series_id_path in series_id_files:
-        debug(2, "Looking for pytivometa file in path " + series_id_path)
+        LOGGER.debug("2,Looking for pytivometa file in path " + series_id_path)
         # Get tvdb_series_id
         if os.path.exists(series_id_path):
-            debug(2, "Reading seriesID from file: " + series_id_path)
+            LOGGER.debug("2,Reading seriesID from file: " + series_id_path)
             if series_id_path.endswith(".pytivometa"):
                 with open(series_id_path, 'r') as series_id_fh:
                     for line in series_id_fh:
                         line = line.strip()
                         (key, data) = line.split(':', maxsplit=1)
-                        debug(2, "key: %s, data: %s"%(key, data))
+                        LOGGER.debug("2,key: %s, data: %s"%(key, data))
                         series_file_info[key] = data
             else:
                 with open(series_id_path, 'r') as series_id_fh:
@@ -159,7 +151,7 @@ def format_episode_data(ep_data, meta_filepath):
     }
 
     for (pytivo_tag, ep_data_key) in pytivo_metadata:
-        debug(3, "Working on " + pytivo_tag)
+        LOGGER.debug("3,Working on " + pytivo_tag)
         if ep_data.get(ep_data_key, ''):
             # ep_data contains ep_data_key and value is not empty ''
             line = ""
@@ -177,7 +169,7 @@ def format_episode_data(ep_data, meta_filepath):
             #if pytivo_tag == 'description':
             #    print "ord -> %s" % ord(text[370])
 
-            debug(3, "%s : %s" % (pytivo_tag, text))
+            LOGGER.debug("3,%s : %s" % (pytivo_tag, text))
 
             if pytivo_tag == 'originalAirDate':
                 text = datetime(*strptime(text, "%Y-%m-%d")[0:6]).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -195,14 +187,14 @@ def format_episode_data(ep_data, meta_filepath):
                 if '|' in text:
                     people = text.strip('|').split('|')
                     for person in people:
-                        debug(3, "Splitting " + person.strip())
+                        LOGGER.debug("3,Splitting " + person.strip())
                         line += "%s : %s\n" % (pytivo_tag, re.sub('\n', ' ', person.strip()+term))
                 else:
                     line = "%s : %s\n" %(pytivo_tag, re.sub('\n', ' ', text+term))
-                    debug(3, "Completed -> " + line)
+                    LOGGER.debug("3,Completed -> " + line)
                 metadata_text += line
         else:
-            debug(3, "No data for " + pytivo_tag)
+            LOGGER.debug("3,No data for " + pytivo_tag)
 
     if metadata_text:
         # only when we are about to write file make metadata dir (e.g. .meta) if
@@ -213,7 +205,7 @@ def format_episode_data(ep_data, meta_filepath):
 
 def write_series_file_info(series_file_info, filepath):
     # creating series ID file from scratch, so pick best path
-    debug(2, "Writing series info to file: " + filepath)
+    LOGGER.debug("2,Writing series info to file: " + filepath)
 
     # only when we are about to write file make metadata dir (e.g. .meta) if
     #   we need to
@@ -270,14 +262,14 @@ class TvData():
         series = self.tvdb_access.search_series(bare_title)
 
         if year and len(series) > 1:
-            debug(2, "There are %d matching series, "%(len(series)) + \
+            LOGGER.debug("2,There are %d matching series, "%(len(series)) + \
                     "but we know what year to search for (%s)."%year
                     )
             series = find_series_by_year(series, year)
-            debug(2, "Series that match by year: %d." % len(series))
+            LOGGER.debug("2,Series that match by year: %d." % len(series))
 
         if len(series) == 1:
-            debug(1, "Found exact match")
+            LOGGER.debug("Found exact match")
             tvdb_series_id = series[0]['id']
         elif self.interactive and len(series) > 1:
             # Display all the shows found
@@ -327,10 +319,10 @@ class TvData():
         # First, search for original air date match between argument (TVDB)
         #   and RPC series.  If found, designate as positive match
         rpc_series_id = ''
-        debug(1, "Searching for RPC series by matching orig. air date...")
+        LOGGER.debug("Searching for RPC series by matching orig. air date...")
         for series in results:
-            debug(2, series.get('title', '') + " - " + series.get('description', '') + "\n")
-            debug(2, " "*4 + "first aired:" + series.get('firstAired', ''))
+            LOGGER.debug(2, series.get('title', '') + " - " + series.get('description', '') + "\n")
+            LOGGER.debug("2, "*4 + "first aired:" + series.get('firstAired', ''))
             if series['firstAired'] == first_aired:
                 #rpc_series_id = series['partnerCollectionId']
                 rpc_series_id = series['collectionId']
@@ -338,10 +330,10 @@ class TvData():
         # Second, if no original air date match, find the series with the most
         #   matching cast members, and call that the match
         if not rpc_series_id:
-            debug(1, "Searching for RPC series by matching cast...")
+            LOGGER.debug("Searching for RPC series by matching cast...")
             series_actor_match = []
             for series in results:
-                debug(2, series.get('title', '') + " - " + series.get('description', '') + "\n")
+                LOGGER.debug(2, series.get('title', '') + " - " + series.get('description', '') + "\n")
                 if 'credit' in series:
                     rpc_cast = [
                             x['fullName']
@@ -353,7 +345,7 @@ class TvData():
                         if actor in rpc_cast:
                             actor_match += 1
                     series_actor_match.append(actor_match)
-                    debug(2, " "*4 + "actor match: " + str(actor_match))
+                    LOGGER.debug("2, "*4 + "actor match: " + str(actor_match))
                 else:
                     series_actor_match.append(-1)
 
@@ -385,14 +377,14 @@ class TvData():
         # Get TVDB info
         if series_file_info.get('tvdb_series_id', None):
             tvdb_series_id = series_file_info.get('tvdb_series_id', '')
-            debug(1, "Using stored TVDB series info: " + tvdb_series_id)
+            LOGGER.debug("Using stored TVDB series info: " + tvdb_series_id)
         else:
             tvdb_series_id = self.search_tvdb_series_id(show_name)
             series_file_info['tvdb_series_id'] = tvdb_series_id
             if not tvdb_series_id:
-                debug(1, "Unable to find tvdb_series_id.")
+                LOGGER.debug("Unable to find tvdb_series_id.")
         if tvdb_series_id is not None:
-            debug(1, "tvdb series id: '" + tvdb_series_id + "'")
+            LOGGER.debug("tvdb series id: '" + tvdb_series_id + "'")
             series_info['tvdb'] = self.tvdb_access.get_series_info(tvdb_series_id)
 
         # Get RPC info
@@ -402,7 +394,7 @@ class TvData():
         if self.rpc_remote is not None:
             if series_file_info.get('rpc_series_id', None):
                 rpc_series_id = series_file_info['rpc_series_id']
-                debug(1, "Using stored RPC series info: " + rpc_series_id)
+                LOGGER.debug("Using stored RPC series info: " + rpc_series_id)
             elif 'tvdb' in series_info:
                 rpc_series_id = self.search_rpc_series_id(
                         show_name,
@@ -416,10 +408,10 @@ class TvData():
                 pass
 
             if rpc_series_id:
-                debug(1, "rpc_series_id: " + rpc_series_id)
+                LOGGER.debug("rpc_series_id: " + rpc_series_id)
                 series_info['rpc'] = self.rpc_remote.get_series_info(rpc_series_id)
             else:
-                debug(1, "Unable to find rpc_series_id.")
+                LOGGER.debug("Unable to find rpc_series_id.")
 
         have_more_info = len(series_info.keys()) > series_file_info_len
         if have_more_info or self.clobber:

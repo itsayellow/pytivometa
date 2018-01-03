@@ -99,9 +99,6 @@ VIDEO_FILE_EXTS = [
         ".mov", ".wmv", ".vob", ".m4v", ".flv"
         ]
 
-# debug level for messages of entire file
-DEBUG_LEVEL = 0
-
 # root logger
 LOGGER = logging.getLogger(__name__)
 
@@ -462,11 +459,6 @@ def main(argv):
     # create default config file in proper place if requested
     if config['createconfig']:
         create_config_file()
-
-    # set master debug message level for all modules
-    # TODO: such a hack
-    global DEBUG_LEVEL
-    DEBUG_LEVEL = config['debug']
 
     # set interactive if we are in an interactive shell
     interactive = check_interactive()

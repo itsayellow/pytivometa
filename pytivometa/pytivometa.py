@@ -71,6 +71,7 @@ or "s01e02", etc.)  Also, an air-date will allow an episode to be found.
 
 import argparse
 import getpass
+import logging
 import os
 import os.path
 import re
@@ -82,8 +83,12 @@ import movie_data
 import tv_data
 import rpc_search103
 
-# location of config file for pytivometa
-CONFIG_FILE_PATH = "~/.config/pytivometa/config"
+
+# location of config dir and file for pytivometa
+CONFIG_DIR = "~/.config/pytivometa"
+CONFIG_FILE_PATH = CONFIG_DIR + "/config"
+LOG_FILE_PATH = CONFIG_DIR + "/log.txt"
+NUM_LOGFILE_HIST = 5
 
 # When using a subdir for metadata files, what should it be called
 META_DIR = '.meta'
@@ -97,11 +102,46 @@ VIDEO_FILE_EXTS = [
 # debug level for messages of entire file
 DEBUG_LEVEL = 0
 
+# root logger
+LOGGER = logging.getLogger(__name__)
+
 
 def debug(level, text):
     if level <= DEBUG_LEVEL:
-        print(text)
+        LOGGER.debug(text)
 
+def logging_setup():
+    # make sure config dir exists
+    logdir_filepath = os.path.realpath(os.path.expanduser(CONFIG_DIR))
+    os.makedirs(logdir_filepath, exist_ok=True)
+    logfile_path = os.path.realpath(os.path.expanduser(LOG_FILE_PATH))
+    # rename all old log files (log.txt.2 -> log.txt.3, log.txt.1 -> log.txt.2, etc.
+    for i in range(NUM_LOGFILE_HIST-1, -1, -1):
+        fname = logfile_path + ".%d"%i if i != 0 else logfile_path 
+        fname_plus_1 = logfile_path + ".%d"%(i+1)
+        if os.path.exists(fname):
+            os.replace(fname, fname_plus_1)
+
+    # create file log handler and set level to debug
+    f_handler = logging.FileHandler(logfile_path)
+    f_handler.setLevel(logging.DEBUG)
+    # create formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # add formatter to f_handler
+    f_handler.setFormatter(formatter)
+
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    # create formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # add formatter to ch
+    ch.setFormatter(formatter)
+
+    # config all loggers (changes made to root logger)
+    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().addHandler(ch)
+    logging.getLogger().addHandler(f_handler)
 
 def get_video_files(dirname, dir_files):
     """Get list of file info objects for files of particular extensions, and
@@ -360,7 +400,7 @@ def create_config_file():
             "\n# Debug level: 0=no debug messages, 1=some, 2=more, 3=most.",
             "debug=%d"%def_config['debug'],
             ]
-    config_filepath = os.path.expanduser(CONFIG_FILE_PATH)
+    config_filepath = os.path.realpath(os.path.expanduser(CONFIG_FILE_PATH))
 
     print("Creating default config file: " + CONFIG_FILE_PATH)
     if os.path.isfile(config_filepath):
@@ -392,8 +432,8 @@ def get_rpc(username=None, password=None):
         try:
             rpc_remote = rpc_search103.Remote(username, password)
         except rpc_search103.RpcAuthError:
-            print("Bad password or username for RPC.")
-            print("    Unable to use RPC search capability")
+            print( "Bad password or username for RPC." 
+                    "    Unable to use RPC search capability")
             debug(1, "No rpc_remote")
             rpc_remote = None
     else:
@@ -402,6 +442,9 @@ def get_rpc(username=None, password=None):
     return rpc_remote
 
 def main(argv):
+    # Set up logging
+    logging_setup()
+
     # start with config default values
     config = default_config_values()
 

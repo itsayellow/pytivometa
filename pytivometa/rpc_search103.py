@@ -25,9 +25,11 @@ import pprint
 TIVO_ADDR = 'middlemind.tivo.com'
 TIVO_PORT = 443
 
+# Set up logger
+LOGGER = logging.getLogger(__name__)
+LOGGER.addHandler(logging.NullHandler())
+
 PP = pprint.PrettyPrinter(indent=4, depth=3)
-#logging.basicConfig(level=logging.DEBUG)
-#logging.basicConfig(level=logging.INFO)
 
 
 # debug decorator that announces function call/entry and lists args
@@ -43,7 +45,7 @@ def debug_fxn(func):
         for key in kwargs:
             log_string += "        " + key + "=" + repr(kwargs[key]) + ",\n"
         log_string += "        )"
-        logging.info(log_string)
+        LOGGER.info(log_string)
         return func(*args, **kwargs)
     return func_wrapper
 
@@ -91,6 +93,7 @@ class Remote(object):
             self.ssl_socket.connect((TIVO_ADDR, TIVO_PORT))
         except:
             print('connect error')
+            LOGGER.error('SSL socket initial connection error', exc_info=True)
             # re-raise so we know exact exception to enumerate code
             raise
 
@@ -175,7 +178,7 @@ class Remote(object):
         buf = self.buf[:need_len]
         self.buf = self.buf[need_len:]
 
-        # logging.debug('READ %s', buf)
+        # LOGGER.debug('READ %s', buf)
         return json.loads(buf[-1 * body_len:].decode('utf-8'))
 
     @debug_fxn
@@ -185,9 +188,9 @@ class Remote(object):
         Args:
             data (str): raw string to send to RPC SSL socket
         """
-        logging.debug('SEND %s', data)
+        LOGGER.debug('SEND %s', data)
         bytes_written = self.ssl_socket.send(data.encode('utf-8'))
-        logging.debug("%d bytes written", bytes_written)
+        LOGGER.debug("%d bytes written", bytes_written)
 
     @debug_fxn
     def _auth(self, username, password):
@@ -264,7 +267,7 @@ class Remote(object):
         #       'type': 'error'
         #   }
         if result['type'] == 'error':
-            logging.error('Authentication failed!  RPC response: %s', result['text'])
+            LOGGER.error('Authentication failed!  RPC response: %s', result['text'])
             raise RpcAuthError
 
     @debug_fxn
@@ -483,7 +486,7 @@ class Remote(object):
                     },
                 ]
         if season_num is not None and episode_num is not None:
-            logging.debug("rpc: season episode")
+            LOGGER.debug("rpc: season episode")
             results = self.rpc_req_generic(
                     'contentSearch',
                     collectionId=collection_id,
@@ -495,7 +498,7 @@ class Remote(object):
             program_id = results['content'][0]['partnerContentId']
 
         elif year is not None and month is not None and day is not None:
-            logging.debug("rpc: year month day")
+            LOGGER.debug("rpc: year month day")
             # search through all episodes, looking for air_date match
             result = self.get_program_id_airdate(
                     collection_id,
@@ -628,16 +631,41 @@ class Remote(object):
                 mergeOverridingCollections='true',
                 orderBy='strippedTitle',
                 )
-
-        collection_list = results['collection']
+        if 'collection' in results:
+            collection_list = results['collection']
+        elif results.get('code', '') == 'mindUnavailable':
+            print("mindUnavailable:")
+            PP.pprint(results)
+            return []
+        else:
+            print("Unknown error.  results:")
+            PP.pprint(results)
+            return []
         # filter by language
-        #   do this by hand because 'English' needs to be able to match e.g.
-        #   'English' or 'English GB' and no way to do this using rpc filter
+        #   do this by hand because 'English' needs to be able to match e.g.:
+        #   'English' or 'English GB' or missing descriptionLanguage.
+        #   No way to do this using rpc filter
+
+        # DEBUG DELETEME
+        LOGGER.debug("ORIGINAL")
+        for coll in collection_list:
+            LOGGER.debug("--------")
+            for key in sorted(coll):
+                LOGGER.debug(key + ": " + str(coll[key]))
+
+        # filter for either self.lang in descriptionLanguage or missing
         collection_list = [
                 x
                 for x in collection_list
-                if self.lang in x.get('descriptionLanguage', '')
+                if self.lang in x.get('descriptionLanguage', self.lang)
                 ]
+
+        # DEBUG DELETEME
+        LOGGER.debug("AFTER LANGUAGE FILTERING")
+        for coll in collection_list:
+            LOGGER.debug("--------")
+            for key in sorted(coll):
+                LOGGER.debug(key + ": " + str(coll[key]))
 
         if year is not None:
             collection_list = [
@@ -645,6 +673,13 @@ class Remote(object):
                     for x in collection_list
                     if int(year)==x.get('movieYear', 0)
                     ]
+
+        # DEBUG DELETEME
+        LOGGER.debug("AFTER YEAR FILTERING")
+        for coll in collection_list:
+            LOGGER.debug("--------")
+            for key in sorted(coll):
+                LOGGER.debug(key + ": " + str(coll[key]))
 
         return collection_list
 

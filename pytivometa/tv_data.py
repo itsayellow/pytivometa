@@ -19,6 +19,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import datetime
+import logging
 import os.path
 import re
 from time import strptime
@@ -31,10 +32,14 @@ import tvdb_api_v2
 # debug level for messages of entire file
 DEBUG_LEVEL = 0
 
+# Set up logger
+LOGGER = logging.getLogger(__name__)
+LOGGER.addHandler(logging.NullHandler())
+
 
 def debug(level, text):
     if level <= DEBUG_LEVEL:
-        print(text)
+        LOGGER.debug(text)
 
 
 def find_series_by_year(series, year):

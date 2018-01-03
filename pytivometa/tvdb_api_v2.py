@@ -110,6 +110,7 @@
 """
 
 import json
+import logging
 import re
 #import urllib.error
 import urllib.request
@@ -120,9 +121,14 @@ TVDB_API_URL = "https://api.thetvdb.com/"
 DEBUG_LEVEL = 0
 
 
+# Set up logger
+LOGGER = logging.getLogger(__name__)
+LOGGER.addHandler(logging.NullHandler())
+
+
 def debug(level, text):
     if level <= DEBUG_LEVEL:
-        print(text)
+        LOGGER.debug(text)
 
 def get_session_token():
     """Get a current session token for thetvdb.com, necessary for any

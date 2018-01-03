@@ -18,6 +18,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import os
 import os.path
 import re
@@ -34,10 +35,14 @@ import common
 # debug level for messages of entire file
 DEBUG_LEVEL = 0
 
+# Set up logger
+LOGGER = logging.getLogger(__name__)
+LOGGER.addHandler(logging.NullHandler())
+
 
 def debug(level, text):
     if level <= DEBUG_LEVEL:
-        print(text)
+        LOGGER.debug(text)
 
 def clean_title(title):
     # strip a variety of common junk from torrented avi filenames
@@ -159,13 +164,16 @@ class MovieData():
             report_match(movie_info, len(results))
 
         # TODO: actually get this to work
-        #if self.rpc_remote is not None:
-        #    print(movie_info['title'])
-        #    rpc_info = self.rpc_remote.search_movie(
-        #            movie_info['title'],
-        #            year=movie_info.get('year', None)
-        #            )
-        #    print(rpc_info)
+        if self.rpc_remote is not None:
+            print(movie_info['title'])
+            rpc_info = self.rpc_remote.search_movie(
+                    movie_info['title'],
+                    year=movie_info.get('year', None)
+                    )
+            for rpc_item in rpc_info:
+                print("----")
+                print(rpc_item.get('title', ''))
+                print(rpc_item.get('description', ''))
 
         if movie_info is not None:
             # So far the movie_info object only contains basic information like the

@@ -18,6 +18,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import os.path
 import textwrap
 
@@ -26,9 +27,14 @@ import textwrap
 DEBUG_LEVEL = 0
 
 
+# Set up logger
+LOGGER = logging.getLogger(__name__)
+LOGGER.addHandler(logging.NullHandler())
+
+
 def debug(level, text):
     if level <= DEBUG_LEVEL:
-        print(text)
+        LOGGER.debug(text)
 
 
 def ask_user(options_text, option_returns, max_options=5):

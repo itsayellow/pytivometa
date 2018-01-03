@@ -106,16 +106,13 @@ DEBUG_LEVEL = 0
 LOGGER = logging.getLogger(__name__)
 
 
-def debug(level, text):
-    if level <= DEBUG_LEVEL:
-        LOGGER.debug(text)
-
 def logging_setup():
     # make sure config dir exists
     logdir_filepath = os.path.realpath(os.path.expanduser(CONFIG_DIR))
     os.makedirs(logdir_filepath, exist_ok=True)
     logfile_path = os.path.realpath(os.path.expanduser(LOG_FILE_PATH))
-    # rename all old log files (log.txt.2 -> log.txt.3, log.txt.1 -> log.txt.2, etc.
+    # rename all old log files
+    #   (log.txt.2 -> log.txt.3, log.txt.1 -> log.txt.2, log.txt -> log.txt.1
     for i in range(NUM_LOGFILE_HIST-1, -1, -1):
         fname = logfile_path + ".%d"%i if i != 0 else logfile_path 
         fname_plus_1 = logfile_path + ".%d"%(i+1)
@@ -161,7 +158,7 @@ def get_video_files(dirname, dir_files):
             video_files.append(dir_file)
     video_files.sort()
 
-    debug(2, "video_files after cull: %s" % str(video_files))
+    LOGGER.debug("2,video_files after cull: %s" % str(video_files))
 
     return video_files
 
@@ -196,7 +193,7 @@ def tvinfo_from_filename(filename):
             tv_info['season'] = str(int(match.group('season')))
             tv_info['episode'] = str(int(match.group('episode')))
 
-        debug(2, "    Series: %s\n"%tv_info['series'] + \
+        LOGGER.debug("2,    Series: %s\n"%tv_info['series'] + \
                 "    Season: %s\n"%tv_info.get('season', '') + \
                 "    Episode: %s\n"%tv_info.get('episode', '') + \
                 "    Year: %s\n"%tv_info.get('year', '') + \
@@ -241,7 +238,7 @@ def create_genre_dir(genre_dir):
 
 def process_dir(dir_proc, dir_files, tv_data_acc, movie_data_acc,
         use_metadir=False, clobber=False):
-    debug(1, "\n## Looking for videos in: " + dir_proc)
+    LOGGER.debug("\n## Looking for videos in: " + dir_proc)
 
     video_files = get_video_files(dir_proc, dir_files)
 
@@ -257,11 +254,11 @@ def process_dir(dir_proc, dir_files, tv_data_acc, movie_data_acc,
     for filename in video_files:
         meta_filepath = os.path.join(meta_dir, filename + '.txt')
 
-        debug(1, "\n--->working on: %s" % filename)
-        debug(2, "Metafile is: " + meta_filepath)
+        LOGGER.debug("\n--->working on: %s" % filename)
+        LOGGER.debug("2,Metafile is: " + meta_filepath)
 
         if os.path.exists(meta_filepath) and not clobber:
-            debug(1, "Metadata file already exists, skipping.")
+            LOGGER.debug("Metadata file already exists, skipping.")
         else:
             # get info in dict if filename looks like tv episode, {} otherwise
             tv_info = tvinfo_from_filename(filename)
@@ -439,7 +436,7 @@ def get_rpc(username=None, password=None):
         except rpc_search103.RpcAuthError:
             print( "Bad password or username for RPC." 
                     "    Unable to use RPC search capability")
-            debug(1, "No rpc_remote")
+            LOGGER.debug("No rpc_remote")
             rpc_remote = None
     else:
         rpc_remote = None
@@ -532,5 +529,8 @@ if __name__ == "__main__":
         print("\nStopped by Keyboard Interrupt", file=sys.stderr)
         # exit error code for Ctrl-C
         status = 130
+    except:
+        LOGGER.error("Uncaught error: ", exc_info=True)
+        raise
 
     sys.exit(status)

@@ -98,7 +98,8 @@ def mk_link(link_name, file_path):
         os.unlink(link_name)
         os.symlink(target, link_name)
     elif os.path.exists(link_name):
-        debug(0, "Unable to create link '" + link_name + "', a file already exists with that name.")
+        print("Unable to create link '" + link_name + "', a file already "
+                "exists with that name.")
     else:
         os.symlink(target, link_name)
 
@@ -142,12 +143,12 @@ class MovieData():
             # Do the search, and get the results (a list of Movie objects).
             results = imdb_access.search_movie(title)
         except imdb.IMDbError as error:
-            debug(0, "IMDb lookup error: " + str(error))
+            print("IMDb lookup error: " + str(error))
             # TODO: raise Exception
             sys.exit(3)
 
         if not results:
-            debug(0, title + ": No IMDB matches found.")
+            print(title + ": No IMDB matches found.")
             return None
 
         if len(results) > 1 and self.interactive:
@@ -165,15 +166,15 @@ class MovieData():
 
         # TODO: actually get this to work
         if self.rpc_remote is not None:
-            print(movie_info['title'])
+            debug(2, "from tvdb: " + movie_info['title'])
             rpc_info = self.rpc_remote.search_movie(
                     movie_info['title'],
                     year=movie_info.get('year', None)
                     )
             for rpc_item in rpc_info:
-                print("----")
-                print(rpc_item.get('title', ''))
-                print(rpc_item.get('description', ''))
+                debug(2, "----")
+                debug(2, rpc_item.get('title', ''))
+                debug(2, rpc_item.get('description', ''))
 
         if movie_info is not None:
             # So far the movie_info object only contains basic information like the
@@ -182,9 +183,9 @@ class MovieData():
                 imdb_access.update(movie_info)
                 #debug(3, movie_info.summary())
             except Exception:
-                debug(0, "Warning: unable to get extended details from " + \
+                print("Warning: unable to get extended details from "
                         "IMDb for: " + str(movie_info))
-                debug(0, "         You may need to update your imdbpy module.")
+                print("         You may need to update your imdbpy module.")
 
             try:
                 pass

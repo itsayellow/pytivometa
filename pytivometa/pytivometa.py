@@ -138,10 +138,15 @@ def logging_setup():
     # add formatter to ch
     ch.setFormatter(formatter)
 
-    # config all loggers (changes made to root logger)
-    logging.getLogger().setLevel(logging.DEBUG)
-    logging.getLogger().addHandler(ch)
-    logging.getLogger().addHandler(f_handler)
+    # config all loggers
+    for logger_name in [__name__, 'movie_data', 'tv_data', 'rpc_search103']:
+        logging.getLogger(logger_name).setLevel(logging.DEBUG)
+        #logging.getLogger(logger_name).addHandler(ch)
+        logging.getLogger(logger_name).addHandler(f_handler)
+
+    # used to config root logger, but imdbpy module then spews to stdout :(
+    #logging.getLogger().setLevel(logging.DEBUG)
+    #logging.getLogger().addHandler(f_handler)
 
 def get_video_files(dirname, dir_files):
     """Get list of file info objects for files of particular extensions, and
@@ -215,9 +220,8 @@ def check_interactive():
 def create_genre_dir(genre_dir):
     # Python doesn't support making symlinks on Windows.
     if sys.platform in ['win32', 'cygwin']:
-        debug(0, "The genre feature doesn't work on Windows as symlinks " +\
-                "aren't well supported."
-                )
+        print("The genre feature doesn't work on Windows as symlinks "
+                "aren't well supported.")
         genre_dir = None
     else:
         if not os.path.exists(genre_dir):
@@ -228,12 +232,11 @@ def create_genre_dir(genre_dir):
                             'file already exists with that name.'
                     )
         else:
-            debug(0, "Note: If you've removed videos, there may be old " +\
-                    "symlinks in '" + genre_dir + "'.  If there's " +\
-                    "nothing else in there, you can just remove the " +\
-                    "whole thing first, then run this again (e.g. " +\
-                    "rm -rf '" + genre_dir + "'), but be careful."
-                    )
+            print("Note: If you've removed videos, there may be old "
+                    "symlinks in '" + genre_dir + "'.  If there's "
+                    "nothing else in there, you can just remove the "
+                    "whole thing first, then run this again (e.g. "
+                    "rm -rf '" + genre_dir + "'), but be careful.")
     return genre_dir
 
 def process_dir(dir_proc, dir_files, tv_data_acc, movie_data_acc,
@@ -438,6 +441,9 @@ def get_rpc(username=None, password=None):
             rpc_remote = None
     else:
         rpc_remote = None
+
+    if rpc_remote is not None:
+        print("Successful login to RPC.  RPC info enabled.")
 
     return rpc_remote
 

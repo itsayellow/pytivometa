@@ -91,9 +91,9 @@ def ask_user(options_text, option_returns, max_options=5):
     return returnval
 
 def mkdir_if_needed(dirname):
+    # Don't use os.makedirs() because that would only matter if -p named a
+    #   non-existant dir (which we don't want to create)
     if not os.path.exists(dirname):
-        # Don't use os.makedirs() because that would only matter if -p named a
-        #   non-existant dir (which we don't want to create)
         os.mkdir(dirname, 0o755)
     elif not os.path.isdir(dirname):
         raise OSError(

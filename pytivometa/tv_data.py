@@ -101,8 +101,8 @@ def format_episode_data(ep_data, meta_filepath):
     # The following is a list of pyTivo metadata attributes and how they
     #   map to ep_data keys.
     # Order of this list of lists is the order in which it is "pleasing" to
-    #   have the metadata show up in a metadata file.  It is probably not
-    #   functionally important to preserve order.
+    #   have the metadata show up in a metadata file.  It is not
+    #   functionally important to preserve this order.
     # https://pytivo.sourceforge.io/wiki/index.php/Metadata
     # for 'time', pytivo wants either 'file' or 'oad' or time_str
     #   that works in: datetime(*uniso(time_str)[:6])

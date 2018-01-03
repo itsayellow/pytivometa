@@ -387,6 +387,8 @@ def create_config_file():
             "# pytivometa config file",
             "# Command-line options will override these options.",
             "\n# for RPC searches.  Leave blank to disable.",
+            "# If username is present and password is blank, user will be",
+            "#     asked for password upon every execution of program.",
             "username=",
             "password=",
             "\n# How many seconds to wait for a connection to thetvdb.com",
@@ -428,7 +430,7 @@ def create_config_file():
 
 def get_rpc(username=None, password=None):
     # get RPC username and password if it exists
-    if username is not None and password is None:
+    if username is not None and not password:
         password = getpass.getpass("tivo.com password: ")
 
     if username and password:

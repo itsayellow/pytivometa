@@ -23,18 +23,9 @@ import os.path
 import textwrap
 
 
-# debug level for messages of entire file
-DEBUG_LEVEL = 0
-
-
 # Set up logger
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
-
-
-def debug(level, text):
-    if level <= DEBUG_LEVEL:
-        LOGGER.debug(text)
 
 
 def ask_user(options_text, option_returns, max_options=5):
@@ -43,7 +34,7 @@ def ask_user(options_text, option_returns, max_options=5):
     # Get number of movies found
     num_choices = len(option_returns)
 
-    debug(2, "Found " + str(num_choices) + " matches.")
+    LOGGER.debug("2,Found " + str(num_choices) + " matches.")
     # Show max max_options titles
     num_choices = min(num_choices, max_options)
 

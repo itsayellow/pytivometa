@@ -244,10 +244,7 @@ class TvData():
         self.series_info_cache = {}
 
         # TODO: DEBUG_LEVEL hack
-        global DEBUG_LEVEL
-        DEBUG_LEVEL = debug_level
         common.DEBUG_LEVEL = debug_level
-        tvdb_api_v2.DEBUG_LEVEL = debug_level
 
     def search_tvdb_series_id(self, show_name):
         # See if there's a year in the name

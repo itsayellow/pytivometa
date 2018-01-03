@@ -118,17 +118,12 @@ import urllib.parse
 
 TVDB_APIKEY = "22FF0E9C529331C6"
 TVDB_API_URL = "https://api.thetvdb.com/"
-DEBUG_LEVEL = 0
 
 
 # Set up logger
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
-
-def debug(level, text):
-    if level <= DEBUG_LEVEL:
-        LOGGER.debug(text)
 
 def get_session_token():
     """Get a current session token for thetvdb.com, necessary for any
@@ -340,7 +335,7 @@ class Tvdb:
 
         # assumes year, month, day are all strings
         search_date_num = int("%04d%02d%02d"%(int(year), int(month), int(day)))
-        debug(1, "searching for episode date %d"%search_date_num)
+        LOGGER.debug("searching for episode date %d"%search_date_num)
 
         # need to get all pages in /series/{id}/episodes to find air date
         get_episodes_url = TVDB_API_URL + "series/" + tvdb_series_id + "/episodes?page="
@@ -351,7 +346,7 @@ class Tvdb:
             # go through each page of episodes until match is found, or
             #   we run out of pages (HTTP Error 404)
             page_str = str(page)
-            debug(2, "get_episode_info_air_date page %s"%page_str)
+            LOGGER.debug("2,get_episode_info_air_date page %s"%page_str)
             try:
                 json_data = self._tvdb_get(get_episodes_url + page_str)
             except urllib.error.HTTPError as http_error:
@@ -378,7 +373,7 @@ class Tvdb:
                             month = ep_date_re.group(2)
                             day = ep_date_re.group(3)
                             ep_date_num = int("%04d%02d%02d"%(int(year), int(month), int(day)))
-                            debug(2, "searching: episode date %d "%ep_date_num + \
+                            LOGGER.debug("2,searching: episode date %d "%ep_date_num + \
                                     "season %s "%episode_info['airedSeason'] + \
                                     "episode %s"%episode_info['airedEpisodeNumber']
                                     )

@@ -161,15 +161,15 @@ class MovieData():
                     )
             for rpc_item in rpc_info:
                 LOGGER.debug("2,----")
-                debug(2, rpc_item.get('title', ''))
-                debug(2, rpc_item.get('description', ''))
+                LOGGER.debug("2," + rpc_item.get('title', ''))
+                LOGGER.debug("2," + rpc_item.get('description', ''))
 
         if movie_info is not None:
             # So far the movie_info object only contains basic information like the
             # title and the year; retrieve main information:
             try:
                 imdb_access.update(movie_info)
-                #debug(3, movie_info.summary())
+                #LOGGER.debug("3," + movie_info.summary())
             except Exception:
                 print("Warning: unable to get extended details from "
                         "IMDb for: " + str(movie_info))

@@ -313,8 +313,10 @@ class TvData():
         rpc_series_id = ''
         LOGGER.debug("Searching for RPC series by matching orig. air date...")
         for series in results:
-            LOGGER.debug(2, series.get('title', '') + " - " + series.get('description', '') + "\n")
-            LOGGER.debug("2, "*4 + "first aired:" + series.get('firstAired', ''))
+            LOGGER.debug("2," + series.get('title', '') + " - " + \
+                    series.get('description', '') + "\n")
+            LOGGER.debug("2," + " "*4 + "first aired:" + \
+                    series.get('firstAired', ''))
             if series['firstAired'] == first_aired:
                 #rpc_series_id = series['partnerCollectionId']
                 rpc_series_id = series['collectionId']
@@ -325,7 +327,8 @@ class TvData():
             LOGGER.debug("Searching for RPC series by matching cast...")
             series_actor_match = []
             for series in results:
-                LOGGER.debug(2, series.get('title', '') + " - " + series.get('description', '') + "\n")
+                LOGGER.debug("2," + series.get('title', '') + " - " + \
+                        series.get('description', '') + "\n")
                 if 'credit' in series:
                     rpc_cast = [
                             x['fullName']
@@ -337,7 +340,7 @@ class TvData():
                         if actor in rpc_cast:
                             actor_match += 1
                     series_actor_match.append(actor_match)
-                    LOGGER.debug("2, "*4 + "actor match: " + str(actor_match))
+                    LOGGER.debug("2," + " "*4 + "actor match: " + str(actor_match))
                 else:
                     series_actor_match.append(-1)
 

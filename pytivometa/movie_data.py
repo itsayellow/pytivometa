@@ -32,17 +32,10 @@ import imdb
 import common
 
 
-# debug level for messages of entire file
-DEBUG_LEVEL = 0
-
 # Set up logger
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
-
-def debug(level, text):
-    if level <= DEBUG_LEVEL:
-        LOGGER.debug(text)
 
 def clean_title(title):
     # strip a variety of common junk from torrented avi filenames
@@ -55,7 +48,7 @@ def clean_title(title):
             )
     for strip in striplist:
         title = re.sub(strip, '', title)
-    debug(3, "After stripping keywords, title is: " + title)
+    LOGGER.debug("3,After stripping keywords, title is: " + title)
     return title
 
 def extract_tags(title):
@@ -78,7 +71,7 @@ def extract_tags(title):
         if match:
             tags += match.expand(taglist[tag]) + ' '
             title = re.sub(tag, '', title)
-    debug(2, "    Tags: " + tags)
+    LOGGER.debug("2,    Tags: " + tags)
     return (tags, title)
 
 def fix_spaces(title):
@@ -93,7 +86,7 @@ def fix_spaces(title):
 
 def mk_link(link_name, file_path):
     target = os.path.relpath(file_path, os.path.dirname(link_name))
-    debug(2, "Linking " + link_name + " -> " + target)
+    LOGGER.debug("2,Linking " + link_name + " -> " + target)
     if os.path.islink(link_name):
         os.unlink(link_name)
         os.symlink(target, link_name)
@@ -108,9 +101,9 @@ def report_match(movie_info, num_results):
     if num_results == 1:
         matchtype = 'Found exact match: '
     if 'long imdb title' in list(movie_info.keys()):
-        debug(1, matchtype + movie_info['long imdb title'])
+        LOGGER.debug(matchtype + movie_info['long imdb title'])
     else:
-        debug(1, matchtype + str(movie_info))
+        LOGGER.debug(matchtype + str(movie_info))
 
 
 class MovieData():
@@ -130,13 +123,8 @@ class MovieData():
         # RPC access
         self.rpc_remote = rpc_remote
 
-        # TODO: DEBUG_LEVEL hack
-        global DEBUG_LEVEL
-        DEBUG_LEVEL = debug_level
-        common.DEBUG_LEVEL = debug_level
-
     def get_movie_info(self, title, is_trailer=False):
-        debug(1, "Searching IMDb for: " + title)
+        LOGGER.debug("Searching IMDb for: " + title)
         # IMDB access object
         imdb_access = imdb.IMDb()
         try:
@@ -166,13 +154,13 @@ class MovieData():
 
         # TODO: actually get this to work
         if self.rpc_remote is not None:
-            debug(2, "from tvdb: " + movie_info['title'])
+            LOGGER.debug("2,from tvdb: " + movie_info['title'])
             rpc_info = self.rpc_remote.search_movie(
                     movie_info['title'],
                     year=movie_info.get('year', None)
                     )
             for rpc_item in rpc_info:
-                debug(2, "----")
+                LOGGER.debug("2,----")
                 debug(2, rpc_item.get('title', ''))
                 debug(2, rpc_item.get('description', ''))
 
@@ -193,14 +181,14 @@ class MovieData():
                 #   actors + everyone else who worked on the movie
                 #imdb_access.update(movie_info, 'full credits')
             except:
-                debug(1, "Warning: unable to retrieve full credits.")
+                LOGGER.debug("Warning: unable to retrieve full credits.")
 
             if is_trailer:
                 try:
                     # This slows down the process, so only do it for trailers
                     imdb_access.update(movie_info, 'release dates')
                 except Exception:
-                    debug(1, "Warning: unable to get release date.")
+                    LOGGER.debug("Warning: unable to get release date.")
 
         return movie_info
 
@@ -281,7 +269,7 @@ class MovieData():
             # Note: maybe safer to search for '(imdb display title)' ?
             #   see: Volver, which finds "To Return" with USA, English?
             if self.country in info_aka or '(' + self.lang + ' title)' in info_aka:
-                debug(3, "AKA: " + title_aka + "::" + info_aka)
+                LOGGER.debug("3,AKA: " + title_aka + "::" + info_aka)
                 break
             else:
                 title_aka = ''
@@ -350,7 +338,7 @@ class MovieData():
             if director['name'] not in director_names:
                 director_names.append(director['name'])
                 line += "vDirector : %s|\n" % director['name']
-                debug(3, "vDirector : " + director['name'])
+                LOGGER.debug("3,vDirector : " + director['name'])
         # vWriter
         # go through list, omitting duplicates
         writer_names = []
@@ -358,7 +346,7 @@ class MovieData():
             if writer['name'] not in writer_names:
                 writer_names.append(writer['name'])
                 line += "vWriter : %s|\n" % writer['name']
-                debug(3, "vWriter : " + writer['name'])
+                LOGGER.debug("3,vWriter : " + writer['name'])
         # vActor
         # go through list, omitting duplicates
         actor_names = []
@@ -366,9 +354,9 @@ class MovieData():
             if actor['name'] not in actor_names:
                 actor_names.append(actor['name'])
                 line += "vActor : %s|\n" % actor['name']
-                debug(3, "vActor : " + actor['name'])
+                LOGGER.debug("3,vActor : " + actor['name'])
 
-        debug(2, "Writing to %s" % metadata_file_name)
+        LOGGER.debug("2,Writing to %s" % metadata_file_name)
 
         # only when we are about to write file make metadata dir (e.g. .meta) if
         #   we need to
@@ -403,7 +391,7 @@ class MovieData():
         if year_match1:
             (tags, _) = extract_tags(title)
             (title, year, _, _) = year_match1.group(1, 5, 4, 7)
-            debug(2, "    Title: %s\n    Year: %s" % (title, year))
+            LOGGER.debug("2,    Title: %s\n    Year: %s" % (title, year))
             title += ' (' + year + ')'
         else:
             # 2nd pass at finding the year.  Look for a series of tags in parens
@@ -411,17 +399,17 @@ class MovieData():
             year_match2 = re.match(r'(.*?\w+.*?)\(.*((?:19|20)\d\d)\).*\)', title)
             if year_match2:
                 (title, year) = year_match2.group([1, 2])
-                debug(2, "    Title: %s\n    Year: %s" % (title, year))
+                LOGGER.debug("2,    Title: %s\n    Year: %s" % (title, year))
                 title += ' (' + year + ')'
             else:
-                debug(2, "Cleaning up title the hard way.")
+                LOGGER.debug("2,Cleaning up title the hard way.")
                 title = clean_title(title)
-                debug(2, "    Title: %s" % title)
+                LOGGER.debug("2,    Title: %s" % title)
             # Note: this also removes the tags from the title
             (tags, title) = extract_tags(title)
-        debug(3, "Before fixing spaces, title is: " + title)
+        LOGGER.debug("3,Before fixing spaces, title is: " + title)
         title = fix_spaces(title)
-        debug(3, "After fixing spaces, title is: " + title)
+        LOGGER.debug("3,After fixing spaces, title is: " + title)
 
         movie_info = self.get_movie_info(title, is_trailer=is_trailer)
 

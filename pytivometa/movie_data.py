@@ -108,7 +108,7 @@ def report_match(movie_info, num_results):
 
 class MovieData():
     def __init__(self, rpc_remote=None, interactive=False, genre_dir=None,
-            country='USA', lang='English', debug_level=0):
+            country='USA', lang='English'):
         self.interactive = interactive
 
         self.genre_dir = genre_dir

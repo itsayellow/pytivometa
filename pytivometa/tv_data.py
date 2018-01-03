@@ -219,15 +219,13 @@ class TvData():
     """TV Data access object storing persistent state (e.g. tvdb_access)
     and various options.
     """
-    def __init__(self, rpc_remote=None, interactive=False, clobber=False,
-            debug_level=0):
+    def __init__(self, rpc_remote=None, interactive=False, clobber=False):
         """Initialize TV Access object and config
 
         Args:
             userpass (list): [<username>, <password>] for rpc access
             interactive (bool): are we able to interact with user
             clobber (bool): should we overwrite all metadata
-            debug_level (int): code debug level for this module
 
         Returns:
             TvData object instance

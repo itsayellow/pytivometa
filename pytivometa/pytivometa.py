@@ -479,7 +479,6 @@ def main(argv):
     tv_data_acc = tv_data.TvData(
             interactive=interactive,
             clobber=config['clobber'],
-            debug_level=config['debug'],
             rpc_remote=rpc_remote
             )
     # Initalize movie_data access
@@ -488,7 +487,6 @@ def main(argv):
             genre_dir=genre_dir,
             country='USA',
             lang='English',
-            debug_level=config['debug'],
             rpc_remote=rpc_remote
             )
 

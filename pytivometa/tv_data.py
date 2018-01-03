@@ -243,9 +243,6 @@ class TvData():
         # Cache for series info.
         self.series_info_cache = {}
 
-        # TODO: DEBUG_LEVEL hack
-        common.DEBUG_LEVEL = debug_level
-
     def search_tvdb_series_id(self, show_name):
         # See if there's a year in the name
         match = re.search(r'(.+?) *\(((?:19|20)\d\d)\)', show_name)

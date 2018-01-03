@@ -98,74 +98,45 @@ def format_episode_data(ep_data, meta_filepath):
     # assuming we are TV episode, this is true
     ep_data["isEpisode"] = "true"
 
-    # The following is a dictionary of pyTivo metadata attributes and how they
-    #   map to thetvdb keys.
-    # NOTE: 'NOT_IN_TVDB_INFO' is a placeholder to show it does not exist
-    #       as metadata on TVDB
-    pytivo_metadata = {
-        # https://pytivo.sourceforge.io/wiki/index.php/Metadata
-        # for 'time', pytivo wants either 'file' or 'oad' or time_str
-        #   that works in: datetime(*uniso(time_str)[:6])
-        'time' : 'NOT_IN_TVDB_INFO',
-        'originalAirDate' : 'firstAired',
-        'seriesTitle' : 'seriesName',
-        'episodeTitle' : 'episodeName',
-        'title' : 'episodeName', # seriesTitle - episodeTitle
-        'description' : 'overview',
-        'isEpisode' : 'isEpisode',
-        'seriesId' : 'tivoSeriesId',
-        'programId' : 'tivoProgramId',
-        'episodeNumber' : 'airedEpisodeNumber', # airedSeason + airedEpisodeNumber
-        'displayMajorNumber' : 'NOT_IN_TVDB_INFO', # channel number (e.g. 10-1)
-        'displayMinorNumber' : 'NOT_IN_TVDB_INFO', # unused by tivo
-        'callsign' : 'network',
-        'showingBits' : 'NOT_IN_TVDB_INFO',
-        'partCount' : 'NOT_IN_TVDB_INFO', # multipart episode, total parts
-        'partIndex' : 'NOT_IN_TVDB_INFO', # multipart episode, this part
-        'tvRating' : 'rating',
-        'vProgramGenre' : 'genre', # can be list
-        'vSeriesGenre' : 'genre', # can be list
-        'vActor' : 'actors',
-        'vGuestStar' : 'guestStars',
-        'vDirector' : 'directors',
-        'vProducer' : 'NOT_IN_TVDB_INFO',
-        'vExecProducer' : 'NOT_IN_TVDB_INFO',
-        'vWriter' : 'writers',
-        'vHost' : 'NOT_IN_TVDB_INFO', # check
-        'vChoreographer' : 'NOT_IN_TVDB_INFO',
-    }
-
-    # These are thetvdb keys that have no corresponding Tivo metadata
-    #   attribute.
-    # absoluteNumber added addedBy airedSeasonID airsAfterSeason
-    # airsBeforeEpisode airsBeforeSeason airsDayOfWeek airsTime aliases banner
-    # director - DEPRECATED, use directors instead dvdChapter dvdDiscid
-    # dvdEpisodeNumber dvdSeason filename id imdbId language lastUpdated
-    # lastUpdatedBy network networkId productionCode rating runtime seriesId
-    # showUrl siteRating siteRatingCount status thumbAdded thumbAuthor
-    # thumbHeight thumbWidth
-
-    # pyTivo Metadata tag order (probably not necessary to preserve order)
-    pytivo_metadata_order = [
-        'seriesTitle',
-        'title',
-        'episodeTitle',
-        'originalAirDate',
-        'description',
-        'isEpisode',
-        'seriesId',
-        'episodeNumber',
-        'vProgramGenre',
-        'vSeriesGenre',
-        'vActor',
-        'vGuestStar',
-        'vWriter',
-        'vDirector',
-        'vProducer',
-        'vExecProducer',
-        'vHost',
-        'vChoreographer',
-        'programId'
+    # The following is a list of pyTivo metadata attributes and how they
+    #   map to ep_data keys.
+    # Order of this list of lists is the order in which it is "pleasing" to
+    #   have the metadata show up in a metadata file.  It is probably not
+    #   functionally important to preserve order.
+    # https://pytivo.sourceforge.io/wiki/index.php/Metadata
+    # for 'time', pytivo wants either 'file' or 'oad' or time_str
+    #   that works in: datetime(*uniso(time_str)[:6])
+    # NOTE: 'NOT_IN_EP_DATA' is a placeholder to show it does not exist
+    #       as metadata in ep_data
+    pytivo_metadata = [
+        # [pytivo_tag, ep_data_key],
+        ['seriesTitle', 'seriesName'],
+        ['title', 'episodeName'], # seriesTitle - episodeTitle
+        ['episodeTitle', 'episodeName'],
+        ['originalAirDate', 'firstAired'],
+        ['description', 'overview'],
+        ['isEpisode', 'isEpisode'],
+        ['seriesId', 'tivoSeriesId'], # currently only valid info from RPC
+        ['programId', 'tivoProgramId'], # currently only valid info from RPC
+        ['episodeNumber', 'airedEpisodeNumber'], # airedSeason + airedEpisodeNumber
+        ['vProgramGenre', 'genre'], # can be list
+        ['vSeriesGenre', 'genre'], # can be list
+        ['vActor', 'actors'],
+        ['vGuestStar', 'guestStars'],
+        ['vDirector', 'directors'],
+        ['vProducer', 'NOT_IN_EP_DATA'],
+        ['vExecProducer', 'NOT_IN_EP_DATA'],
+        ['vWriter', 'writers'],
+        ['vHost', 'NOT_IN_EP_DATA'], # check
+        ['vChoreographer', 'NOT_IN_EP_DATA'],
+        ['time', 'NOT_IN_EP_DATA'],
+        ['displayMajorNumber', 'NOT_IN_EP_DATA'], # channel number (e.g. 10-1)
+        ['displayMinorNumber', 'NOT_IN_EP_DATA'], # unused by tivo
+        ['callsign', 'network'],
+        ['showingBits', 'NOT_IN_EP_DATA'],
+        ['partCount', 'NOT_IN_EP_DATA'], # multipart episode, total parts
+        ['partIndex', 'NOT_IN_EP_DATA'], # multipart episode, this part
+        ['tvRating', 'rating'],
     ]
 
     # Metadata name fields
@@ -187,36 +158,37 @@ def format_episode_data(ep_data, meta_filepath):
         8221 : '\"'  # Unicode RIGHT DOUBLE QUOTATION MARK (U+201D)
     }
 
-    for tv_tag in pytivo_metadata_order:
-        debug(3, "Working on " + tv_tag)
-        if pytivo_metadata.get(tv_tag, '') and ep_data.get(pytivo_metadata[tv_tag], ''):
-            # got data to work with
-            line = term = ""
+    for (pytivo_tag, ep_data_key) in pytivo_metadata:
+        debug(3, "Working on " + pytivo_tag)
+        if ep_data.get(ep_data_key, ''):
+            # ep_data contains ep_data_key and value is not empty ''
+            line = ""
+            term = ""
 
-            if isinstance(ep_data[pytivo_metadata[tv_tag]], list):
-                text = '|'.join(ep_data[pytivo_metadata[tv_tag]])
+            if isinstance(ep_data[ep_data_key], list):
+                text = '|'.join(ep_data[ep_data_key])
             else:
-                text = str(ep_data[pytivo_metadata[tv_tag]])
+                text = str(ep_data[ep_data_key])
             text = text.translate(transtable)
             # replace all whitespace chacaters with single spaces
             text = ' '.join(text.split())
 
             # for debugging character translations
-            #if tv_tag == 'description':
+            #if pytivo_tag == 'description':
             #    print "ord -> %s" % ord(text[370])
 
-            debug(3, "%s : %s" % (tv_tag, text))
+            debug(3, "%s : %s" % (pytivo_tag, text))
 
-            if tv_tag == 'originalAirDate':
+            if pytivo_tag == 'originalAirDate':
                 text = datetime(*strptime(text, "%Y-%m-%d")[0:6]).strftime("%Y-%m-%dT%H:%M:%SZ")
 
             # Only check to see if Season is > 0, allow EpNum to be 0 for
             #   things like "1x00 - Bonus content"
-            if (tv_tag == 'episodeNumber' and ep_data['airedEpisodeNumber'] and
+            if (pytivo_tag == 'episodeNumber' and ep_data['airedEpisodeNumber'] and
                     int(ep_data['airedSeason'])):
                 text = "%d%02d"%(int(ep_data['airedSeason']), int(ep_data['airedEpisodeNumber']))
 
-            if tv_tag in metadata_name_fields:
+            if pytivo_tag in metadata_name_fields:
                 term = "|"
 
             if text is not None:
@@ -224,13 +196,13 @@ def format_episode_data(ep_data, meta_filepath):
                     people = text.strip('|').split('|')
                     for person in people:
                         debug(3, "Splitting " + person.strip())
-                        line += "%s : %s\n" % (tv_tag, re.sub('\n', ' ', person.strip()+term))
+                        line += "%s : %s\n" % (pytivo_tag, re.sub('\n', ' ', person.strip()+term))
                 else:
-                    line = "%s : %s\n" %(tv_tag, re.sub('\n', ' ', text+term))
+                    line = "%s : %s\n" %(pytivo_tag, re.sub('\n', ' ', text+term))
                     debug(3, "Completed -> " + line)
                 metadata_text += line
         else:
-            debug(3, "No data for " + tv_tag)
+            debug(3, "No data for " + pytivo_tag)
 
     if metadata_text:
         # only when we are about to write file make metadata dir (e.g. .meta) if

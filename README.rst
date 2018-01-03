@@ -18,4 +18,4 @@ together in the same directory.
 
 Based on the original pytivometathis by Graham Dunn and later Josh Harding
 (https://sourceforge.net/projects/pytivometathis/).  This version has been
-ported to python3 and extensively revised.
+ported to python3 and extensively modified.

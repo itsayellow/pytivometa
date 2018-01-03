@@ -9,7 +9,7 @@ type
 one of ['offerSearch', 'contentSearch', 'collectionSearch', 'categorySearch']
 
 contentSearch
-    Search for a TV epsidoe.  Episode of a TV series is content.  Independent
+    Search for a TV epsiode.  Episode of a TV series is content.  Independent
     of unit.
 collectionSearch
     Search for a TV series. Series is represented by a collection.  Independent
@@ -172,10 +172,12 @@ Format
 ~~~~~~
 tivo:<type>[.<namespace>].<id>
 
-e.g. tivo:cl.351131803 - collectionId of series 'Friends and Enemeies'
-e.g. tivo:ct.22345 - contentId of
-e.g. epgProvider:cl.SH0351131803 - collectionId of series 'Friends and Enemies
-e.g. tivo:ca.349301 - categoryId
+<type> is one of: cl, ct, ca, etc.
+
+* e.g. tivo:cl.351131803 - collectionId of series 'Friends and Enemeies'
+* e.g. tivo:ct.22345 - contentId of
+* e.g. epgProvider:cl.SH0351131803 - collectionId of series 'Friends and Enemies
+* e.g. tivo:ca.349301 - categoryId
 
 All rpc_request fiels seen in the wild
 --------------------------------------

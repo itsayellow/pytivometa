@@ -108,7 +108,7 @@ VIDEO_FILE_EXTS = [
 LOGGER = logging.getLogger(__name__)
 
 
-def logging_setup():
+def logging_setup(debug_level=False):
     # make sure config dir exists
     logdir_filepath = os.path.realpath(os.path.expanduser(CONFIG_DIR))
     os.makedirs(logdir_filepath, exist_ok=True)
@@ -137,15 +137,27 @@ def logging_setup():
     # add formatter to ch
     ch.setFormatter(formatter)
 
+    # set global log level to either INFO or DEBUG depending on config
+    if debug_level:
+        global_log_level = logging.DEBUG
+    else:
+        global_log_level = logging.INFO
+
     # config all loggers
     for logger_name in [__name__, 'movie_data', 'tv_data', 'rpc_search103']:
-        logging.getLogger(logger_name).setLevel(logging.DEBUG)
+        logging.getLogger(logger_name).setLevel(global_log_level)
         #logging.getLogger(logger_name).addHandler(ch)
         logging.getLogger(logger_name).addHandler(f_handler)
 
     # used to config root logger, but imdbpy module then spews to stdout :(
-    #logging.getLogger().setLevel(logging.DEBUG)
+    #logging.getLogger().setLevel(global_log_level)
     #logging.getLogger().addHandler(f_handler)
+
+    log_eff_level = LOGGER.getEffectiveLevel()
+    LOGGER.log(
+            log_eff_level,
+            "Global log level set to " + logging.getLevelName(log_eff_level)
+            )
 
 def get_video_files(dirname, dir_files):
     """Get list of file info objects for files of particular extensions, and
@@ -309,8 +321,8 @@ def process_command_line(argv):
             help="Create default config file: " + CONFIG_FILE_PATH
             )
     parser.add_argument(
-            "-d", "--debug", action="count",
-            help="Turn on debugging. More -d's increase debug level."
+            "-d", "--debug", action="store_true",
+            help="More detailed debugging messages are printed to log file."
             )
     parser.add_argument(
             "-f", "--force", action="store_true", dest="clobber",
@@ -362,7 +374,7 @@ def get_config_file():
     if 'timeout' in config_data:
         config_data['timeout'] = int(config_data['timeout'])
     if 'debug' in config_data:
-        config_data['debug'] = int(config_data['debug'])
+        config_data['debug'] = 'true' in config_data['debug'].lower()
 
     return config_data
 
@@ -372,7 +384,7 @@ def default_config_values():
     config_data = {
             'clobber': False,
             'createconfig': False,
-            'debug': 0,
+            'debug': False,
             'genre': None,
             'metadir': False,
             'recursive': False,
@@ -401,7 +413,7 @@ def create_config_file():
             "genre=",
             "\n# Force overwrite of existing metadata if true.",
             "clobber=%s"%def_config['clobber'],
-            "\n# Debug level: 0=no debug messages, 1=some, 2=more, 3=most.",
+            "\n# Extra debug messages in log file: true or false",
             "debug=%d"%def_config['debug'],
             ]
     config_filepath = os.path.realpath(os.path.expanduser(CONFIG_FILE_PATH))
@@ -449,9 +461,6 @@ def get_rpc(username=None, password=None):
     return rpc_remote
 
 def main(argv):
-    # Set up logging
-    logging_setup()
-
     # start with config default values
     config = default_config_values()
 
@@ -460,6 +469,9 @@ def main(argv):
 
     # command-line arguments (overrides config file)
     config.update(vars(process_command_line(argv)))
+
+    # Set up logging
+    logging_setup(config['debug'])
 
     # create default config file in proper place if requested
     if config['createconfig']:

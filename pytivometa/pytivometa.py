@@ -78,6 +78,7 @@ import re
 import stat
 import sys
 
+import appdirs
 
 import movie_data
 import tv_data
@@ -520,6 +521,7 @@ if __name__ == "__main__":
         # exit error code for Ctrl-C
         status = 130
     except:
+        # make sure any uncaught errors end up in log
         LOGGER.error("Uncaught error: ", exc_info=True)
         raise
 

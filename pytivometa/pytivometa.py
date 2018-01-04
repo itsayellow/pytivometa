@@ -78,15 +78,19 @@ import re
 import stat
 import sys
 
-import appdirs
-
 import movie_data
 import tv_data
 import rpc_search103
 
 
 # location of config dir and file for pytivometa
-CONFIG_DIR = "~/.config/pytivometa"
+if sys.platform == 'win32':
+    CONFIG_DIR = os.path.join(
+            os.environ.get('LOCALAPPDATA', os.path.expanduser("~/AppData/Local")),
+            'pytivometa'
+            )
+else:
+    CONFIG_DIR = os.path.expanduser("~/.config/pytivometa")
 CONFIG_FILE_PATH = CONFIG_DIR + "/config"
 LOG_FILE_PATH = CONFIG_DIR + "/log.txt"
 NUM_LOGFILE_HIST = 5

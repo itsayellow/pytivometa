@@ -358,10 +358,13 @@ def get_config_file():
     if os.path.isfile(config_filepath):
         with open(config_filepath, 'r') as config_fh:
             for line in config_fh:
-                line = re.sub(r'^(\s*#.*)', '', line)
-                data_re = re.search(r'^(\S+)=(\S.*)$', line)
-                if data_re:
-                    config_data[data_re.group(1)] = data_re.group(2)
+                line = re.sub(r'#.*', '', line)
+                line = line.lstrip()
+                line = line.rstrip('\n\r')
+                if "=" in line:
+                    (key, value) = line.split('=', maxsplit=1)
+                    key = key.strip()
+                    config_data[key] = value
 
     # convert 'true' or 'True' to True, else False
     if 'metadir' in config_data:

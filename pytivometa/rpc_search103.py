@@ -2,6 +2,9 @@
 # Modified by KenV99
 # Modified by Matthew Clapp
 
+# debug_fxn_omit decorator is used when we don't want to write password to
+#   log file
+
 # TODO: catch HTTP errors of _rpc_request
 #   HTTP 5xx server error
 # TODO: catch RPC error dictionary error
@@ -34,9 +37,8 @@ PP = pprint.PrettyPrinter(indent=4, depth=3)
 
 # debug decorator that announces function call/entry and lists args
 def debug_fxn(func):
-    """Function decorator that (if enabled by DEBUG_FXN_ENTRY bit in DEBUG)
-    prints the function name and the arguments used in the function call
-    before executing the function
+    """Function decorator that prints the function name and the arguments used
+    in the function call before executing the function
     """
     def func_wrapper(*args, **kwargs):
         log_string = "FXN:" + func.__qualname__ + "(\n"
@@ -49,11 +51,40 @@ def debug_fxn(func):
         return func(*args, **kwargs)
     return func_wrapper
 
+# debug decorator that announces function call/entry and lists args
+#   this one accepts arguments of positional or keyword arguments to omit
+def debug_fxn_omit(omit_args=None, omit_kwargs=None):
+    if omit_args == None:
+        omit_args = []
+    if omit_kwargs == None:
+        omit_kwargs = []
+    def debug_fxn_int(func):
+        """Function decorator that prints the function name and the arguments used
+        in the function call before executing the function
+        """
+        def func_wrapper(*args, **kwargs):
+            log_string = "FXN:" + func.__qualname__ + "(\n"
+            for (i,arg) in enumerate(args[1:]):
+                if i not in omit_args:
+                    log_string += "        " + repr(arg) + ",\n"
+                else:
+                    log_string += "        " + "*** REDACTED ***" + ",\n"
+            for key in kwargs:
+                if key not in omit_kwargs:
+                    log_string += "        " + key + "=" + repr(kwargs[key]) + ",\n"
+                else:
+                    log_string += "        " + key + "=" + "*** REDACTED ***" + ",\n"
+            log_string += "        )"
+            LOGGER.info(log_string)
+            return func(*args, **kwargs)
+        return func_wrapper
+    return debug_fxn_int
+
 class RpcAuthError(Exception):
     pass
 
 class Remote(object):
-    @debug_fxn
+    @debug_fxn_omit(omit_args=[1])
     def __init__(self, username, password, lang='English'):
         """Initialize Remote TiVo mind SSL socket connection
 
@@ -111,7 +142,7 @@ class Remote(object):
         self.rpc_id = self.rpc_id + 1
         return rpc_id
 
-    @debug_fxn
+    @debug_fxn_omit(omit_kwargs=['credential'])
     def _rpc_request(self, req_type, monitor=False, **kwargs):
         """Format key=value pairs into string for RPC request to TiVo Mind
 
@@ -181,18 +212,23 @@ class Remote(object):
         # LOGGER.debug('READ %s', buf)
         return json.loads(buf[-1 * body_len:].decode('utf-8'))
 
-    @debug_fxn
     def _write(self, data):
         """Send string to established SSL RPC socket
 
         Args:
             data (str): raw string to send to RPC SSL socket
         """
-        LOGGER.debug('SEND %s', data)
+        # the following nukes password in data so it isn't logged
+        data_logged = re.sub(
+                r'(["\']password["\']\s*:).+',
+                r'\1 *** REDACTED ***',
+                data
+                )
+        LOGGER.debug('SEND %s', data_logged)
         bytes_written = self.ssl_socket.send(data.encode('utf-8'))
         LOGGER.debug("%d bytes written", bytes_written)
 
-    @debug_fxn
+    @debug_fxn_omit(omit_args=[1])
     def _auth(self, username, password):
         """Private fxn only used in init of Remote to establish SSL credentials
 

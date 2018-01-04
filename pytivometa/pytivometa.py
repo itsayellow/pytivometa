@@ -317,8 +317,9 @@ def process_command_line(argv):
 
     # switches/options:
     parser.add_argument(
-            "-c", "--createconfig", action="store_true", default=False,
-            help="Create default config file: " + CONFIG_FILE_PATH
+            "-c", "--createconfig", action="store_true",
+            help="Create config file: " + CONFIG_FILE_PATH + \
+                    " with default settings and immediately exit."
             )
     parser.add_argument(
             "-d", "--debug", action="store_true",
@@ -404,17 +405,17 @@ def create_config_file():
             "password=",
             "\n# How many seconds to wait for a connection to thetvdb.com",
             "timeout=%d"%def_config['timeout'],
-            "\n# Save metadata files in .meta subdirectory if true.",
+            "\n# Save metadata files in .meta subdirectory: True or False",
             "metadir=%s"%def_config['metadir'],
-            "\n# Generate metadata for all files in sub dirs too if true.",
+            "\n# Generate metadata for all files in sub dirs too: True or False",
             "recursive=%s"%def_config['recursive'],
             "\n# Specify a directory in which to place symlinks to shows, ",
             "#    organized by genre.  Leave blank to disable.",
             "genre=",
-            "\n# Force overwrite of existing metadata if true.",
+            "\n# Force overwrite of existing metadata: True or False",
             "clobber=%s"%def_config['clobber'],
-            "\n# Extra debug messages in log file: true or false",
-            "debug=%d"%def_config['debug'],
+            "\n# Extra debug messages in log file: True or False",
+            "debug=%s"%def_config['debug'],
             ]
     config_filepath = os.path.realpath(os.path.expanduser(CONFIG_FILE_PATH))
 
@@ -473,9 +474,11 @@ def main(argv):
     # Set up logging
     logging_setup(config['debug'])
 
-    # create default config file in proper place if requested
+    # create default config file in proper place if requested, and immediately
+    #   exit
     if config['createconfig']:
         create_config_file()
+        return 0
 
     # set interactive if we are in an interactive shell
     interactive = check_interactive()
@@ -504,7 +507,7 @@ def main(argv):
             genre_dir=genre_dir,
             country='USA',
             lang='English',
-            rpc_remote=rpc_remote
+            rpc_remote=rpc_remote,
             )
 
     # process all dirs
@@ -536,7 +539,7 @@ if __name__ == "__main__":
         print("\nStopped by Keyboard Interrupt", file=sys.stderr)
         # exit error code for Ctrl-C
         status = 130
-    except:
+    except Exception as error:
         # make sure any uncaught errors end up in log
         LOGGER.error("Uncaught error: ", exc_info=True)
         raise

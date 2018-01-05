@@ -10,6 +10,8 @@ the associated video files) for pytivo to find them.
 Installation
 ------------
 
+pytivometa requires Python 3.  Make sure Python 3 is installed on your system.
+
 To install required modules for pytivometa to work, execute the following
 command::
 

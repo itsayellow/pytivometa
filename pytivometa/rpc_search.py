@@ -390,7 +390,7 @@ class Remote(object):
 
         collection_list = results['collection']
         # filter by language
-        #   do this by hand because 'English' needs to be able to match e.g.
+        #   do this by hand because e.g. 'English' needs to be able to match
         #   'English' or 'English GB' and no way to do this using rpc filter
         collection_list = [
                 x
@@ -677,10 +677,10 @@ class Remote(object):
             print("Unknown error.  results:")
             PP.pprint(results)
             return []
-        # filter by language
-        #   do this by hand because 'English' needs to be able to match e.g.:
-        #   'English' or 'English GB' or missing descriptionLanguage.
-        #   No way to do this using rpc filter
+
+        # no results or 1 result, return early
+        if len(collection_list) < 2:
+            return collection_list
 
         # DEBUG DELETEME
         LOGGER.debug("ORIGINAL")
@@ -689,12 +689,19 @@ class Remote(object):
             for key in sorted(coll):
                 LOGGER.debug(key + ": " + str(coll[key]))
 
+        # filter by language
         # filter for either self.lang in descriptionLanguage or missing
+        #   do this by hand because e.g. 'English' needs to be able to match
+        #   'English' or 'English GB' or missing descriptionLanguage.
+        #   No way to do this using rpc filter
         collection_list = [
                 x
                 for x in collection_list
                 if self.lang in x.get('descriptionLanguage', self.lang)
                 ]
+        # no results or 1 result, return early
+        if len(collection_list) < 2:
+            return collection_list
 
         # DEBUG DELETEME
         LOGGER.debug("AFTER LANGUAGE FILTERING")
@@ -709,6 +716,9 @@ class Remote(object):
                     for x in collection_list
                     if int(year)==x.get('movieYear', 0)
                     ]
+        # no results or 1 result, return early
+        if len(collection_list) < 2:
+            return collection_list
 
         # DEBUG DELETEME
         LOGGER.debug("AFTER YEAR FILTERING")

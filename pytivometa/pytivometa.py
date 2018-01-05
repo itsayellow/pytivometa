@@ -393,6 +393,8 @@ def default_config_values():
             'metadir': False,
             'recursive': False,
             'timeout': 5,
+            'country': 'USA',
+            'language': 'English'
             }
     return config_data
 
@@ -401,15 +403,19 @@ def create_config_file():
     config_default_lines = [
             "# pytivometa config file",
             "# Command-line options will override these options.",
-            "\n# for RPC searches.  Leave blank to disable.",
+            "\n# for RPC searches.  Omit or leave blank to disable.",
             "# If username is present and password is blank, user will be",
             "#     asked for password upon every execution of program.",
             "username=",
             "password=",
-            "\n# How many seconds to wait for a connection to thetvdb.com",
-            "timeout=%d"%def_config['timeout'],
+            "\n# When searching for matching entries, prefer descriptions",
+            "#     in 'language' and info matching 'country'",
+            "language=%s"%def_config['language'],
+            "country=%s"%def_config['country'],
             "\n# Save metadata files in .meta subdirectory: True or False",
             "metadir=%s"%def_config['metadir'],
+            "\n# How many seconds to wait for a connection to thetvdb.com",
+            "timeout=%d"%def_config['timeout'],
             "\n# Generate metadata for all files in sub dirs too: True or False",
             "recursive=%s"%def_config['recursive'],
             "\n# Specify a directory in which to place symlinks to shows, ",
@@ -508,8 +514,8 @@ def main(argv):
     movie_data_acc = movie_data.MovieData(
             interactive=interactive,
             genre_dir=genre_dir,
-            country='USA',
-            lang='English',
+            country=config['country'],
+            lang=config['language'],
             rpc_remote=rpc_remote,
             )
 

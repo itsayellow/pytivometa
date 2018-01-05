@@ -15,7 +15,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import rpc_search103
+import rpc_search
 import pprint
 import json
 
@@ -24,7 +24,7 @@ PP = pprint.PrettyPrinter(indent=4, depth=3)
 with open('test_rpc.conf', 'r') as conf_fh:
     conf_data = json.loads(conf_fh.read())
 
-mind_remote = rpc_search103.Remote(
+mind_remote = rpc_search.Remote(
         conf_data['username'],
         conf_data['password']
         )

@@ -80,7 +80,7 @@ import sys
 
 import movie_data
 import tv_data
-import rpc_search103
+import rpc_search
 
 
 # location of config dir and file for pytivometa
@@ -144,7 +144,7 @@ def logging_setup(debug_level=False):
         global_log_level = logging.INFO
 
     # config all loggers
-    for logger_name in [__name__, 'movie_data', 'tv_data', 'rpc_search103']:
+    for logger_name in [__name__, 'movie_data', 'tv_data', 'rpc_search']:
         logging.getLogger(logger_name).setLevel(global_log_level)
         #logging.getLogger(logger_name).addHandler(ch)
         logging.getLogger(logger_name).addHandler(f_handler)
@@ -450,8 +450,8 @@ def get_rpc(username=None, password=None):
 
     if username and password:
         try:
-            rpc_remote = rpc_search103.Remote(username, password)
-        except rpc_search103.RpcAuthError:
+            rpc_remote = rpc_search.Remote(username, password)
+        except rpc_search.RpcAuthError:
             print( "Bad password or username for RPC." 
                     "    Unable to use RPC search capability")
             LOGGER.debug("No rpc_remote")

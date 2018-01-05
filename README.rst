@@ -10,8 +10,8 @@ the associated video files) for pytivo to find them.
 Installation
 ------------
 
-To install required modules (imdpy and its dependencies), execute the
-following command::
+To install required modules for pytivometa to work, execute the following
+command::
 
     pip3 install -r requirements.txt
 

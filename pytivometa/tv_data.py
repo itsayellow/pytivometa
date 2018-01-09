@@ -318,7 +318,6 @@ class TvData():
             LOGGER.debug("2," + " "*4 + "first aired:" + \
                     series.get('firstAired', ''))
             if series['firstAired'] == first_aired:
-                #rpc_series_id = series['partnerCollectionId']
                 rpc_series_id = series['collectionId']
                 break
         # Second, if no original air date match, find the series with the most
@@ -349,7 +348,6 @@ class TvData():
             assert len(series_actor_match) == len(results)
 
             if series_actor_match[i_max] > 0:
-                #rpc_series_id = results[i_max]['partnerCollectionId']
                 rpc_series_id = results[i_max]['collectionId']
 
         return rpc_series_id

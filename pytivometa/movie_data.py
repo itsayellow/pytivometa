@@ -124,6 +124,46 @@ class MovieData():
         self.rpc_remote = rpc_remote
 
     def get_movie_info(self, title, is_trailer=False):
+        # minimal movie listing:
+        #
+        # category: [
+        #   {'categoryId': 'tivo:ca.413902', 'displayRank': 0,
+        #       'label': 'Movies', 'topLevel': True, 'type': 'category'
+        #   }
+        # ]
+        # collectionId: tivo:cl.ts.114928751
+        # description: When Dr. Indiana Jones, the tweed-suited professor who
+        #       just happens to be a celebrated archaeologist-- is hired by the
+        #       government to locate the legendary Ark of the Covenant he finds
+        #       himself up against the entire Nazi regime.  In HD.
+        # movieYear: 1981
+        # mpaaRating: pg
+        # rating: [{'type': 'typedMpaaRating', 'value': 'pg'}]
+        # title: Indiana Jones/Raiders of the Lost Ark
+        # type: collection
+        # -------------------
+        # category: [
+        #   {'categoryId': 'tivo:ca.121999524', 'displayRank': 0,
+        #   'label': 'Action', 'topLevel': False, 'type': 'category'
+        #   },
+        #   {'categoryId': 'tivo:ca.121999525', 'displayRank': 1,
+        #   'label': 'Adventure', #   'topLevel': False, 'type': 'category'
+        #   }
+        # ]
+        # collectionId: tivo:cl.ts.93034831
+        # description: Get ready for edge-of-your-seat thrills in Indiana Jones
+        #       and the Raiders of the Lost Ark. Indy (Harrison Ford) and his feisty
+        #       ex-flame Marion Ravenwood (Karen Allen) dodge booby-traps, fight
+        #       Nazis and stare down snakes in their incredible worldwide quest for
+        #       the mystical Ark of the Covenant. Experience one exciting cliffhanger
+        #       after another when you discover adventure with the one and only
+        #       Indiana Jones.
+        # movieYear: 1981
+        # mpaaRating: pg
+        # partnerCollectionId: ZINC-VUDU#16966B1861503A2B287BFD393FE90E3ED1671AA2
+        # rating: [{'type': 'typedMpaaRating', 'value': 'pg'}]
+        # title: Indiana Jones and the Raiders of the Lost Ark
+        # type: collection
         LOGGER.debug("Searching IMDb for: " + title)
         # IMDB access object
         imdb_access = imdb.IMDb()
@@ -154,7 +194,7 @@ class MovieData():
 
         # TODO: actually get this to work
         if self.rpc_remote is not None:
-            LOGGER.debug("2,from tvdb: " + movie_info['title'])
+            LOGGER.debug("2,from imdb: " + movie_info['title'])
             rpc_info = self.rpc_remote.search_movie(
                     movie_info['title'],
                     year=movie_info.get('year', None)

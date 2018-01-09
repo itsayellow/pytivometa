@@ -389,6 +389,9 @@ class Remote(object):
                 )
 
         collection_list = results['collection']
+
+        LOGGER.debug("ORIGINAL, Total: %d"%(len(collection_list)))
+
         # filter by language
         #   do this by hand because e.g. 'English' needs to be able to match
         #   'English' or 'English GB' and no way to do this using rpc filter
@@ -397,9 +400,22 @@ class Remote(object):
                 for x in collection_list
                 if self.lang in x.get('descriptionLanguage', '')
                 ]
+
+        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d"%(len(collection_list)))
+
+        # filter for presence of 'partnerCollectionId', useless if absent
+        collection_list = [
+                x
+                for x in collection_list
+                if 'partnerCollectionId' in x
+                ]
+
+        LOGGER.debug("AFTER FILTERING FOR partnerCollectionId, Total: %d"%(len(collection_list)))
+
         for collection in collection_list:
             season1ep1 = self.get_first_aired(collection['collectionId'])
             collection['firstAired'] = season1ep1.get('originalAirdate', '')
+
         return collection_list
 
     @debug_fxn
@@ -682,8 +698,8 @@ class Remote(object):
         if len(collection_list) < 2:
             return collection_list
 
+        LOGGER.debug("ORIGINAL, Total: %d"%(len(collection_list)))
         # DEBUG DELETEME
-        LOGGER.debug("ORIGINAL")
         for coll in collection_list:
             LOGGER.debug("--------")
             for key in sorted(coll):
@@ -699,12 +715,33 @@ class Remote(object):
                 for x in collection_list
                 if self.lang in x.get('descriptionLanguage', self.lang)
                 ]
+
+        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d"%(len(collection_list)))
+
         # no results or 1 result, return early
         if len(collection_list) < 2:
             return collection_list
 
         # DEBUG DELETEME
-        LOGGER.debug("AFTER LANGUAGE FILTERING")
+        for coll in collection_list:
+            LOGGER.debug("--------")
+            for key in sorted(coll):
+                LOGGER.debug(key + ": " + str(coll[key]))
+
+        # filter for presence of 'partnerCollectionId', useless if absent
+        collection_list = [
+                x
+                for x in collection_list
+                if 'partnerCollectionId' in x
+                ]
+
+        LOGGER.debug("AFTER FILTERING FOR partnerCollectionId, Total: %d"%(len(collection_list)))
+
+        # no results or 1 result, return early
+        if len(collection_list) < 2:
+            return collection_list
+
+        # DEBUG DELETEME
         for coll in collection_list:
             LOGGER.debug("--------")
             for key in sorted(coll):
@@ -716,12 +753,14 @@ class Remote(object):
                     for x in collection_list
                     if int(year)==x.get('movieYear', 0)
                     ]
+
+        LOGGER.debug("AFTER YEAR FILTERING, Total: %d"%(len(collection_list)))
+
         # no results or 1 result, return early
         if len(collection_list) < 2:
             return collection_list
 
         # DEBUG DELETEME
-        LOGGER.debug("AFTER YEAR FILTERING")
         for coll in collection_list:
             LOGGER.debug("--------")
             for key in sorted(coll):
@@ -732,7 +771,7 @@ class Remote(object):
 
 
 # -----------------------------------------------------------------------------
-
+# OLD CODE BELOW
 
     @debug_fxn
     def collection_search(self, count, keywords):

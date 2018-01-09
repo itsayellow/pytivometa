@@ -669,20 +669,31 @@ class Remote(object):
                     'typeName': 'credit'
                     },
                 ]
-        results = self.rpc_req_generic(
-                'collectionSearch',
-                titleKeyword=title_keywords,
-                collectionType='movie',
-                responseTemplate=resp_template,
-                count=25,
-                filterUnavailable='false',
-                includeBroadcast='true',
-                includeFree='true',
-                includePaid='false',
-                includeVod='false',
-                mergeOverridingCollections='true',
-                orderBy='strippedTitle',
-                )
+
+        # keep trying to get results if RPC says 'mindUnavailable' for at
+        #   least a couple of times
+        no_results = True
+        tries = 0
+        while no_results and tries < 2:
+            if tries > 0:
+                print('RPC access timed out.  Trying again...')
+            results = self.rpc_req_generic(
+                    'collectionSearch',
+                    titleKeyword=title_keywords,
+                    collectionType='movie',
+                    responseTemplate=resp_template,
+                    count=25,
+                    filterUnavailable='false',
+                    includeBroadcast='true',
+                    includeFree='true',
+                    includePaid='false',
+                    includeVod='false',
+                    mergeOverridingCollections='true',
+                    orderBy='strippedTitle',
+                    )
+            no_results = results.get('code', '') == 'mindUnavailable'
+            tries += 1
+
         if 'collection' in results:
             collection_list = results['collection']
         elif results.get('code', '') == 'mindUnavailable':

@@ -186,23 +186,24 @@ class MovieData():
             options_text = []
             for result in results:
                 options_text.append(result['long imdb title'])
-            movie_info = common.ask_user(options_text, results, max_options=5)
+            imdb_movie_info = common.ask_user(options_text, results, max_options=5)
             print("------------------------------------")
         else:
             # automatically pick first match
-            movie_info = results[0]
-            report_match(movie_info, len(results))
+            imdb_movie_info = results[0]
+            report_match(imdb_movie_info, len(results))
 
-        # TODO: actually get this to work
+        # get more info from RPC
         if self.rpc_remote is not None:
-            LOGGER.debug("2,from imdb: " + movie_info['title'])
+            rpc_movie_info = {}
+            LOGGER.debug("2,from imdb: " + imdb_movie_info['title'])
 
             tries_left = 3
             while tries_left > 0:
                 try:
                     rpc_info = self.rpc_remote.search_movie(
-                            movie_info['title'],
-                            year=movie_info.get('year', None)
+                            imdb_movie_info['title'],
+                            year=imdb_movie_info.get('year', None)
                             )
                 except rpc_search.MindTimeoutError:
                     print("RPC Timeout, trying again...")
@@ -218,38 +219,46 @@ class MovieData():
                         r'epgProvider:ct\.', '',
                         rpc_info['partnerContentId']
                         )
-                movie_info['tivoSeriesId'] = partnerCollectionId
-                movie_info['tivoProgramId'] = partnerContentId
+                rpc_movie_info['tivoSeriesId'] = partnerCollectionId
+                rpc_movie_info['tivoProgramId'] = partnerContentId
 
             # DEBUG DELETEME
             for key in sorted(rpc_info):
                 LOGGER.debug(key + ": " + str(rpc_info[key]))
 
-        if movie_info is not None:
-            # So far the movie_info object only contains basic information like the
+        if imdb_movie_info is not None:
+            # So far the imdb_movie_info object only contains basic information like the
             # title and the year; retrieve main information:
             try:
-                imdb_access.update(movie_info)
-                #LOGGER.debug("3," + movie_info.summary())
+                imdb_access.update(imdb_movie_info)
+                #LOGGER.debug("3," + imdb_movie_info.summary())
             except Exception:
                 print("Warning: unable to get extended details from "
-                        "IMDb for: " + str(movie_info))
+                        "IMDb for: " + str(imdb_movie_info))
                 print("         You may need to update your imdbpy module.")
 
             try:
                 pass
                 #don't enable the next line unless you want the full cast,
                 #   actors + everyone else who worked on the movie
-                #imdb_access.update(movie_info, 'full credits')
+                #imdb_access.update(imdb_movie_info, 'full credits')
             except:
                 LOGGER.debug("Warning: unable to retrieve full credits.")
 
             if is_trailer:
                 try:
                     # This slows down the process, so only do it for trailers
-                    imdb_access.update(movie_info, 'release dates')
+                    imdb_access.update(imdb_movie_info, 'release dates')
                 except Exception:
                     LOGGER.debug("Warning: unable to get release date.")
+
+        # copy from imdb_movie_info object into real dict
+        movie_info = {}
+        for key in imdb_movie_info.keys():
+            movie_info[key] = imdb_movie_info[key]
+
+        # add RPC info to movie info
+        movie_info.update(rpc_movie_info)
 
         return movie_info
 
@@ -382,9 +391,9 @@ class MovieData():
 
         # TiVo Series ID and Program ID from RPC
         if 'tivoSeriesId' in movie_info:
-            line += "seriesId : %s"%movie_info['tivoSeriesId']
+            line += "seriesId : %s\n"%movie_info['tivoSeriesId']
         if 'tivoProgramId' in movie_info:
-            line += "programId : %s"%movie_info['tivoSeriesId']
+            line += "programId : %s\n"%movie_info['tivoProgramId']
 
         #vProgramGenre and vSeriesGenre
         for genre in movie_info.get('genres', []):

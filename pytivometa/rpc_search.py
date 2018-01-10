@@ -91,6 +91,9 @@ class AuthError(Error):
 class MindTimeoutError(Error):
     pass
 
+class MindInternalError(Error):
+    pass
+
 class Remote(object):
     @debug_fxn_omit(omit_args=[1])
     def __init__(self, username, password, lang='English'):
@@ -680,94 +683,7 @@ class Remote(object):
         return returnval
 
     @debug_fxn
-    def search_movie(self, title_keywords, year=None):
-        """Search for movie in Mind database given title (or title keywords)
-        and possibly year of movie
-
-        Args:
-            title_keywords (str): Can be space-separated title OR title keywords
-            year (str): year of movie's release
-
-        Returns:
-            list: of matching movie collection dict objects
-
-        Raises:
-            MindTimeoutError: if mind returns 'code':'mindUnavailable'
-        """
-        resp_template = [
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': ['collection'],
-                    'typeName': 'collectionList'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'category',
-                        'collectionId',
-                        'credit',
-                        'title',
-                        'partnerCollectionId',
-                        'description',
-                        'descriptionLanguage',
-                        'internalRating',
-                        'movieYear',
-                        'mpaaRating',
-                        'partnerCollectionId',
-                        'rating',
-                        'starRating',
-                        'tvRating'
-                        ],
-                    'typeName': 'collection'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'categoryId',
-                        'displayRank',
-                        'label',
-                        'topLevel',
-                        ],
-                    'typeName': 'category'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'personId',
-                        'role',
-                        'last',
-                        'first',
-                        'characterName',
-                        'fullName',
-                        ],
-                    'typeName': 'credit'
-                    },
-                ]
-
-        # keep trying to get results if RPC says 'mindUnavailable' for at
-        #   least a couple of times
-        results = self.rpc_req_generic(
-                'collectionSearch',
-                titleKeyword=title_keywords,
-                collectionType='movie',
-                responseTemplate=resp_template,
-                count=25,
-                filterUnavailable='false',
-                includeBroadcast='true',
-                includeFree='true',
-                includePaid='false',
-                includeVod='false',
-                mergeOverridingCollections='true',
-                orderBy='strippedTitle',
-                )
-
-        if 'collection' in results:
-            collection_list = results['collection']
-        else:
-            print("Unknown error.  results:")
-            PP.pprint(results)
-            return []
-
+    def _filter_movie_results(self, collection_list, year=None):
         LOGGER.debug("ORIGINAL, Total: %d"%(len(collection_list)))
         # DEBUG DELETEME
         #for coll in collection_list:
@@ -838,19 +754,20 @@ class Remote(object):
         # Filter 3: for proper movieYear
         #   NOTE: sometimes RPC movie year can be (IMDB movie year + 1)
         if year is not None:
+            year = int(year)
             old_collection_list = collection_list
             collection_list = [
                     x
                     for x in collection_list
-                    if int(year) == x.get('movieYear', 0)
+                    if year == x.get('movieYear', 0)
                     ]
             if not collection_list:
-                # if no movies left, try supplied year + 1
-                LOGGER.debug("Trying year + 1")
+                # if no movies left, try supplied year + 1 or year - 1
+                LOGGER.debug("Trying year +/- 1")
                 collection_list = [
                         x
                         for x in old_collection_list
-                        if int(year) + 1 == x.get('movieYear', 0)
+                        if year - 1 <= x.get('movieYear', 0) <= year + 1
                         ]
 
         LOGGER.debug("AFTER YEAR FILTERING, Total: %d"%(len(collection_list)))
@@ -861,13 +778,129 @@ class Remote(object):
             LOGGER.debug("title: " + str(coll['title']))
             LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
 
-        ## no results or 1 result, return early
-        #if len(collection_list) <= 1:
-        #    return collection_list
+        return collection_list
+
+    @debug_fxn
+    def search_movie(self, title_keywords, year=None):
+        """Search for movie in Mind database given title (or title keywords)
+        and possibly year of movie
+
+        Args:
+            title_keywords (str): Can be space-separated title OR title keywords
+            year (str): year of movie's release
+
+        Returns:
+            list: of matching movie collection dict objects
+
+        Raises:
+            MindTimeoutError: if mind returns 'code':'mindUnavailable'
+        """
+        # TODO: more restrictive resp_template
+        resp_template = [
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'collection',
+                        'isTop',
+                        'isBottom',
+                        ],
+                    'typeName': 'collectionList'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'category',
+                        'collectionId',
+                        'credit',
+                        'title',
+                        'partnerCollectionId',
+                        'description',
+                        'descriptionLanguage',
+                        'internalRating',
+                        'movieYear',
+                        'mpaaRating',
+                        'partnerCollectionId',
+                        'rating',
+                        'starRating',
+                        'tvRating'
+                        ],
+                    'typeName': 'collection'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'categoryId',
+                        'displayRank',
+                        'label',
+                        'topLevel',
+                        ],
+                    'typeName': 'category'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'personId',
+                        'role',
+                        'last',
+                        'first',
+                        'characterName',
+                        'fullName',
+                        ],
+                    'typeName': 'credit'
+                    },
+                ]
+
+        # TODO: get next batch of results if our filters remove all
+        isBottom = False
+        collection_list = []
+        offset = 0
+        results_per_req = 10
+        while not isBottom and not collection_list:
+            LOGGER.debug("Trying again to search for movie: offset=%d"%offset)
+            print("offset = %d"%offset)
+            results = self.rpc_req_generic(
+                    'collectionSearch',
+                    titleKeyword=title_keywords,
+                    collectionType='movie',
+                    responseTemplate=resp_template,
+                    count=results_per_req,
+                    offset=results_per_req*offset,
+                    filterUnavailable='false',
+                    includeBroadcast='true',
+                    includeFree='true',
+                    includePaid='false',
+                    includeVod='false',
+                    mergeOverridingCollections='true',
+                    orderBy='strippedTitle',
+                    )
+
+            if 'code' in results:
+                # Mind errors have a 'code'
+                if results['code'] == 'internalError':
+                    print(results['text'])
+                    raise MindInternalError()
+
+            if 'collection' in results:
+                collection_list = results['collection']
+            else:
+                print("Unknown error.  results:")
+                PP.pprint(results)
+                return []
+
+            isBottom = results['isBottom']
+            isTop = results['isTop']
+
+            offset += 1
+
+            collection_list = self._filter_movie_results(collection_list, year=year)
 
         if len(collection_list) > 1:
-            LOGGER.debug("More than 1 in collection_list, is one of these best:")
+            LOGGER.debug(
+                    "%d in collection_list after "%(len(collection_list)) +
+                    "filtering, is one of these best:"
+                    )
             for coll in collection_list:
+                LOGGER.debug("-----")
                 for key in sorted(coll):
                     LOGGER.debug(key + ": " + str(coll[key]))
         if len(collection_list) > 0:
@@ -884,6 +917,7 @@ class Remote(object):
 
     @debug_fxn
     def search_movie_content(self, collection_id):
+        # TODO: more restrictive resp_template ?
         resp_template = [
                 {
                     'type': 'responseTemplate',

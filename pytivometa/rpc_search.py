@@ -770,20 +770,20 @@ class Remote(object):
 
         LOGGER.debug("ORIGINAL, Total: %d"%(len(collection_list)))
         # DEBUG DELETEME
-        for coll in collection_list:
-            LOGGER.debug("--------")
-            LOGGER.debug("title: " + str(coll['title']))
-            LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
+        #for coll in collection_list:
+        #    LOGGER.debug("--------")
+        #    LOGGER.debug("title: " + str(coll['title']))
+        #    LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
 
         # no results or 1 result, return early
-        if len(collection_list) == 1:
-            LOGGER.debug(collection_list[0]['collectionId'])
-            self.search_movie_content(collection_list[0]['collectionId'])
-            return collection_list
-        elif len(collection_list) == 0:
-            return collection_list
+        #if len(collection_list) == 1:
+        #    LOGGER.debug(collection_list[0]['collectionId'])
+        #    self.search_movie_content(collection_list[0]['collectionId'])
+        #    return collection_list
+        #elif len(collection_list) == 0:
+        #    return collection_list
 
-        # filter by language
+        # Filter 1: by language
         # filter for either self.lang in descriptionLanguage or missing
         #   do this by hand because e.g. 'English' needs to be able to match
         #   'English' or 'English GB' or missing descriptionLanguage.
@@ -797,20 +797,20 @@ class Remote(object):
         LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d"%(len(collection_list)))
 
         # DEBUG DELETEME
-        for coll in collection_list:
-            LOGGER.debug("--------")
-            LOGGER.debug("title: " + str(coll['title']))
-            LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
+        #for coll in collection_list:
+        #    LOGGER.debug("--------")
+        #    LOGGER.debug("title: " + str(coll['title']))
+        #    LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
 
         # no results or 1 result, return early
-        if len(collection_list) == 1:
-            LOGGER.debug(collection_list[0]['collectionId'])
-            self.search_movie_content(collection_list[0]['collectionId'])
-            return collection_list
-        elif len(collection_list) == 0:
-            return collection_list
+        #if len(collection_list) == 1:
+        #    LOGGER.debug(collection_list[0]['collectionId'])
+        #    self.search_movie_content(collection_list[0]['collectionId'])
+        #    return collection_list
+        #elif len(collection_list) == 0:
+        #    return collection_list
 
-        # filter for presence of 'partnerCollectionId', useless if absent
+        # Filter 2: for presence of 'partnerCollectionId', (useless if absent)
         #   also look for 'epgProvider:' starting partnerCollectionId, otherwise
         #   not useful for pytivo
         collection_list = [
@@ -828,14 +828,14 @@ class Remote(object):
             LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
 
         # no results or 1 result, return early
-        if len(collection_list) == 1:
-            LOGGER.debug(collection_list[0]['collectionId'])
-            self.search_movie_content(collection_list[0]['collectionId'])
-            return collection_list
-        elif len(collection_list) == 0:
-            return collection_list
+        #if len(collection_list) == 1:
+        #    LOGGER.debug(collection_list[0]['collectionId'])
+        #    self.search_movie_content(collection_list[0]['collectionId'])
+        #    return collection_list
+        #elif len(collection_list) == 0:
+        #    return collection_list
 
-        # filter for proper movieYear
+        # Filter 3: for proper movieYear
         #   NOTE: sometimes RPC movie year can be (IMDB movie year + 1)
         if year is not None:
             old_collection_list = collection_list
@@ -865,10 +865,22 @@ class Remote(object):
         #if len(collection_list) <= 1:
         #    return collection_list
 
+        if len(collection_list) > 1:
+            LOGGER.debug("More than 1 in collection_list, is one of these best:")
+            for coll in collection_list:
+                for key in sorted(coll):
+                    LOGGER.debug(key + ": " + str(coll[key]))
         if len(collection_list) > 0:
             LOGGER.debug(collection_list[0]['collectionId'])
-            self.search_movie_content(collection_list[0]['collectionId'])
-        return collection_list
+            content_info = self.search_movie_content(collection_list[0]['collectionId'])
+            collection_list[0].update(content_info)
+
+        if collection_list:
+            return collection_list[0]
+        else:
+            LOGGER.debug("No results survived filtering, returning empty dict.")
+            print("No suitable results from RPC.")
+            return {}
 
     @debug_fxn
     def search_movie_content(self, collection_id):
@@ -904,10 +916,9 @@ class Remote(object):
 
         content = results['content'][0]
         for key in sorted(content):
-            print(key)
-            print(str(content[key]))
             LOGGER.debug(key + ": " + str(content[key]))
 
+        return content
 
 
 # -----------------------------------------------------------------------------

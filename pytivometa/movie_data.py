@@ -209,11 +209,21 @@ class MovieData():
                     tries_left -= 1
                 else:
                     tries_left = 0
+            if rpc_info.get('partnerCollectionId', '') and rpc_info.get('partnerContentId', ''):
+                partnerCollectionId = re.sub(
+                        r'epgProvider:cl\.', '',
+                        rpc_info['partnerCollectionId']
+                        )
+                partnerContentId = re.sub(
+                        r'epgProvider:ct\.', '',
+                        rpc_info['partnerContentId']
+                        )
+                movie_info['tivoSeriesId'] = partnerCollectionId
+                movie_info['tivoProgramId'] = partnerContentId
 
-            for rpc_item in rpc_info:
-                LOGGER.debug("----")
-                for key in sorted(rpc_item):
-                    LOGGER.debug(key + ": " + str(rpc_item[key]))
+            # DEBUG DELETEME
+            for key in sorted(rpc_info):
+                LOGGER.debug(key + ": " + str(rpc_info[key]))
 
         if movie_info is not None:
             # So far the movie_info object only contains basic information like the
@@ -369,6 +379,12 @@ class MovieData():
 
             if mpaa_rating:
                 line += "mpaaRating : %s\n" % mpaa_rating
+
+        # TiVo Series ID and Program ID from RPC
+        if 'tivoSeriesId' in movie_info:
+            line += "seriesId : %s"%movie_info['tivoSeriesId']
+        if 'tivoProgramId' in movie_info:
+            line += "programId : %s"%movie_info['tivoSeriesId']
 
         #vProgramGenre and vSeriesGenre
         for genre in movie_info.get('genres', []):

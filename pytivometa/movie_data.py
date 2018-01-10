@@ -199,6 +199,7 @@ class MovieData():
             LOGGER.debug("2,from imdb: " + imdb_movie_info['title'])
 
             tries_left = 3
+            rpc_info = {}
             while tries_left > 0:
                 try:
                     rpc_info = self.rpc_remote.search_movie(

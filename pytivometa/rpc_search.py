@@ -201,6 +201,8 @@ class Remote(object):
         Returns:
             list, dict, etc.: Python arbitrary complex data structure
         """
+        # TODO: parse rpc_id and return (so caller can match with request) ?
+        # TODO: why do we have self.buf and buf ??
         start_line = ''
         head_len = None
         body_len = None
@@ -220,7 +222,11 @@ class Remote(object):
         buf = self.buf[:need_len]
         self.buf = self.buf[need_len:]
 
-        # LOGGER.debug('READ %s', buf)
+        #LOGGER.debug('READ %s', buf)
+        head_val = buf[:-1*body_len].decode('utf-8')
+        LOGGER.debug('header: %s', head_val)
+        rpc_id = int(re.search(r'RpcId: (\d+)\r\n', head_val).group(1))
+        LOGGER.debug('rpc_id: %d', rpc_id)
 
         returnval = json.loads(buf[-1 * body_len:].decode('utf-8'))
 
@@ -795,20 +801,7 @@ class Remote(object):
         Raises:
             MindTimeoutError: if mind returns 'code':'mindUnavailable'
         """
-        # TODO: more restrictive resp_template
-        resp_template = [
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'collection',
-                        'isTop',
-                        'isBottom',
-                        ],
-                    'typeName': 'collectionList'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
+        collection_fields = [
                         'category',
                         'collectionId',
                         'credit',
@@ -823,7 +816,20 @@ class Remote(object):
                         'rating',
                         'starRating',
                         'tvRating'
+                        ]
+        resp_template = [
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'collection',
+                        'isTop',
+                        'isBottom',
                         ],
+                    'typeName': 'collectionList'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': collection_fields,
                     'typeName': 'collection'
                     },
                 {
@@ -918,6 +924,13 @@ class Remote(object):
     @debug_fxn
     def search_movie_content(self, collection_id):
         # TODO: more restrictive resp_template ?
+        content_fields = [
+                        'movieYear',
+                        'description',
+                        'partnerCollectionId',
+                        'partnerContentId',
+                        'title'
+                        ]
         resp_template = [
                 {
                     'type': 'responseTemplate',
@@ -930,12 +943,7 @@ class Remote(object):
                     },
                 {
                     'type': 'responseTemplate',
-                    'fieldName': [
-                        'seasonNumber',
-                        'episodeNum',
-                        'partnerCollectionId',
-                        'partnerContentId',
-                        ],
+                    'fieldName': content_fields,
                     'typeName': 'content'
                     },
                 ]
@@ -943,7 +951,8 @@ class Remote(object):
                 'contentSearch',
                 collectionId=collection_id,
                 count=25,
-                levelOfDetail='high',
+                #levelOfDetail='high',
+                responseTemplate=resp_template,
                 )
 
         assert len(results['content']) == 1

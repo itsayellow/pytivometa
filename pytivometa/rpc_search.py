@@ -857,7 +857,6 @@ class Remote(object):
         results_per_req = 10
         while not isBottom and not collection_list:
             LOGGER.debug("Trying again to search for movie: offset=%d"%offset)
-            print("offset = %d"%offset)
             results = self.rpc_req_generic(
                     'collectionSearch',
                     titleKeyword=title_keywords,

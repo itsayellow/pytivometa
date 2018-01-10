@@ -1,0 +1,40 @@
+collectionDescription is always the same as description
+contentType is always 'video'
+
+My Neighbor Totoro was only content without key: credit
+
+Data:
+----
+Total: 45 movies examined
+always_keys (17):
+[
+    'category',
+    'collectionDescription',
+    'collectionId',
+    'collectionType',
+    'contentId',
+    'contentType',
+    'description',
+    'episodic',
+    'image',
+    'isEpisode',
+    'levelOfDetail',
+    'movieRuntime',
+    'movieYear',
+    'partnerCollectionId',
+    'partnerContentId',
+    'title',
+    'type'
+]
+sometimes_keys (9):
+[
+    'credit',
+    'internalRating',
+    'mpaaRating',
+    'originalAirYear',
+    'originalAirdate',
+    'rating',
+    'releaseDate',
+    'starRating',
+    'tvRating'
+]

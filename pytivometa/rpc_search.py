@@ -850,13 +850,14 @@ class Remote(object):
                     },
                 ]
 
-        # TODO: get next batch of results if our filters remove all
         isBottom = False
         collection_list = []
         offset = 0
         results_per_req = 10
         while not isBottom and not collection_list:
             LOGGER.debug("Trying again to search for movie: offset=%d"%offset)
+            # TODO: do we need to trap MindTimeoutError here so we don't
+            #   start over from offset=0?
             results = self.rpc_req_generic(
                     'collectionSearch',
                     titleKeyword=title_keywords,

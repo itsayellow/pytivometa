@@ -163,14 +163,14 @@ def get_session_token():
             data=json.dumps(post_fields).encode('ascii'),
             headers=headers
             )
-    LOGGER.info("before AUTH request")
+    LOGGER.debug("before AUTH request")
     try:
         json_reply_raw = urllib.request.urlopen(request)
     except urllib.error.HTTPError as http_error:
         print(http_error)
         # TODO: do something better than re-raise
         raise
-    LOGGER.info("after AUTH request")
+    LOGGER.debug("after AUTH request")
 
     json_reply = json_reply_raw.read().decode()
     json_data = json.loads(json_reply)

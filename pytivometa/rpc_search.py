@@ -218,7 +218,13 @@ class Remote(object):
         self.buf = self.buf[need_len:]
 
         # LOGGER.debug('READ %s', buf)
-        return json.loads(buf[-1 * body_len:].decode('utf-8'))
+
+        returnval = json.loads(buf[-1 * body_len:].decode('utf-8'))
+
+        if returnval.get('code', '') == 'mindUnavailable':
+            raise MindTimeoutError()
+
+        return returnval
 
     def _write(self, data):
         """Send string to established SSL RPC socket
@@ -330,8 +336,6 @@ class Remote(object):
         req = self._rpc_request(req_type, **kwargs)
         self._write(req)
         result = self._read()
-        if result.get('code', '') == 'mindUnavailable':
-            raise MindTimeoutError()
         return result
 
     @debug_fxn
@@ -742,49 +746,42 @@ class Remote(object):
 
         # keep trying to get results if RPC says 'mindUnavailable' for at
         #   least a couple of times
-        no_results = True
-        tries = 0
-        while no_results and tries < 2:
-            if tries > 0:
-                print('RPC access timed out.  Trying again...')
-            results = self.rpc_req_generic(
-                    'collectionSearch',
-                    titleKeyword=title_keywords,
-                    collectionType='movie',
-                    responseTemplate=resp_template,
-                    count=25,
-                    filterUnavailable='false',
-                    includeBroadcast='true',
-                    includeFree='true',
-                    includePaid='false',
-                    includeVod='false',
-                    mergeOverridingCollections='true',
-                    orderBy='strippedTitle',
-                    )
-            no_results = results.get('code', '') == 'mindUnavailable'
-            tries += 1
+        results = self.rpc_req_generic(
+                'collectionSearch',
+                titleKeyword=title_keywords,
+                collectionType='movie',
+                responseTemplate=resp_template,
+                count=25,
+                filterUnavailable='false',
+                includeBroadcast='true',
+                includeFree='true',
+                includePaid='false',
+                includeVod='false',
+                mergeOverridingCollections='true',
+                orderBy='strippedTitle',
+                )
 
         if 'collection' in results:
             collection_list = results['collection']
-        elif results.get('code', '') == 'mindUnavailable':
-            print("mindUnavailable:")
-            PP.pprint(results)
-            return []
         else:
             print("Unknown error.  results:")
             PP.pprint(results)
             return []
 
-        # no results or 1 result, return early
-        if len(collection_list) < 2:
-            return collection_list
-
         LOGGER.debug("ORIGINAL, Total: %d"%(len(collection_list)))
         # DEBUG DELETEME
         for coll in collection_list:
             LOGGER.debug("--------")
-            for key in sorted(coll):
-                LOGGER.debug(key + ": " + str(coll[key]))
+            LOGGER.debug("title: " + str(coll['title']))
+            LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
+
+        # no results or 1 result, return early
+        if len(collection_list) == 1:
+            LOGGER.debug(collection_list[0]['collectionId'])
+            self.search_movie_content(collection_list[0]['collectionId'])
+            return collection_list
+        elif len(collection_list) == 0:
+            return collection_list
 
         # filter by language
         # filter for either self.lang in descriptionLanguage or missing
@@ -799,55 +796,117 @@ class Remote(object):
 
         LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d"%(len(collection_list)))
 
-        # no results or 1 result, return early
-        if len(collection_list) < 2:
-            return collection_list
-
         # DEBUG DELETEME
         for coll in collection_list:
             LOGGER.debug("--------")
-            for key in sorted(coll):
-                LOGGER.debug(key + ": " + str(coll[key]))
+            LOGGER.debug("title: " + str(coll['title']))
+            LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
+
+        # no results or 1 result, return early
+        if len(collection_list) == 1:
+            LOGGER.debug(collection_list[0]['collectionId'])
+            self.search_movie_content(collection_list[0]['collectionId'])
+            return collection_list
+        elif len(collection_list) == 0:
+            return collection_list
 
         # filter for presence of 'partnerCollectionId', useless if absent
+        #   also look for 'epgProvider:' starting partnerCollectionId, otherwise
+        #   not useful for pytivo
         collection_list = [
                 x
                 for x in collection_list
-                if 'partnerCollectionId' in x
+                if x.get('partnerCollectionId','').startswith('epgProvider:')
                 ]
 
-        LOGGER.debug("AFTER FILTERING FOR partnerCollectionId, Total: %d"%(len(collection_list)))
-
-        # no results or 1 result, return early
-        if len(collection_list) < 2:
-            return collection_list
+        LOGGER.debug("AFTER FILTERING FOR partnerCollectionId: epgProvider:, Total: %d"%(len(collection_list)))
 
         # DEBUG DELETEME
         for coll in collection_list:
             LOGGER.debug("--------")
-            for key in sorted(coll):
-                LOGGER.debug(key + ": " + str(coll[key]))
+            LOGGER.debug("title: " + str(coll['title']))
+            LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
 
+        # no results or 1 result, return early
+        if len(collection_list) == 1:
+            LOGGER.debug(collection_list[0]['collectionId'])
+            self.search_movie_content(collection_list[0]['collectionId'])
+            return collection_list
+        elif len(collection_list) == 0:
+            return collection_list
+
+        # filter for proper movieYear
+        #   NOTE: sometimes RPC movie year can be (IMDB movie year + 1)
         if year is not None:
+            old_collection_list = collection_list
             collection_list = [
                     x
                     for x in collection_list
-                    if int(year)==x.get('movieYear', 0)
+                    if int(year) == x.get('movieYear', 0)
                     ]
+            if not collection_list:
+                # if no movies left, try supplied year + 1
+                LOGGER.debug("Trying year + 1")
+                collection_list = [
+                        x
+                        for x in old_collection_list
+                        if int(year) + 1 == x.get('movieYear', 0)
+                        ]
 
         LOGGER.debug("AFTER YEAR FILTERING, Total: %d"%(len(collection_list)))
-
-        # no results or 1 result, return early
-        if len(collection_list) < 2:
-            return collection_list
 
         # DEBUG DELETEME
         for coll in collection_list:
             LOGGER.debug("--------")
-            for key in sorted(coll):
-                LOGGER.debug(key + ": " + str(coll[key]))
+            LOGGER.debug("title: " + str(coll['title']))
+            LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
 
+        ## no results or 1 result, return early
+        #if len(collection_list) <= 1:
+        #    return collection_list
+
+        if len(collection_list) > 0:
+            LOGGER.debug(collection_list[0]['collectionId'])
+            self.search_movie_content(collection_list[0]['collectionId'])
         return collection_list
+
+    @debug_fxn
+    def search_movie_content(self, collection_id):
+        resp_template = [
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'content',
+                        'isTop',
+                        'isBottom',
+                        ],
+                    'typeName': 'contentList'
+                    },
+                {
+                    'type': 'responseTemplate',
+                    'fieldName': [
+                        'seasonNumber',
+                        'episodeNum',
+                        'partnerCollectionId',
+                        'partnerContentId',
+                        ],
+                    'typeName': 'content'
+                    },
+                ]
+        results = self.rpc_req_generic(
+                'contentSearch',
+                collectionId=collection_id,
+                count=25,
+                levelOfDetail='high',
+                )
+
+        assert len(results['content']) == 1
+
+        content = results['content'][0]
+        for key in sorted(content):
+            print(key)
+            print(str(content[key]))
+            LOGGER.debug(key + ": " + str(content[key]))
 
 
 

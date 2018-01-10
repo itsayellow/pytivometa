@@ -211,10 +211,9 @@ class MovieData():
                     tries_left = 0
 
             for rpc_item in rpc_info:
-                LOGGER.debug("2,----")
-                LOGGER.debug("2," + rpc_item.get('title', ''))
-                LOGGER.debug("2," + rpc_item.get('description', ''))
-                LOGGER.debug("2," + rpc_item.get('partnerCollectionId', ''))
+                LOGGER.debug("----")
+                for key in sorted(rpc_item):
+                    LOGGER.debug(key + ": " + str(rpc_item[key]))
 
         if movie_info is not None:
             # So far the movie_info object only contains basic information like the

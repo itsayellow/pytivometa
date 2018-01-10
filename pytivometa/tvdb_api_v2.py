@@ -126,6 +126,23 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
 
+# debug decorator that announces function call/entry and lists args
+def debug_fxn(func):
+    """Function decorator that prints the function name and the arguments used
+    in the function call before executing the function
+    """
+    def func_wrapper(*args, **kwargs):
+        log_string = "FXN:" + func.__qualname__ + "(\n"
+        for arg in args[1:]:
+            log_string += "        " + repr(arg) + ",\n"
+        for key in kwargs:
+            log_string += "        " + key + "=" + repr(kwargs[key]) + ",\n"
+        log_string += "        )"
+        LOGGER.info(log_string)
+        return func(*args, **kwargs)
+    return func_wrapper
+
+@debug_fxn
 def get_session_token():
     """Get a current session token for thetvdb.com, necessary for any
     future requests of data.
@@ -146,12 +163,14 @@ def get_session_token():
             data=json.dumps(post_fields).encode('ascii'),
             headers=headers
             )
+    LOGGER.info("before AUTH request")
     try:
         json_reply_raw = urllib.request.urlopen(request)
     except urllib.error.HTTPError as http_error:
         print(http_error)
         # TODO: do something better than re-raise
         raise
+    LOGGER.info("after AUTH request")
 
     json_reply = json_reply_raw.read().decode()
     json_data = json.loads(json_reply)
@@ -159,10 +178,13 @@ def get_session_token():
 
     return tvdb_sess_token
 
+
 class Tvdb:
+    @debug_fxn
     def __init__(self):
         self.session_token = get_session_token()
 
+    @debug_fxn
     def _tvdb_get(self, url, headers_extra=None):
         """Basic function handling low-level tvdb data requests
 
@@ -193,6 +215,7 @@ class Tvdb:
 
         return json_data
 
+    @debug_fxn
     def search_series(self, search_string):
         """Given a search string, return a list from thetvdb.com of all possible
         television series matches.
@@ -226,6 +249,7 @@ class Tvdb:
 
         return json_data['data']
 
+    @debug_fxn
     def get_series_info(self, tvdb_series_id):
         """Given a series ID, return info on the series
 
@@ -299,6 +323,7 @@ class Tvdb:
 
         return series_info
 
+    @debug_fxn
     def get_episode_info(self, tvdb_series_id, season=None, episode=None,
             year=None, month=None, day=None):
         """Given a series ID, return info on a particular episode
@@ -330,6 +355,7 @@ class Tvdb:
         episode_info = json_data['data']
         return episode_info
 
+    @debug_fxn
     def get_season_ep_from_airdate(self, tvdb_series_id, year, month, day):
         season = None
         episode = None

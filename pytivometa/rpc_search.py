@@ -80,7 +80,15 @@ def debug_fxn_omit(omit_args=None, omit_kwargs=None):
         return func_wrapper
     return debug_fxn_int
 
-class RpcAuthError(Exception):
+class Error(Exception):
+    """Base class for all RPC errors
+    """
+    pass
+
+class AuthError(Error):
+    pass
+
+class MindTimeoutError(Error):
     pass
 
 class Remote(object):
@@ -99,7 +107,7 @@ class Remote(object):
                 'type' is 'collectionList'
 
         Raises:
-            RpcAuthError: in case unable to auth, possibly bad password and/or
+            AuthError: in case unable to auth, possibly bad password and/or
                 username
         """
         # language to search for descriptions in descriptionLanguage
@@ -128,7 +136,7 @@ class Remote(object):
             # re-raise so we know exact exception to enumerate code
             raise
 
-        # may raise RpcAuthError, calling code should catch
+        # may raise AuthError, calling code should catch
         self._auth(username, password)
 
     @debug_fxn
@@ -237,7 +245,7 @@ class Remote(object):
             password (str): tivo.com password
 
         Raises:
-            RpcAuthError: for any failure to authenticate SSL RPC connection
+            AuthError: for any failure to authenticate SSL RPC connection
         """
         self._write(self._rpc_request('bodyAuthenticate',
                 credential={
@@ -304,7 +312,7 @@ class Remote(object):
         #   }
         if result['type'] == 'error':
             LOGGER.error('Authentication failed!  RPC response: %s', result['text'])
-            raise RpcAuthError
+            raise AuthError
 
     @debug_fxn
     def rpc_req_generic(self, req_type, **kwargs):
@@ -315,10 +323,15 @@ class Remote(object):
 
         Returns:
             dict: key=value pairs representing all fields of RPC return val
+
+        Raises:
+            MindTimeoutError: if mind returns 'code':'mindUnavailable'
         """
         req = self._rpc_request(req_type, **kwargs)
         self._write(req)
         result = self._read()
+        if result.get('code', '') == 'mindUnavailable':
+            raise MindTimeoutError()
         return result
 
     @debug_fxn
@@ -326,6 +339,9 @@ class Remote(object):
         """
         Returns:
             list: of series collection dict objects
+
+        Raises:
+            MindTimeoutError: if mind returns 'code':'mindUnavailable'
         """
         resp_template = [
                 {
@@ -420,6 +436,11 @@ class Remote(object):
 
     @debug_fxn
     def get_first_aired(self, collection_id):
+        """
+
+        Raises:
+            MindTimeoutError: if mind returns 'code':'mindUnavailable'
+        """
         resp_template = [
                 {
                     'type': 'responseTemplate',
@@ -457,6 +478,17 @@ class Remote(object):
 
     @debug_fxn
     def get_series_info(self, collection_id):
+        """Return info for series identified by Mind collection ID
+
+        Args:
+            collection_id (str): Mind collection ID string
+
+        Returns:
+            dict: key:values are info about series
+
+        Raises:
+            MindTimeoutError: if mind returns 'code':'mindUnavailable'
+        """
         resp_template = [
                 {
                     'type': 'responseTemplate',
@@ -521,6 +553,22 @@ class Remote(object):
     @debug_fxn
     def get_program_id(self, collection_id, season_num=None, episode_num=None,
             year=None, month=None, day=None):
+        """Return specific program ID given some search criteria. Must have
+        (season_num AND episode_num) OR (year AND month AND day)
+
+        Args:
+            collection_id (str):
+            season_num (str):
+            episode_num (str):
+            year (str):
+            month (str):
+            day (str):
+        Returns:
+            str: str of Mind program ID
+
+        Raises:
+            MindTimeoutError: if mind returns 'code':'mindUnavailable'
+        """
         resp_template = [
                 {
                     'type': 'responseTemplate',
@@ -569,6 +617,19 @@ class Remote(object):
     @debug_fxn
     def get_program_id_airdate(self, collection_id,
             year=None, month=None, day=None):
+        """Get Mind program ID given year AND month AND day
+        Args:
+            collection_id (str): Mind series ID
+            year (str): year of program's airing
+            month (str): month of program's airing
+            day (str): day of program's airing
+
+        Returns:
+            str: program ID for episode
+
+        Raises:
+            MindTimeoutError: if mind returns 'code':'mindUnavailable'
+        """
         returnval = {}
         air_date = "%04d-%02d-%02d"%(int(year), int(month), int(day))
         resp_template = [
@@ -616,9 +677,18 @@ class Remote(object):
 
     @debug_fxn
     def search_movie(self, title_keywords, year=None):
-        """
+        """Search for movie in Mind database given title (or title keywords)
+        and possibly year of movie
+
+        Args:
+            title_keywords (str): Can be space-separated title OR title keywords
+            year (str): year of movie's release
+
         Returns:
-            list: of series collection dict objects
+            list: of matching movie collection dict objects
+
+        Raises:
+            MindTimeoutError: if mind returns 'code':'mindUnavailable'
         """
         resp_template = [
                 {

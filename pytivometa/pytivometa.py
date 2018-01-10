@@ -106,6 +106,8 @@ VIDEO_FILE_EXTS = [
 
 # root logger
 LOGGER = logging.getLogger(__name__)
+LOGGED_MODULES = [__name__, 'movie_data', 'tv_data', 'rpc_search',
+        'tvdb_api_v2']
 
 
 def logging_setup(debug_level=False):
@@ -144,7 +146,7 @@ def logging_setup(debug_level=False):
         global_log_level = logging.INFO
 
     # config all loggers
-    for logger_name in [__name__, 'movie_data', 'tv_data', 'rpc_search']:
+    for logger_name in LOGGED_MODULES:
         logging.getLogger(logger_name).setLevel(global_log_level)
         #logging.getLogger(logger_name).addHandler(ch)
         logging.getLogger(logger_name).addHandler(f_handler)

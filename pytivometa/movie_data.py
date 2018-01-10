@@ -30,6 +30,7 @@ import imdb
 
 
 import common
+import rpc_search
 
 
 # Set up logger
@@ -195,14 +196,25 @@ class MovieData():
         # TODO: actually get this to work
         if self.rpc_remote is not None:
             LOGGER.debug("2,from imdb: " + movie_info['title'])
-            rpc_info = self.rpc_remote.search_movie(
-                    movie_info['title'],
-                    year=movie_info.get('year', None)
-                    )
+
+            tries_left = 3
+            while tries_left > 0:
+                try:
+                    rpc_info = self.rpc_remote.search_movie(
+                            movie_info['title'],
+                            year=movie_info.get('year', None)
+                            )
+                except rpc_search.MindTimeoutError:
+                    print("RPC Timeout, trying again...")
+                    tries_left -= 1
+                else:
+                    tries_left = 0
+
             for rpc_item in rpc_info:
                 LOGGER.debug("2,----")
                 LOGGER.debug("2," + rpc_item.get('title', ''))
                 LOGGER.debug("2," + rpc_item.get('description', ''))
+                LOGGER.debug("2," + rpc_item.get('partnerCollectionId', ''))
 
         if movie_info is not None:
             # So far the movie_info object only contains basic information like the

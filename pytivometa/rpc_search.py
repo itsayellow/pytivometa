@@ -200,6 +200,7 @@ class Remote(object):
             list, dict, etc.: Python arbitrary complex data structure
         """
         # TODO: parse rpc_id and return (so caller can match with request) ?
+        # TODO: do we need to check for ssl_socket timeouts, error?
 
         # read buffer is bytes
         buf_raw = b''
@@ -352,6 +353,20 @@ class Remote(object):
         Raises:
             MindTimeoutError: if mind returns 'code':'mindUnavailable'
         """
+        # specifies which fields we ask RPC for, for each series
+        collection_fields = [
+                'category',
+                'collectionId',
+                'credit',
+                'title',
+                'partnerCollectionId',
+                'description',
+                'descriptionLanguage',
+                'episodic',
+                'internalRating',
+                'rating',
+                'tvRating'
+                ]
         resp_template = [
                 {
                     'type': 'responseTemplate',
@@ -360,19 +375,7 @@ class Remote(object):
                     },
                 {
                     'type': 'responseTemplate',
-                    'fieldName': [
-                        'category',
-                        'collectionId',
-                        'credit',
-                        'title',
-                        'partnerCollectionId',
-                        'description',
-                        'descriptionLanguage',
-                        'episodic',
-                        'internalRating',
-                        'rating',
-                        'tvRating'
-                        ],
+                    'fieldName': collection_fields,
                     'typeName': 'collection'
                     },
                 {
@@ -498,6 +501,20 @@ class Remote(object):
         Raises:
             MindTimeoutError: if mind returns 'code':'mindUnavailable'
         """
+        # specifies which fields we ask RPC for, for each series
+        collection_fields = [
+                'category',
+                'collectionId',
+                'credit',
+                'title',
+                'partnerCollectionId',
+                'description',
+                'descriptionLanguage',
+                'episodic',
+                'internalRating',
+                'rating',
+                'tvRating'
+                ]
         resp_template = [
                 {
                     'type': 'responseTemplate',
@@ -506,19 +523,7 @@ class Remote(object):
                     },
                 {
                     'type': 'responseTemplate',
-                    'fieldName': [
-                        'category',
-                        'collectionId',
-                        'credit',
-                        'title',
-                        'partnerCollectionId',
-                        'description',
-                        'descriptionLanguage',
-                        'episodic',
-                        'internalRating',
-                        'rating',
-                        'tvRating'
-                        ],
+                    'fieldName': collection_fields,
                     'typeName': 'collection'
                     },
                 {
@@ -797,6 +802,7 @@ class Remote(object):
         Raises:
             MindTimeoutError: if mind returns 'code':'mindUnavailable'
         """
+        # specifies which fields we ask RPC for, for each movie
         collection_fields = [
                         'category',
                         'collectionId',
@@ -919,7 +925,7 @@ class Remote(object):
 
     @debug_fxn
     def search_movie_content(self, collection_id):
-        # TODO: more restrictive resp_template ?
+        # specifies which fields we ask RPC for, for each movie content
         content_fields = [
                         'movieYear',
                         'description',

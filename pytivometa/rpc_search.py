@@ -203,9 +203,6 @@ class Remote(object):
 
         # read buffer is bytes
         buf_raw = b''
-        start_line = ''
-        head_len = None
-        body_len = None
 
         while True:
             buf_raw += self.ssl_socket.read(16)

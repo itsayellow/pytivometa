@@ -120,8 +120,6 @@ class Remote(object):
         self.session_id = random.randrange(0x26c000, 0x27dc20)
         # unique ID for each request
         self.rpc_id = 0
-        # read buffer is bytes
-        self.buf = b''
         # initialize SSL socket
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ssl_socket = ssl.wrap_socket(
@@ -202,14 +200,16 @@ class Remote(object):
             list, dict, etc.: Python arbitrary complex data structure
         """
         # TODO: parse rpc_id and return (so caller can match with request) ?
-        # TODO: why do we have self.buf and buf ??
+
+        # read buffer is bytes
+        buf_raw = b''
         start_line = ''
         head_len = None
         body_len = None
 
         while True:
-            self.buf += self.ssl_socket.read(16)
-            match = re.match(r'MRPC/2 (\d+) (\d+)\r\n', self.buf.decode('utf-8'))
+            buf_raw += self.ssl_socket.read(16)
+            match = re.match(r'MRPC/2 (\d+) (\d+)\r\n', buf_raw.decode('utf-8'))
             if match:
                 start_line = match.group(0)
                 head_len = int(match.group(1))
@@ -217,10 +217,9 @@ class Remote(object):
                 break
 
         need_len = len(start_line) + head_len + body_len
-        while len(self.buf) < need_len:
-            self.buf += self.ssl_socket.read(1024)
-        buf = self.buf[:need_len]
-        self.buf = self.buf[need_len:]
+        while len(buf_raw) < need_len:
+            buf_raw += self.ssl_socket.read(1024)
+        buf = buf_raw[:need_len]
 
         #LOGGER.debug('READ %s', buf)
         head_val = buf[:-1*body_len].decode('utf-8')

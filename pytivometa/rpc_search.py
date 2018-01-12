@@ -370,7 +370,11 @@ class Remote(object):
         resp_template = [
                 {
                     'type': 'responseTemplate',
-                    'fieldName': ['collection'],
+                    'fieldName': [
+                        'collection',
+                        'isTop',
+                        'isBottom',
+                        ],
                     'typeName': 'collectionList'
                     },
                 {

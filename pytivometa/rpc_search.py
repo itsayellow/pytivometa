@@ -319,7 +319,8 @@ class Remote(object):
         # Bad password response:
         #   {
         #       'code': 'authenticationFailed',
-        #       'text': "error response from IT code: 'usernamePasswordError' text: 'Authentication Failed'",
+        #       'text': "error response from IT code: 'usernamePasswordError' " \
+        #               "text: 'Authentication Failed'",
         #       'type': 'error'
         #   }
         if result['type'] == 'error':

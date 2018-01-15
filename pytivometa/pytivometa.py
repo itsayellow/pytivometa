@@ -214,12 +214,18 @@ def tvinfo_from_filename(filename):
             tv_info['season'] = str(int(match.group('season')))
             tv_info['episode'] = str(int(match.group('episode')))
 
-        LOGGER.debug("2,    Series: %s\n"%tv_info['series'] + \
-                "    Season: %s\n"%tv_info.get('season', '') + \
-                "    Episode: %s\n"%tv_info.get('episode', '') + \
-                "    Year: %s\n"%tv_info.get('year', '') + \
-                "    Month: %s\n"%tv_info.get('month', '') + \
-                "    Day: %s"%tv_info.get('day', '')
+        LOGGER.debug("2,    Series: %s\n" \
+                "    Season: %s\n" \
+                "    Episode: %s\n" \
+                "    Year: %s\n" \
+                "    Month: %s\n" \
+                "    Day: %s",
+                tv_info['series'],
+                tv_info.get('season', ''),
+                tv_info.get('episode', ''),
+                tv_info.get('year', ''),
+                tv_info.get('month', ''),
+                tv_info.get('day', '')
                 )
 
     return tv_info

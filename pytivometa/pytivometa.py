@@ -111,6 +111,11 @@ LOGGED_MODULES = [__name__, 'movie_data', 'tv_data', 'rpc_search',
 
 
 def logging_setup(debug_level=False):
+    """Setup logging for this and all submodules
+
+    Args:
+        debug_level (bool): whether to include DEBUG messages
+    """
     # make sure config dir exists
     logdir_filepath = os.path.realpath(os.path.expanduser(CONFIG_DIR))
     os.makedirs(logdir_filepath, exist_ok=True)
@@ -118,7 +123,7 @@ def logging_setup(debug_level=False):
     # rename all old log files
     #   (log.txt.2 -> log.txt.3, log.txt.1 -> log.txt.2, log.txt -> log.txt.1
     for i in range(NUM_LOGFILE_HIST-1, -1, -1):
-        fname = logfile_path + ".%d"%i if i != 0 else logfile_path 
+        fname = logfile_path + ".%d"%i if i != 0 else logfile_path
         fname_plus_1 = logfile_path + ".%d"%(i+1)
         if os.path.exists(fname):
             os.replace(fname, fname_plus_1)
@@ -158,7 +163,7 @@ def logging_setup(debug_level=False):
     log_eff_level = LOGGER.getEffectiveLevel()
     LOGGER.log(
             log_eff_level,
-            "Global log level set to " + logging.getLevelName(log_eff_level)
+            "Global log level set to %s", logging.getLevelName(log_eff_level)
             )
 
 def get_video_files(dirname, dir_files):
@@ -174,7 +179,7 @@ def get_video_files(dirname, dir_files):
             video_files.append(dir_file)
     video_files.sort()
 
-    LOGGER.debug("2,video_files after cull: %s" % str(video_files))
+    LOGGER.debug("2,video_files after cull: %s", str(video_files))
 
     return video_files
 
@@ -254,7 +259,7 @@ def create_genre_dir(genre_dir):
 
 def process_dir(dir_proc, dir_files, tv_data_acc, movie_data_acc,
         use_metadir=False, clobber=False):
-    LOGGER.debug("\n## Looking for videos in: " + dir_proc)
+    LOGGER.debug("\n## Looking for videos in: %s", dir_proc)
 
     video_files = get_video_files(dir_proc, dir_files)
 
@@ -270,8 +275,8 @@ def process_dir(dir_proc, dir_files, tv_data_acc, movie_data_acc,
     for filename in video_files:
         meta_filepath = os.path.join(meta_dir, filename + '.txt')
 
-        LOGGER.debug("\n--->working on: %s" % filename)
-        LOGGER.debug("2,Metafile is: " + meta_filepath)
+        LOGGER.debug("\n--->working on: %s", filename)
+        LOGGER.debug("2,Metafile is: %s", meta_filepath)
 
         if os.path.exists(meta_filepath) and not clobber:
             LOGGER.debug("Metadata file already exists, skipping.")
@@ -459,8 +464,8 @@ def get_rpc(username=None, password=None):
     if username and password:
         try:
             rpc_remote = rpc_search.Remote(username, password)
-        except rpc_search.RpcAuthError:
-            print( "Bad password or username for RPC." 
+        except rpc_search.AuthError:
+            print("Bad password or username for RPC."
                     "    Unable to use RPC search capability")
             LOGGER.debug("No rpc_remote")
             rpc_remote = None

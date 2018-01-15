@@ -49,7 +49,7 @@ def clean_title(title):
             )
     for strip in striplist:
         title = re.sub(strip, '', title)
-    LOGGER.debug("3,After stripping keywords, title is: " + title)
+    LOGGER.debug("3,After stripping keywords, title is: %s", title)
     return title
 
 def extract_tags(title):
@@ -72,7 +72,7 @@ def extract_tags(title):
         if match:
             tags += match.expand(taglist[tag]) + ' '
             title = re.sub(tag, '', title)
-    LOGGER.debug("2,    Tags: " + tags)
+    LOGGER.debug("2,    Tags: %s", tags)
     return (tags, title)
 
 def fix_spaces(title):
@@ -165,7 +165,7 @@ class MovieData():
         # rating: [{'type': 'typedMpaaRating', 'value': 'pg'}]
         # title: Indiana Jones and the Raiders of the Lost Ark
         # type: collection
-        LOGGER.debug("Searching IMDb for: " + title)
+        LOGGER.debug("Searching IMDb for: %s", title)
         # IMDB access object
         imdb_access = imdb.IMDb()
         try:
@@ -196,7 +196,7 @@ class MovieData():
         # get more info from RPC
         if self.rpc_remote is not None:
             rpc_movie_info = {}
-            LOGGER.debug("2,from imdb: " + imdb_movie_info['title'])
+            LOGGER.debug("2,from imdb: %s", imdb_movie_info['title'])
 
             tries_left = 3
             rpc_info = {}
@@ -415,7 +415,7 @@ class MovieData():
             if director['name'] not in director_names:
                 director_names.append(director['name'])
                 line += "vDirector : %s|\n" % director['name']
-                LOGGER.debug("3,vDirector : " + director['name'])
+                LOGGER.debug("3,vDirector : %s", director['name'])
         # vWriter
         # go through list, omitting duplicates
         writer_names = []
@@ -423,7 +423,7 @@ class MovieData():
             if writer['name'] not in writer_names:
                 writer_names.append(writer['name'])
                 line += "vWriter : %s|\n" % writer['name']
-                LOGGER.debug("3,vWriter : " + writer['name'])
+                LOGGER.debug("3,vWriter : %s", writer['name'])
         # vActor
         # go through list, omitting duplicates
         actor_names = []
@@ -431,9 +431,9 @@ class MovieData():
             if actor['name'] not in actor_names:
                 actor_names.append(actor['name'])
                 line += "vActor : %s|\n" % actor['name']
-                LOGGER.debug("3,vActor : " + actor['name'])
+                LOGGER.debug("3,vActor : %s", actor['name'])
 
-        LOGGER.debug("2,Writing to %s" % metadata_file_name)
+        LOGGER.debug("2,Writing to %s", metadata_file_name)
 
         # only when we are about to write file make metadata dir (e.g. .meta) if
         #   we need to
@@ -468,7 +468,7 @@ class MovieData():
         if year_match1:
             (tags, _) = extract_tags(title)
             (title, year, _, _) = year_match1.group(1, 5, 4, 7)
-            LOGGER.debug("2,    Title: %s\n    Year: %s" % (title, year))
+            LOGGER.debug("2,    Title: %s\n    Year: %s", title, year)
             title += ' (' + year + ')'
         else:
             # 2nd pass at finding the year.  Look for a series of tags in parens

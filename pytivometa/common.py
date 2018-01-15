@@ -34,7 +34,7 @@ def ask_user(options_text, option_returns, max_options=5):
     # Get number of movies found
     num_choices = len(option_returns)
 
-    LOGGER.debug("2,Found " + str(num_choices) + " matches.")
+    LOGGER.debug("2,Found %d matches.", num_choices)
     # Show max max_options titles
     num_choices = min(num_choices, max_options)
 

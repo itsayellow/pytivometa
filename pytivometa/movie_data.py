@@ -476,17 +476,17 @@ class MovieData():
             year_match2 = re.match(r'(.*?\w+.*?)\(.*((?:19|20)\d\d)\).*\)', title)
             if year_match2:
                 (title, year) = year_match2.group([1, 2])
-                LOGGER.debug("2,    Title: %s\n    Year: %s" % (title, year))
+                LOGGER.debug("2,    Title: %s\n    Year: %s", title, year)
                 title += ' (' + year + ')'
             else:
                 LOGGER.debug("2,Cleaning up title the hard way.")
                 title = clean_title(title)
-                LOGGER.debug("2,    Title: %s" % title)
+                LOGGER.debug("2,    Title: %s", title)
             # Note: this also removes the tags from the title
             (tags, title) = extract_tags(title)
-        LOGGER.debug("3,Before fixing spaces, title is: " + title)
+        LOGGER.debug("3,Before fixing spaces, title is: %s", title)
         title = fix_spaces(title)
-        LOGGER.debug("3,After fixing spaces, title is: " + title)
+        LOGGER.debug("3,After fixing spaces, title is: %s", title)
 
         movie_info = self.get_movie_info(title, is_trailer=is_trailer)
 

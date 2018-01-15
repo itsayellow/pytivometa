@@ -136,13 +136,13 @@ def logging_setup(debug_level=False):
     # add formatter to f_handler
     f_handler.setFormatter(formatter)
 
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    # create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    # add formatter to ch
-    ch.setFormatter(formatter)
+    ## create console handler and set level to debug
+    #c_handler = logging.StreamHandler()
+    #c_handler.setLevel(logging.DEBUG)
+    ## create formatter
+    #formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ## add formatter to c_handler
+    #c_handler.setFormatter(formatter)
 
     # set global log level to either INFO or DEBUG depending on config
     if debug_level:
@@ -153,7 +153,7 @@ def logging_setup(debug_level=False):
     # config all loggers
     for logger_name in LOGGED_MODULES:
         logging.getLogger(logger_name).setLevel(global_log_level)
-        #logging.getLogger(logger_name).addHandler(ch)
+        #logging.getLogger(logger_name).addHandler(c_handler)
         logging.getLogger(logger_name).addHandler(f_handler)
 
     # used to config root logger, but imdbpy module then spews to stdout :(

@@ -54,9 +54,9 @@ def debug_fxn(func):
 # debug decorator that announces function call/entry and lists args
 #   this one accepts arguments of positional or keyword arguments to omit
 def debug_fxn_omit(omit_args=None, omit_kwargs=None):
-    if omit_args == None:
+    if omit_args is None:
         omit_args = []
-    if omit_kwargs == None:
+    if omit_kwargs is None:
         omit_kwargs = []
     def debug_fxn_int(func):
         """Function decorator that prints the function name and the arguments used
@@ -64,7 +64,7 @@ def debug_fxn_omit(omit_args=None, omit_kwargs=None):
         """
         def func_wrapper(*args, **kwargs):
             log_string = "FXN:" + func.__qualname__ + "(\n"
-            for (i,arg) in enumerate(args[1:]):
+            for (i, arg) in enumerate(args[1:]):
                 if i not in omit_args:
                     log_string += "        " + repr(arg) + ",\n"
                 else:
@@ -422,7 +422,7 @@ class Remote(object):
 
         collection_list = results['collection']
 
-        LOGGER.debug("ORIGINAL, Total: %d"%(len(collection_list)))
+        LOGGER.debug("ORIGINAL, Total: %d", len(collection_list))
 
         # filter by language
         #   do this by hand because e.g. 'English' needs to be able to match
@@ -433,7 +433,7 @@ class Remote(object):
                 if self.lang in x.get('descriptionLanguage', '')
                 ]
 
-        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d"%(len(collection_list)))
+        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d", len(collection_list))
 
         # filter for presence of 'partnerCollectionId', useless if absent
         collection_list = [
@@ -442,7 +442,7 @@ class Remote(object):
                 if 'partnerCollectionId' in x
                 ]
 
-        LOGGER.debug("AFTER FILTERING FOR partnerCollectionId, Total: %d"%(len(collection_list)))
+        LOGGER.debug("AFTER FILTERING FOR partnerCollectionId, Total: %d", len(collection_list))
 
         for collection in collection_list:
             season1ep1 = self.get_first_aired(collection['collectionId'])
@@ -695,7 +695,7 @@ class Remote(object):
 
     @debug_fxn
     def _filter_movie_results(self, collection_list, year=None):
-        LOGGER.debug("ORIGINAL, Total: %d"%(len(collection_list)))
+        LOGGER.debug("ORIGINAL, Total: %d", len(collection_list))
         # DEBUG DELETEME
         #for coll in collection_list:
         #    LOGGER.debug("--------")
@@ -721,7 +721,7 @@ class Remote(object):
                 if self.lang in x.get('descriptionLanguage', self.lang)
                 ]
 
-        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d"%(len(collection_list)))
+        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d", len(collection_list))
 
         # DEBUG DELETEME
         #for coll in collection_list:
@@ -743,16 +743,19 @@ class Remote(object):
         collection_list = [
                 x
                 for x in collection_list
-                if x.get('partnerCollectionId','').startswith('epgProvider:')
+                if x.get('partnerCollectionId', '').startswith('epgProvider:')
                 ]
 
-        LOGGER.debug("AFTER FILTERING FOR partnerCollectionId: epgProvider:, Total: %d"%(len(collection_list)))
+        LOGGER.debug(
+                "AFTER FILTERING FOR partnerCollectionId: epgProvider:, Total: %d",
+                len(collection_list)
+                )
 
         # DEBUG DELETEME
         for coll in collection_list:
             LOGGER.debug("--------")
-            LOGGER.debug("title: " + str(coll['title']))
-            LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
+            LOGGER.debug("title: %s", str(coll['title']))
+            LOGGER.debug("movieYear: %s", str(coll.get('movieYear', '')))
 
         # no results or 1 result, return early
         #if len(collection_list) == 1:
@@ -781,13 +784,13 @@ class Remote(object):
                         if year - 1 <= x.get('movieYear', 0) <= year + 1
                         ]
 
-        LOGGER.debug("AFTER YEAR FILTERING, Total: %d"%(len(collection_list)))
+        LOGGER.debug("AFTER YEAR FILTERING, Total: %d", len(collection_list))
 
         # DEBUG DELETEME
         for coll in collection_list:
             LOGGER.debug("--------")
-            LOGGER.debug("title: " + str(coll['title']))
-            LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
+            LOGGER.debug("title: %s", str(coll['title']))
+            LOGGER.debug("movieYear: %s", str(coll.get('movieYear', '')))
 
         return collection_list
 
@@ -862,12 +865,12 @@ class Remote(object):
                     },
                 ]
 
-        isBottom = False
+        is_bottom = False
         collection_list = []
         offset = 0
         results_per_req = 10
-        while not isBottom and not collection_list:
-            LOGGER.debug("Trying again to search for movie: offset=%d"%offset)
+        while not is_bottom and not collection_list:
+            LOGGER.debug("Trying again to search for movie: offset=%d", offset)
             # TODO: do we need to trap MindTimeoutError here so we don't
             #   start over from offset=0?
             results = self.rpc_req_generic(
@@ -899,8 +902,8 @@ class Remote(object):
                 PP.pprint(results)
                 return []
 
-            isBottom = results['isBottom']
-            isTop = results['isTop']
+            is_bottom = results['isBottom']
+            #isTop = results['isTop']
 
             offset += 1
 
@@ -908,24 +911,24 @@ class Remote(object):
 
         if len(collection_list) > 1:
             LOGGER.debug(
-                    "%d in collection_list after "%(len(collection_list)) +
-                    "filtering, is one of these best:"
+                    "%d in collection_list after filtering, is one of these best:",
+                    len(collection_list)
                     )
             for coll in collection_list:
                 LOGGER.debug("-----")
                 for key in sorted(coll):
-                    LOGGER.debug(key + ": " + str(coll[key]))
-        if len(collection_list) > 0:
+                    LOGGER.debug("%s: %s", key, str(coll[key]))
+        if collection_list:
             LOGGER.debug(collection_list[0]['collectionId'])
             content_info = self.search_movie_content(collection_list[0]['collectionId'])
             collection_list[0].update(content_info)
 
-        if collection_list:
-            return collection_list[0]
-        else:
+        if not collection_list:
             LOGGER.debug("No results survived filtering, returning empty dict.")
             print("No suitable results from RPC.")
             return {}
+
+        return collection_list[0]
 
     @debug_fxn
     def search_movie_content(self, collection_id):

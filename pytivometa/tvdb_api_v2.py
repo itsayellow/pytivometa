@@ -362,7 +362,7 @@ class Tvdb:
 
         # assumes year, month, day are all strings
         search_date_num = int("%04d%02d%02d"%(int(year), int(month), int(day)))
-        LOGGER.debug("searching for episode date %d"%search_date_num)
+        LOGGER.debug("searching for episode date %d", search_date_num)
 
         # need to get all pages in /series/{id}/episodes to find air date
         get_episodes_url = TVDB_API_URL + "series/" + tvdb_series_id + "/episodes?page="
@@ -373,7 +373,7 @@ class Tvdb:
             # go through each page of episodes until match is found, or
             #   we run out of pages (HTTP Error 404)
             page_str = str(page)
-            LOGGER.debug("2,get_episode_info_air_date page %s"%page_str)
+            LOGGER.debug("2,get_episode_info_air_date page %s", page_str)
             try:
                 json_data = self._tvdb_get(get_episodes_url + page_str)
             except urllib.error.HTTPError as http_error:
@@ -400,9 +400,10 @@ class Tvdb:
                             month = ep_date_re.group(2)
                             day = ep_date_re.group(3)
                             ep_date_num = int("%04d%02d%02d"%(int(year), int(month), int(day)))
-                            LOGGER.debug("2,searching: episode date %d "%ep_date_num + \
-                                    "season %s "%episode_info['airedSeason'] + \
-                                    "episode %s"%episode_info['airedEpisodeNumber']
+                            LOGGER.debug("2,searching: episode date %d season %s episode %s",
+                                    ep_date_num,
+                                    episode_info['airedSeason'],
+                                    episode_info['airedEpisodeNumber']
                                     )
                             if ep_date_num == search_date_num:
                                 # found a match

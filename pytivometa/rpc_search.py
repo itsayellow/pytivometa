@@ -433,7 +433,9 @@ class Remote(object):
                 if self.lang in x.get('descriptionLanguage', '')
                 ]
 
-        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d", len(collection_list))
+        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d",
+                len(collection_list)
+                )
 
         # filter for presence of 'partnerCollectionId', useless if absent
         collection_list = [
@@ -442,7 +444,9 @@ class Remote(object):
                 if 'partnerCollectionId' in x
                 ]
 
-        LOGGER.debug("AFTER FILTERING FOR partnerCollectionId, Total: %d", len(collection_list))
+        LOGGER.debug("AFTER FILTERING FOR partnerCollectionId, Total: %d",
+                len(collection_list)
+                )
 
         for collection in collection_list:
             season1ep1 = self.get_first_aired(collection['collectionId'])
@@ -721,7 +725,9 @@ class Remote(object):
                 if self.lang in x.get('descriptionLanguage', self.lang)
                 ]
 
-        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d", len(collection_list))
+        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d",
+                len(collection_list)
+                )
 
         # DEBUG DELETEME
         #for coll in collection_list:

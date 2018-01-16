@@ -5,6 +5,35 @@
 # debug_fxn_omit decorator is used when we don't want to write password to
 #   log file
 
+# RPC request keys:
+#   Advanced Search Filters
+#       titleKeyword: keywords appearing in title
+#       keyword: keywords appearing in title, description, etc.
+#       collectionId: collectionId matching this string
+#       collectionType: 'movie', 'series' (for collectionSearch)
+#
+#   Control of order of returned list
+#       orderBy: 'strippedTitle', 'seasonNumber', 'episodeNum',
+#           or list of such strings
+#
+#   Control of which info is returned
+#       responseTemplate: resp_template dict
+#       - or -
+#       levelOfDetail: 'high', 'medium', 'low'
+#
+#   Control of list window returned
+#       count: maximum matches asked for in list
+#       offset: first item in returned list window is this offset in overall
+#           list (starting at offset=0)
+#
+#   T/F Search Filters
+#       filterUnavailable='false'
+#       includeBroadcast='true'
+#       includeFree='true'
+#       includePaid='false'
+#       includeVod='false'
+#       mergeOverridingCollections='true'
+
 # TODO: catch HTTP errors of _rpc_request
 #   HTTP 5xx server error
 # TODO: catch RPC error dictionary error

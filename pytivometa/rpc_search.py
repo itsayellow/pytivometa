@@ -5,7 +5,10 @@
 # debug_fxn_omit decorator is used when we don't want to write password to
 #   log file
 
-# RPC request keys:
+# RPC requests
+#   Request Type:
+#       'collectionSearch', 'contentSearch', 'offerSearch', 'bodyAuthenticate'
+#
 #   Advanced Search Filters
 #       titleKeyword: keywords appearing in title
 #       keyword: keywords appearing in title, description, etc.

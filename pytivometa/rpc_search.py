@@ -7,7 +7,8 @@
 
 # RPC requests
 #   Request Type:
-#       'collectionSearch', 'contentSearch', 'offerSearch', 'bodyAuthenticate'
+#       'collectionSearch', 'contentSearch', 'offerSearch', 'bodyAuthenticate',
+#       'categorySearch', 'subscriptionSearch'
 #
 #   Advanced Search Filters
 #       titleKeyword: keywords appearing in title
@@ -16,8 +17,8 @@
 #       collectionType: 'movie', 'series' (for collectionSearch)
 #
 #   Control of order of returned list
-#       orderBy: 'strippedTitle', 'seasonNumber', 'episodeNum',
-#           or list of such strings
+#       orderBy: 'strippedTitle', 'seasonNumber', 'episodeNum', 'relevance',
+#           'title', 'collectionId', or list of such strings
 #
 #   Control of which info is returned
 #       responseTemplate: resp_template dict
@@ -195,7 +196,8 @@ class Remote(object):
         Args:
             req_type (str): type of RPC request (e.g. 'collectionSearch',
                 'contentSearch',' bodyAuthenticate', 'offerSearch')
-            monitor (boolean): ResponseCount = 'multiple' if True, 'single' if False
+            monitor (boolean): aka 'monitorFutureChanges', typically should be
+                false.  ResponseCount = 'multiple' if True, 'single' if False
             **kwargs: keys need to be in camelCase because they are passed on
                 directly to JSON request body
 

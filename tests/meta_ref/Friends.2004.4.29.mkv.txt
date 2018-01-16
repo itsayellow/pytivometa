@@ -5,6 +5,7 @@ originalAirDate : 2004-04-29T00:00:00Z
 description : With Rachel leaving tomorrow, the gang throws her a small going away party. She says goodbye to each of her friends individually, except for Ross. He gets mad and the two of them end up in a passionate kiss after she explains that she was putting it off because of how hard saying goodbye to him would be. Meanwhile, Erica is in town until the baby arrives and she ends up going into labor at the party.
 isEpisode : true
 seriesId : SH0000016645
+programId : EP0000016645-0022841426
 episodeNumber : 1016
 vProgramGenre : Comedy
 vProgramGenre : Romance
@@ -17,7 +18,8 @@ vActor : Matt LeBlanc|
 vActor : Matthew Perry|
 vActor : David Schwimmer|
 vGuestStar : Anna Faris|
+vDirector : Gary Halvorson|
 vWriter : Andrew Reich|
 vWriter : Ted Cohen|
-vDirector : Gary Halvorson|
-programId : EP0000016645-0022841426
+callsign : NBC
+tvRating : TV-14

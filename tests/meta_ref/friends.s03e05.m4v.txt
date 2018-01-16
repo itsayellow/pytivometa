@@ -5,6 +5,7 @@ originalAirDate : 1996-10-17T00:00:00Z
 description : Phoebe's half-brother visits and she offers to give him a massage, but they have trouble bonding. Joey attempts to build an entertainment center. Ross is challenged to name the five celebrities he'd like to sleep with most.
 isEpisode : true
 seriesId : SH0000016645
+programId : EP0000016645-0000039224
 episodeNumber : 305
 vProgramGenre : Comedy
 vProgramGenre : Romance
@@ -19,7 +20,8 @@ vActor : David Schwimmer|
 vGuestStar : Giovanni Ribisi|
 vGuestStar : Cynthia Mann|
 vGuestStar : Isabella Rossellini|
+vDirector : Steve Zuckerman|
 vWriter : Shana Goldberg-Meehan|
 vWriter : Scott Silveri|
-vDirector : Steve Zuckerman|
-programId : EP0000016645-0000039224
+callsign : NBC
+tvRating : TV-14

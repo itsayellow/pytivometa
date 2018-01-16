@@ -5,6 +5,7 @@ originalAirDate : 1966-11-11T00:00:00Z
 description : When Newkirk discovers a new radio controlled tank that could win the war for Germany, the allies want Hogan and the men to photograph the tank and then destroy it --- but complication ensue during their mission.
 isEpisode : true
 seriesId : SH0000018483
+programId : EP0000018483-0000247372
 episodeNumber : 209
 vProgramGenre : Comedy
 vSeriesGenre : Comedy
@@ -19,6 +20,7 @@ vActor : Kenneth Washington|
 vGuestStar : Vincent Van Lynn|
 vGuestStar : Robert Gibbons|
 vGuestStar : Margareta Sullivan|
-vWriter : Laurence Marks|
 vDirector : Gene Reynolds|
-programId : EP0000018483-0000247372
+vWriter : Laurence Marks|
+callsign : CBS
+tvRating : TV-PG

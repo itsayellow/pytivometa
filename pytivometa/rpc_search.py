@@ -738,14 +738,6 @@ class Remote(object):
         #    LOGGER.debug("title: " + str(coll['title']))
         #    LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
 
-        # no results or 1 result, return early
-        #if len(collection_list) == 1:
-        #    LOGGER.debug(collection_list[0]['collectionId'])
-        #    self.search_movie_content(collection_list[0]['collectionId'])
-        #    return collection_list
-        #elif len(collection_list) == 0:
-        #    return collection_list
-
         # Filter 1: by language
         # filter for either self.lang in descriptionLanguage or missing
         #   do this by hand because e.g. 'English' needs to be able to match
@@ -767,14 +759,6 @@ class Remote(object):
         #    LOGGER.debug("title: " + str(coll['title']))
         #    LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
 
-        # no results or 1 result, return early
-        #if len(collection_list) == 1:
-        #    LOGGER.debug(collection_list[0]['collectionId'])
-        #    self.search_movie_content(collection_list[0]['collectionId'])
-        #    return collection_list
-        #elif len(collection_list) == 0:
-        #    return collection_list
-
         # Filter 2: for presence of 'partnerCollectionId', (useless if absent)
         #   also look for 'epgProvider:' starting partnerCollectionId, otherwise
         #   not useful for pytivo
@@ -790,18 +774,10 @@ class Remote(object):
                 )
 
         # DEBUG DELETEME
-        for coll in collection_list:
-            LOGGER.debug("--------")
-            LOGGER.debug("title: %s", str(coll['title']))
-            LOGGER.debug("movieYear: %s", str(coll.get('movieYear', '')))
-
-        # no results or 1 result, return early
-        #if len(collection_list) == 1:
-        #    LOGGER.debug(collection_list[0]['collectionId'])
-        #    self.search_movie_content(collection_list[0]['collectionId'])
-        #    return collection_list
-        #elif len(collection_list) == 0:
-        #    return collection_list
+        #for coll in collection_list:
+        #    LOGGER.debug("--------")
+        #    LOGGER.debug("title: %s", str(coll['title']))
+        #    LOGGER.debug("movieYear: %s", str(coll.get('movieYear', '')))
 
         # Filter 3: for proper movieYear
         #   NOTE: sometimes RPC movie year can be (IMDB movie year + 1)
@@ -825,10 +801,10 @@ class Remote(object):
         LOGGER.debug("AFTER YEAR FILTERING, Total: %d", len(collection_list))
 
         # DEBUG DELETEME
-        for coll in collection_list:
-            LOGGER.debug("--------")
-            LOGGER.debug("title: %s", str(coll['title']))
-            LOGGER.debug("movieYear: %s", str(coll.get('movieYear', '')))
+        #for coll in collection_list:
+        #    LOGGER.debug("--------")
+        #    LOGGER.debug("title: %s", str(coll['title']))
+        #    LOGGER.debug("movieYear: %s", str(coll.get('movieYear', '')))
 
         return collection_list
 

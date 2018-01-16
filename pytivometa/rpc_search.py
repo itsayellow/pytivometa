@@ -35,10 +35,8 @@ LOGGER.addHandler(logging.NullHandler())
 PP = pprint.PrettyPrinter(indent=4, depth=3)
 
 
-# debug decorator that announces function call/entry and lists args
 def debug_fxn(func):
     """Function decorator that prints the function name and the arguments used
-    in the function call before executing the function
     """
     def func_wrapper(*args, **kwargs):
         log_string = "FXN:" + func.__qualname__ + "(\n"
@@ -51,17 +49,16 @@ def debug_fxn(func):
         return func(*args, **kwargs)
     return func_wrapper
 
-# debug decorator that announces function call/entry and lists args
-#   this one accepts arguments of positional or keyword arguments to omit
 def debug_fxn_omit(omit_args=None, omit_kwargs=None):
+    """Function decorator that prints the function name and the arguments used
+
+    this version accepts arguments of positional or keyword arguments to omit
+    """
     if omit_args is None:
         omit_args = []
     if omit_kwargs is None:
         omit_kwargs = []
     def debug_fxn_int(func):
-        """Function decorator that prints the function name and the arguments used
-        in the function call before executing the function
-        """
         def func_wrapper(*args, **kwargs):
             log_string = "FXN:" + func.__qualname__ + "(\n"
             for (i, arg) in enumerate(args[1:]):
@@ -86,15 +83,23 @@ class Error(Exception):
     pass
 
 class AuthError(Error):
+    """Error raised if RPC authentication error (e.g. username/pass)
+    """
     pass
 
 class MindTimeoutError(Error):
+    """RPC returns response that it timed out.  Caller can try again
+    """
     pass
 
 class MindInternalError(Error):
+    """RPC/Mind responded with 'Internal error'
+    """
     pass
 
 class Remote(object):
+    """Used to initiate and maintain SSL RPC socket access to Mind
+    """
     @debug_fxn_omit(omit_args=[1])
     def __init__(self, username, password, lang='English'):
         """Initialize Remote TiVo mind SSL socket connection
@@ -156,7 +161,8 @@ class Remote(object):
         """Format key=value pairs into string for RPC request to TiVo Mind
 
         Args:
-            req_type (str):
+            req_type (str): type of RPC request (e.g. 'collectionSearch',
+                'contentSearch',' bodyAuthenticate', 'offerSearch')
             monitor (boolean): ResponseCount = 'multiple' if True, 'single' if False
             **kwargs: keys need to be in camelCase because they are passed on
                 directly to JSON request body
@@ -251,6 +257,8 @@ class Remote(object):
     @debug_fxn_omit(omit_args=[1])
     def _auth(self, username, password):
         """Private fxn only used in init of Remote to establish SSL credentials
+
+        Once called, this Remote instance has an established socket connection
 
         Args:
             username (str): tivo.com username
@@ -347,7 +355,12 @@ class Remote(object):
 
     @debug_fxn
     def search_series(self, title_keywords):
-        """
+        """Given title keywords, search for matching tv series
+
+        Args:
+            title_keywords (str): word(s) to search for in title,
+                space-separated
+
         Returns:
             list: of series collection dict objects
 
@@ -457,7 +470,10 @@ class Remote(object):
 
     @debug_fxn
     def get_first_aired(self, collection_id):
-        """
+        """Given RPC collection ID, get airdate of Season 1 Episode 1
+
+        Args:
+            collection_id (str): collectionId to search for
 
         Raises:
             MindTimeoutError: if mind returns 'code':'mindUnavailable'
@@ -580,12 +596,13 @@ class Remote(object):
         (season_num AND episode_num) OR (year AND month AND day)
 
         Args:
-            collection_id (str):
-            season_num (str):
-            episode_num (str):
-            year (str):
-            month (str):
-            day (str):
+            collection_id (str): RPC collectionId
+            season_num (str): starting with season 1
+            episode_num (str): starting with episode 1 in a season
+            year (str): 4-digit year
+            month (str): 2-digit month
+            day (str): 2-digit day
+
         Returns:
             str: str of Mind program ID
 
@@ -641,11 +658,12 @@ class Remote(object):
     def get_program_id_airdate(self, collection_id,
             year=None, month=None, day=None):
         """Get Mind program ID given year AND month AND day
+
         Args:
             collection_id (str): Mind series ID
-            year (str): year of program's airing
-            month (str): month of program's airing
-            day (str): day of program's airing
+            year (str): 4-digit year of program's airing
+            month (str): 2-digit month of program's airing
+            day (str): 2-digit day of program's airing
 
         Returns:
             str: program ID for episode
@@ -700,6 +718,19 @@ class Remote(object):
 
     @debug_fxn
     def _filter_movie_results(self, collection_list, year=None):
+        """Given a list of collections, do intelligent filtering
+
+        Filter based on year, language of description,
+        and whether partnerCollectionId value starts with 'epgProvider'
+
+        Args:
+            collection_list (list): list of returned RPC collection dicts
+            year (str): year to filter for if present (prefer year, but
+                fall back to year +/- 1)
+
+        Returns:
+            list: hopefully smaller filtered list of good matches
+        """
         LOGGER.debug("ORIGINAL, Total: %d", len(collection_list))
         # DEBUG DELETEME
         #for coll in collection_list:
@@ -939,6 +970,14 @@ class Remote(object):
 
     @debug_fxn
     def search_movie_content(self, collection_id):
+        """Given collection_id for movie, fetch associated content
+
+        Args:
+            collection_id (str): RPC collectionId
+
+        Returns:
+            dict: content dict from RPC
+        """
         # specifies which fields we ask RPC for, for each movie content
         content_fields = [
                         'movieYear',

@@ -1,9 +1,2 @@
-decorator==4.1.2
-IMDbPY==6.2
-lxml==4.1.1
-pbr==3.1.1
-six==1.11.0
-SQLAlchemy==1.2.0
-sqlalchemy-migrate==0.11.0
-sqlparse==0.2.4
-Tempita==0.5.2
+# requirements for pytivometa
+IMDbPY>=6.5

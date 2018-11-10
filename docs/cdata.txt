@@ -1,0 +1,6 @@
+# https://www.tivocommunity.com/community/index.php?threads/discovering-the-ipad-interface.462980/page-16#post-9984124
+
+# If you have a cdata.p12:
+openssl pkcs12 -in cdata.p12 -out cdata.pem -nodes
+# turns it into a cdata.pem that you can then use with:
+#   self.ssl_socket = ssl.wrap_socket(self.socket, certfile='cdata.pem')

@@ -179,7 +179,7 @@ tivo:<type>[.<namespace>].<id>
 * e.g. epgProvider:cl.SH0351131803 - collectionId of series 'Friends and Enemies
 * e.g. tivo:ca.349301 - categoryId
 
-All rpc_request fiels seen in the wild
+All rpc_request fields seen in the wild
 --------------------------------------
 ::
 

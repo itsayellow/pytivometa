@@ -1,2 +1,4 @@
 # requirements for pytivometa
+
+# pypi packages
 IMDbPY>=6.5

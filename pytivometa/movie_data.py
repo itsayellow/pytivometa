@@ -410,9 +410,11 @@ class MovieData():
         # description
         line += 'description : '
         if "plot outline" in list(movie_info.keys()):
-            # it looks like tivo only uses about the first 122 characters
+            # tivo select only uses about the first 122 characters
+            # tivo 'info' button allows more
             #   (as of 2019-04-06)
-            line += movie_info['plot outline'][:180]
+            line += movie_info['plot outline'][:200]
+            line += "..." if len(movie_info['plot_outline']) > 200
         # IMDB score if available
         if "rating" in list(movie_info.keys()):
             line += " IMDB: %s/10" % movie_info['rating']

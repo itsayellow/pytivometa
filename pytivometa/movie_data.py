@@ -414,7 +414,7 @@ class MovieData():
             # tivo 'info' button allows more
             #   (as of 2019-04-06)
             line += movie_info['plot outline'][:200]
-            line += "..." if len(movie_info['plot_outline']) > 200
+            line += "..." if len(movie_info['plot outline']) > 200 else ""
         # IMDB score if available
         if "rating" in list(movie_info.keys()):
             line += " IMDB: %s/10" % movie_info['rating']

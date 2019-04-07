@@ -201,16 +201,17 @@ class MovieData():
         LOGGER.debug("Searching IMDb for: %s", title)
         # what are the only tags we need
         imdb_info_to_fetch = [
-                'title',
-                'year',
-                'director',
-                'plot outline',
-                'mpaa',
-                'genres',
-                'director',
-                'writer',
-                'cast',
                 'akas',
+                'cast',
+                'director',
+                'director',
+                'genres',
+                'mpaa',
+                'plot outline',
+                'rating',
+                'title',
+                'writer',
+                'year',
                 ]
         # IMDB access object
         imdb_access = imdb.IMDb()

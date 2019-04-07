@@ -138,7 +138,7 @@ def title_from_filename(filename):
     LOGGER.debug("3,Before fixing spaces, title is: %s", title)
     title = fix_spaces(title)
     LOGGER.debug("3,After fixing spaces, title is: %s", title)
-    return title
+    return (title, tags)
 
 class MovieData():
     def __init__(self, rpc_remote=None, interactive=False, genre_dir=None,
@@ -510,7 +510,7 @@ class MovieData():
 
     def parse_movie(self, search_dir, filename, metadata_file_name,
             is_trailer=False):
-        title = title_from_filename(filename)
+        (title, tags) = title_from_filename(filename)
 
         movie_info = self.get_movie_info(title, is_trailer=is_trailer)
 

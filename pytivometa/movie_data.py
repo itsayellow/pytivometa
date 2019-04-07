@@ -206,7 +206,7 @@ class MovieData():
             report_match(imdb_movie_info, len(results))
 
         # get more info from RPC
-        if self.rpc_remote is not None:
+        if (imdb_movie_info is not None) and (self.rpc_remote is not None):
             rpc_movie_info = {}
             LOGGER.debug("2,from imdb: %s", imdb_movie_info['title'])
 
@@ -265,14 +265,16 @@ class MovieData():
                 except Exception:
                     LOGGER.debug("Warning: unable to get release date.")
 
-        # copy selected keys from imdb_movie_info object into real dict
-        movie_info = {}
-        for key in imdb_info_to_fetch:
-            if key in imdb_movie_info:
-                movie_info[key] = imdb_movie_info[key]
+            # copy selected keys from imdb_movie_info object into real dict
+            movie_info = {}
+            for key in imdb_info_to_fetch:
+                if key in imdb_movie_info:
+                    movie_info[key] = imdb_movie_info[key]
 
-        # add RPC info to movie info
-        movie_info.update(rpc_movie_info)
+            # add RPC info to movie info
+            movie_info.update(rpc_movie_info)
+        else:
+            movie_info = None
 
         return movie_info
 

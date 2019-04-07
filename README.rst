@@ -22,6 +22,12 @@ On Windows, you may need to run pip3 from a command prompt in "run as
 administrator" mode (right-click on the Command Prompt in the Start Menu and
 select "Run as Administrator") to allow the installation of new python modules.
 
+Note: you may consider using the latest github version of IMDbPY.  The imdb web
+page format changes often, and imdbpy must update frequently to accurately
+scrape it.  Updates to the imdbpy on pypi are often much more infrequent than
+is necessary to preserve functionality. (See
+https://github.com/alberanid/imdbpy#installation)
+
 Running
 -------
 

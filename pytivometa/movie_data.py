@@ -106,6 +106,40 @@ def report_match(movie_info, num_results):
     else:
         LOGGER.debug(matchtype + str(movie_info))
 
+def title_from_filename(filename):
+    title = os.path.splitext(filename)[0]
+
+    # Most tags and group names come after the year (which is often in parens
+    #   or brackets)
+    # Using the year when searching IMDb will help, so try to find it.
+    year_match1 = re.match(
+            r'(.*?\w+.*?)(?:([[(])|(\W))(.*?)((?:19|20)\d\d)(?(2)[])]|(\3|$))(.*?)$',
+            title
+            )
+    if year_match1:
+        (tags, _) = extract_tags(title)
+        (title, year, _, _) = year_match1.group(1, 5, 4, 7)
+        LOGGER.debug("2,    Title: %s\n    Year: %s", title, year)
+        title += ' (' + year + ')'
+    else:
+        # 2nd pass at finding the year.  Look for a series of tags in parens
+        #   which may include the year.
+        year_match2 = re.match(r'(.*?\w+.*?)\(.*((?:19|20)\d\d)\).*\)', title)
+        if year_match2:
+            (title, year) = year_match2.group([1, 2])
+            LOGGER.debug("2,    Title: %s\n    Year: %s", title, year)
+            title += ' (' + year + ')'
+        else:
+            LOGGER.debug("2,Cleaning up title the hard way.")
+            title = clean_title(title)
+            LOGGER.debug("2,    Title: %s", title)
+        # Note: this also removes the tags from the title
+        (tags, title) = extract_tags(title)
+    LOGGER.debug("3,Before fixing spaces, title is: %s", title)
+    title = fix_spaces(title)
+    LOGGER.debug("3,After fixing spaces, title is: %s", title)
+    return title
+
 class MovieData():
     def __init__(self, rpc_remote=None, interactive=False, genre_dir=None,
             country='USA', lang='English'):
@@ -476,37 +510,7 @@ class MovieData():
 
     def parse_movie(self, search_dir, filename, metadata_file_name,
             is_trailer=False):
-        title = os.path.splitext(filename)[0]
-
-        # Most tags and group names come after the year (which is often in parens
-        #   or brackets)
-        # Using the year when searching IMDb will help, so try to find it.
-        year_match1 = re.match(
-                r'(.*?\w+.*?)(?:([[(])|(\W))(.*?)((?:19|20)\d\d)(?(2)[])]|(\3|$))(.*?)$',
-                title
-                )
-        if year_match1:
-            (tags, _) = extract_tags(title)
-            (title, year, _, _) = year_match1.group(1, 5, 4, 7)
-            LOGGER.debug("2,    Title: %s\n    Year: %s", title, year)
-            title += ' (' + year + ')'
-        else:
-            # 2nd pass at finding the year.  Look for a series of tags in parens
-            #   which may include the year.
-            year_match2 = re.match(r'(.*?\w+.*?)\(.*((?:19|20)\d\d)\).*\)', title)
-            if year_match2:
-                (title, year) = year_match2.group([1, 2])
-                LOGGER.debug("2,    Title: %s\n    Year: %s", title, year)
-                title += ' (' + year + ')'
-            else:
-                LOGGER.debug("2,Cleaning up title the hard way.")
-                title = clean_title(title)
-                LOGGER.debug("2,    Title: %s", title)
-            # Note: this also removes the tags from the title
-            (tags, title) = extract_tags(title)
-        LOGGER.debug("3,Before fixing spaces, title is: %s", title)
-        title = fix_spaces(title)
-        LOGGER.debug("3,After fixing spaces, title is: %s", title)
+        title = title_from_filename(filename)
 
         movie_info = self.get_movie_info(title, is_trailer=is_trailer)
 

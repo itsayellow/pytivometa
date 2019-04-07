@@ -24,8 +24,8 @@ select "Run as Administrator") to allow the installation of new python modules.
 
 Note: you may consider using the latest github version of IMDbPY.  The imdb web
 page format changes often, and imdbpy must update frequently to accurately
-scrape it.  Updates to the imdbpy on pypi are often much more infrequent than
-is necessary to preserve functionality. (See
+scrape it.  Updates to imdbpy on pypi are often much more infrequent than is
+necessary to preserve functionality. (See
 https://github.com/alberanid/imdbpy#installation)
 
 Running

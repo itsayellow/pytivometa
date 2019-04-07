@@ -106,7 +106,6 @@ def report_match(movie_info, num_results):
     else:
         LOGGER.debug(matchtype + str(movie_info))
 
-
 class MovieData():
     def __init__(self, rpc_remote=None, interactive=False, genre_dir=None,
             country='USA', lang='English'):
@@ -166,6 +165,19 @@ class MovieData():
         # title: Indiana Jones and the Raiders of the Lost Ark
         # type: collection
         LOGGER.debug("Searching IMDb for: %s", title)
+        # what are the only tags we need
+        imdb_info_to_fetch = [
+                'title',
+                'year',
+                'director',
+                'plot outline',
+                'mpaa',
+                'genres',
+                'director',
+                'writer',
+                'cast',
+                'akas',
+                ]
         # IMDB access object
         imdb_access = imdb.IMDb()
         try:
@@ -229,9 +241,9 @@ class MovieData():
 
         if imdb_movie_info is not None:
             # So far the imdb_movie_info object only contains basic information like the
-            # title and the year; retrieve main information:
+            # title and the year; retrieve more information
             try:
-                imdb_access.update(imdb_movie_info)
+                imdb_movie_info = imdb_access.get_movie(imdb_movie_info.movieID)
                 #LOGGER.debug("3," + imdb_movie_info.summary())
             except Exception:
                 print("Warning: unable to get extended details from "
@@ -253,10 +265,11 @@ class MovieData():
                 except Exception:
                     LOGGER.debug("Warning: unable to get release date.")
 
-        # copy from imdb_movie_info object into real dict
+        # copy selected keys from imdb_movie_info object into real dict
         movie_info = {}
-        for key in imdb_movie_info.keys():
-            movie_info[key] = imdb_movie_info[key]
+        for key in imdb_info_to_fetch:
+            if key in imdb_movie_info:
+                movie_info[key] = imdb_movie_info[key]
 
         # add RPC info to movie info
         movie_info.update(rpc_movie_info)
@@ -335,15 +348,18 @@ class MovieData():
 
         # search for user language or country version of title if present
         title_aka = ''
-        for aka in movie_info.get('akas', []):
-            (title_aka, info_aka) = aka.split('::')
-            # Note: maybe safer to search for '(imdb display title)' ?
-            #   see: Volver, which finds "To Return" with USA, English?
-            if self.country in info_aka or '(' + self.lang + ' title)' in info_aka:
-                LOGGER.debug("3,AKA: " + title_aka + "::" + info_aka)
-                break
-            else:
-                title_aka = ''
+
+        # TODO: Currently akas are broken with imdbpy
+        #for aka in movie_info.get('akas', []):
+        #    print(aka)
+        #    (title_aka, info_aka) = aka.split('::')
+        #    # Note: maybe safer to search for '(imdb display title)' ?
+        #    #   see: Volver, which finds "To Return" with USA, English?
+        #    if self.country in info_aka or '(' + self.lang + ' title)' in info_aka:
+        #        LOGGER.debug("3,AKA: " + title_aka + "::" + info_aka)
+        #        break
+        #    else:
+        #        title_aka = ''
 
         # title
         if title_aka and movie_info['title'] != title_aka:
@@ -357,7 +373,9 @@ class MovieData():
         # description
         line += 'description : '
         if "plot outline" in list(movie_info.keys()):
-            line += movie_info['plot outline']
+            # it looks like tivo only uses about the first 122 characters
+            #   (as of 2019-04-06)
+            line += movie_info['plot outline'][:180]
         # IMDB score if available
         if "rating" in list(movie_info.keys()):
             line += " IMDB: %s/10" % movie_info['rating']

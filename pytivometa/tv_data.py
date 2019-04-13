@@ -511,8 +511,13 @@ class TvData():
                 episode_info['tivoSeriesId'] = tivo_series_id
                 episode_info['tivoProgramId'] = tivo_program_id
             else:
-                print("No RPC results for: " + tv_info['series'] + \
-                        " S" + tv_info['season'] + "E" + tv_info['episode'])
+                print(
+                        "No RPC results for: {0} S{1:02}E{2:02}".format(
+                            tv_info['series'],
+                            tv_info['season'],
+                            tv_info['episode']
+                            )
+                    )
 
         if episode_info:
             format_episode_data(episode_info, meta_filepath)

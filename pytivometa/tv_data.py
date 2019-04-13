@@ -502,12 +502,17 @@ class TvData():
                     day=tv_info.get('day', None),
                     )
 
-            # format series_id properly
-            tivo_series_id = re.sub(r'epgProvider:cl\.', '', tivo_series_id)
-            tivo_program_id = re.sub(r'epgProvider:ct\.', '', tivo_program_id)
+            if tivo_program_id is not None:
+                # if we have no match, then tivo_program_id is None
+                # format series_id properly
+                tivo_series_id = re.sub(r'epgProvider:cl\.', '', tivo_series_id)
+                tivo_program_id = re.sub(r'epgProvider:ct\.', '', tivo_program_id)
 
-            episode_info['tivoSeriesId'] = tivo_series_id
-            episode_info['tivoProgramId'] = tivo_program_id
+                episode_info['tivoSeriesId'] = tivo_series_id
+                episode_info['tivoProgramId'] = tivo_program_id
+            else:
+                print("No RPC results for: " + tv_info['series'] + \
+                        " S" + tv_info['season'] + "E" + tv_info['episode'])
 
         if episode_info:
             format_episode_data(episode_info, meta_filepath)

@@ -669,7 +669,10 @@ class Remote(object):
                     count=1,
                     responseTemplate=resp_template,
                     )
-            program_id = results['content'][0]['partnerContentId']
+            if 'content' in results:
+                program_id = results['content'][0]['partnerContentId']
+            else:
+                program_id = None
 
         elif year is not None and month is not None and day is not None:
             LOGGER.debug("rpc: year month day")

@@ -41,23 +41,43 @@ LOGGER.addHandler(logging.NullHandler())
 def clean_title(title):
     # strip a variety of common junk from torrented avi filenames
     striplist = (
-            r'crowbone', r'joox-dot-net', r'DOMiNiON', r'LiMiTED',
-            r'aXXo', r'DoNE', r'ViTE', r'BaLD', r'COCAiNE', r'NoGRP',
-            r'leetay', r'AC3', r'BluRay', r'DVD', r'VHS', r'Screener',
-            r'(?i)DVD SCR', r'\[.*\]', r'(?i)swesub', r'(?i)dvdrip',
-            r'(?i)dvdscr', r'(?i)xvid', r'(?i)divx'
-            )
+        r"crowbone",
+        r"joox-dot-net",
+        r"DOMiNiON",
+        r"LiMiTED",
+        r"aXXo",
+        r"DoNE",
+        r"ViTE",
+        r"BaLD",
+        r"COCAiNE",
+        r"NoGRP",
+        r"leetay",
+        r"AC3",
+        r"BluRay",
+        r"DVD",
+        r"VHS",
+        r"Screener",
+        r"(?i)DVD SCR",
+        r"\[.*\]",
+        r"(?i)swesub",
+        r"(?i)dvdrip",
+        r"(?i)dvdscr",
+        r"(?i)xvid",
+        r"(?i)divx",
+    )
     for strip in striplist:
-        title = re.sub(strip, '', title)
+        title = re.sub(strip, "", title)
     LOGGER.debug("3,After stripping keywords, title is: %s", title)
     return title
+
 
 def extract_tags(title):
     # Look for tags that we want to show on the tivo, but not include in
     #   IMDb searches.
     tags = ""
+    # fmt: off
     taglist = {
-        # Strip these out      : return these instead
+        # Strip these out       : return these instead
         r'(\d{3,4})([IiPp])'    : r'\1\2', #720p,1080p,1080i,720P,etc
         r'(?i)Telecine'         : r'TC',    #Telecine,telecine
         r'TC'                   : r'TC',
@@ -66,24 +86,27 @@ def extract_tags(title):
         r'CAM'                  : r'CAM',
         r'(?i)CD ?(\d)'         : r'CD\1', #CD1,CD2,cd1,cd3,etc
         r'(?i)\(?Disc ?(\d)\)?' : r'CD\1', #Disc 1,Disc 2,disc 1,etc
-        }
+    }
+    # fmt: on
     for tag in list(taglist.keys()):
         match = re.search(tag, title)
         if match:
-            tags += match.expand(taglist[tag]) + ' '
-            title = re.sub(tag, '', title)
+            tags += match.expand(taglist[tag]) + " "
+            title = re.sub(tag, "", title)
     LOGGER.debug("2,    Tags: %s", tags)
     return (tags, title)
 
+
 def fix_spaces(title):
-    placeholders = ['[-._]', '  +']
+    placeholders = ["[-._]", "  +"]
     for place_holder in placeholders:
-        title = re.sub(place_holder, ' ', title)
+        title = re.sub(place_holder, " ", title)
     # Remove leftover spaces before/after the year
-    title = re.sub(r'\( ', '(', title)
-    title = re.sub(r' \)', ')', title)
-    title = re.sub(r'\(\)', '', title)
+    title = re.sub(r"\( ", "(", title)
+    title = re.sub(r" \)", ")", title)
+    title = re.sub(r"\(\)", "", title)
     return title
+
 
 def mk_link(link_name, file_path):
     target = os.path.relpath(file_path, os.path.dirname(link_name))
@@ -92,19 +115,23 @@ def mk_link(link_name, file_path):
         os.unlink(link_name)
         os.symlink(target, link_name)
     elif os.path.exists(link_name):
-        print("Unable to create link '" + link_name + "', a file already "
-                "exists with that name.")
+        print(
+            "Unable to create link '" + link_name + "', a file already "
+            "exists with that name."
+        )
     else:
         os.symlink(target, link_name)
 
+
 def report_match(movie_info, num_results):
-    matchtype = 'Using best match: '
+    matchtype = "Using best match: "
     if num_results == 1:
-        matchtype = 'Found exact match: '
-    if 'long imdb title' in list(movie_info.keys()):
-        LOGGER.debug(matchtype + movie_info['long imdb title'])
+        matchtype = "Found exact match: "
+    if "long imdb title" in list(movie_info.keys()):
+        LOGGER.debug(matchtype + movie_info["long imdb title"])
     else:
         LOGGER.debug(matchtype + str(movie_info))
+
 
 def title_from_filename(filename):
     title = os.path.splitext(filename)[0]
@@ -113,22 +140,21 @@ def title_from_filename(filename):
     #   or brackets)
     # Using the year when searching IMDb will help, so try to find it.
     year_match1 = re.match(
-            r'(.*?\w+.*?)(?:([[(])|(\W))(.*?)((?:19|20)\d\d)(?(2)[])]|(\3|$))(.*?)$',
-            title
-            )
+        r"(.*?\w+.*?)(?:([[(])|(\W))(.*?)((?:19|20)\d\d)(?(2)[])]|(\3|$))(.*?)$", title
+    )
     if year_match1:
         (tags, _) = extract_tags(title)
         (title, year, _, _) = year_match1.group(1, 5, 4, 7)
         LOGGER.debug("2,    Title: %s\n    Year: %s", title, year)
-        title += ' (' + year + ')'
+        title += " (" + year + ")"
     else:
         # 2nd pass at finding the year.  Look for a series of tags in parens
         #   which may include the year.
-        year_match2 = re.match(r'(.*?\w+.*?)\(.*((?:19|20)\d\d)\).*\)', title)
+        year_match2 = re.match(r"(.*?\w+.*?)\(.*((?:19|20)\d\d)\).*\)", title)
         if year_match2:
             (title, year) = year_match2.group([1, 2])
             LOGGER.debug("2,    Title: %s\n    Year: %s", title, year)
-            title += ' (' + year + ')'
+            title += " (" + year + ")"
         else:
             LOGGER.debug("2,Cleaning up title the hard way.")
             title = clean_title(title)
@@ -140,9 +166,16 @@ def title_from_filename(filename):
     LOGGER.debug("3,After fixing spaces, title is: %s", title)
     return (title, tags)
 
-class MovieData():
-    def __init__(self, rpc_remote=None, interactive=False, genre_dir=None,
-            country='USA', lang='English'):
+
+class MovieData:
+    def __init__(
+        self,
+        rpc_remote=None,
+        interactive=False,
+        genre_dir=None,
+        country="USA",
+        lang="English",
+    ):
         self.interactive = interactive
 
         self.genre_dir = genre_dir
@@ -201,18 +234,18 @@ class MovieData():
         LOGGER.debug("Searching IMDb for: %s", title)
         # what are the only tags we need
         imdb_info_to_fetch = [
-                'akas',
-                'cast',
-                'director',
-                'director',
-                'genres',
-                'mpaa',
-                'plot outline',
-                'rating',
-                'title',
-                'writer',
-                'year',
-                ]
+            "akas",
+            "cast",
+            "director",
+            "director",
+            "genres",
+            "mpaa",
+            "plot outline",
+            "rating",
+            "title",
+            "writer",
+            "year",
+        ]
         # IMDB access object
         imdb_access = imdb.IMDb()
         try:
@@ -228,11 +261,11 @@ class MovieData():
             return None
 
         if len(results) > 1 and self.interactive:
-            print("\nMatches for movie title '%s'"%title)
+            print("\nMatches for movie title '%s'" % title)
             print("------------------------------------")
             options_text = []
             for result in results:
-                options_text.append(result['long imdb title'])
+                options_text.append(result["long imdb title"])
             imdb_movie_info = common.ask_user(options_text, results, max_options=5)
             print("------------------------------------")
         else:
@@ -243,32 +276,31 @@ class MovieData():
         # get more info from RPC
         if (imdb_movie_info is not None) and (self.rpc_remote is not None):
             rpc_movie_info = {}
-            LOGGER.debug("2,from imdb: %s", imdb_movie_info['title'])
+            LOGGER.debug("2,from imdb: %s", imdb_movie_info["title"])
 
             tries_left = 3
             rpc_info = {}
             while tries_left > 0:
                 try:
                     rpc_info = self.rpc_remote.search_movie(
-                            imdb_movie_info['title'],
-                            year=imdb_movie_info.get('year', None)
-                            )
+                        imdb_movie_info["title"], year=imdb_movie_info.get("year", None)
+                    )
                 except rpc_search.MindTimeoutError:
                     print("RPC Timeout, trying again...")
                     tries_left -= 1
                 else:
                     tries_left = 0
-            if rpc_info.get('partnerCollectionId', '') and rpc_info.get('partnerContentId', ''):
+            if rpc_info.get("partnerCollectionId", "") and rpc_info.get(
+                "partnerContentId", ""
+            ):
                 partnerCollectionId = re.sub(
-                        r'epgProvider:cl\.', '',
-                        rpc_info['partnerCollectionId']
-                        )
+                    r"epgProvider:cl\.", "", rpc_info["partnerCollectionId"]
+                )
                 partnerContentId = re.sub(
-                        r'epgProvider:ct\.', '',
-                        rpc_info['partnerContentId']
-                        )
-                rpc_movie_info['tivoSeriesId'] = partnerCollectionId
-                rpc_movie_info['tivoProgramId'] = partnerContentId
+                    r"epgProvider:ct\.", "", rpc_info["partnerContentId"]
+                )
+                rpc_movie_info["tivoSeriesId"] = partnerCollectionId
+                rpc_movie_info["tivoProgramId"] = partnerContentId
 
             # DEBUG DELETEME
             for key in sorted(rpc_info):
@@ -279,24 +311,26 @@ class MovieData():
             # title and the year; retrieve more information
             try:
                 imdb_movie_info = imdb_access.get_movie(imdb_movie_info.movieID)
-                #LOGGER.debug("3," + imdb_movie_info.summary())
+                # LOGGER.debug("3," + imdb_movie_info.summary())
             except Exception:
-                print("Warning: unable to get extended details from "
-                        "IMDb for: " + str(imdb_movie_info))
+                print(
+                    "Warning: unable to get extended details from "
+                    "IMDb for: " + str(imdb_movie_info)
+                )
                 print("         You may need to update your imdbpy module.")
 
             try:
                 pass
-                #don't enable the next line unless you want the full cast,
+                # don't enable the next line unless you want the full cast,
                 #   actors + everyone else who worked on the movie
-                #imdb_access.update(imdb_movie_info, 'full credits')
+                # imdb_access.update(imdb_movie_info, 'full credits')
             except:
                 LOGGER.debug("Warning: unable to retrieve full credits.")
 
             if is_trailer:
                 try:
                     # This slows down the process, so only do it for trailers
-                    imdb_access.update(imdb_movie_info, 'release dates')
+                    imdb_access.update(imdb_movie_info, "release dates")
                 except Exception:
                     LOGGER.debug("Warning: unable to get release date.")
 
@@ -384,10 +418,10 @@ class MovieData():
         line = ""
 
         # search for user language or country version of title if present
-        title_aka = ''
+        title_aka = ""
 
         # TODO: Currently akas are broken with imdbpy
-        #for aka in movie_info.get('akas', []):
+        # for aka in movie_info.get('akas', []):
         #    print(aka)
         #    (title_aka, info_aka) = aka.split('::')
         #    # Note: maybe safer to search for '(imdb display title)' ?
@@ -399,37 +433,37 @@ class MovieData():
         #        title_aka = ''
 
         # title
-        if title_aka and movie_info['title'] != title_aka:
-            line = "title : %s (%s) %s\n" % (movie_info['title'], title_aka, tags)
+        if title_aka and movie_info["title"] != title_aka:
+            line = "title : %s (%s) %s\n" % (movie_info["title"], title_aka, tags)
         else:
-            line = "title : %s %s\n" % (movie_info['title'], tags)
+            line = "title : %s %s\n" % (movie_info["title"], tags)
 
         # movieYear
-        line += "movieYear : %s\n" % movie_info['year']
+        line += "movieYear : %s\n" % movie_info["year"]
 
         # description
-        line += 'description : '
+        line += "description : "
         if "plot outline" in list(movie_info.keys()):
             # tivo select only uses about the first 122 characters
             # tivo 'info' button allows more
             #   (as of 2019-04-06)
-            line += movie_info['plot outline'][:200]
-            line += "..." if len(movie_info['plot outline']) > 200 else ""
+            line += movie_info["plot outline"][:200]
+            line += "..." if len(movie_info["plot outline"]) > 200 else ""
         # IMDB score if available
         if "rating" in list(movie_info.keys()):
-            line += " IMDB: %s/10" % movie_info['rating']
+            line += " IMDB: %s/10" % movie_info["rating"]
         line += "\n"
 
         # isEpisode always false for movies
         line += "isEpisode : false\n"
         # starRating
         if "rating" in list(movie_info.keys()):
-            line += "starRating : x%s\n" % (int((movie_info['rating']-1)/1.3+1))
+            line += "starRating : x%s\n" % (int((movie_info["rating"] - 1) / 1.3 + 1))
         # mpaa_rating
         # kind of a hack for now...
         # maybe parsing certificates would work better?
         if "mpaa" in list(movie_info.keys()):
-            mpaa_str = movie_info['mpaa']
+            mpaa_str = movie_info["mpaa"]
             mpaa_rating = ""
             if "Rated G " in mpaa_str:
                 mpaa_rating = "G1"
@@ -448,54 +482,52 @@ class MovieData():
                 line += "mpaaRating : %s\n" % mpaa_rating
 
         # TiVo Series ID and Program ID from RPC
-        if 'tivoSeriesId' in movie_info:
-            line += "seriesId : %s\n"%movie_info['tivoSeriesId']
-        if 'tivoProgramId' in movie_info:
-            line += "programId : %s\n"%movie_info['tivoProgramId']
+        if "tivoSeriesId" in movie_info:
+            line += "seriesId : %s\n" % movie_info["tivoSeriesId"]
+        if "tivoProgramId" in movie_info:
+            line += "programId : %s\n" % movie_info["tivoProgramId"]
 
-        #vProgramGenre and vSeriesGenre
-        for genre in movie_info.get('genres', []):
+        # vProgramGenre and vSeriesGenre
+        for genre in movie_info.get("genres", []):
             line += "vProgramGenre : %s\n" % genre
-        for genre in movie_info.get('genres', []):
+        for genre in movie_info.get("genres", []):
             line += "vSeriesGenre : %s\n" % genre
 
         # genre directory linking
         if "genres" in list(movie_info.keys()) and self.genre_dir:
-            self.link_genres(dir_, file_name, metadata_file_name,
-                    movie_info['genres']
-                    )
+            self.link_genres(dir_, file_name, metadata_file_name, movie_info["genres"])
 
         # vDirector
         # go through list, omitting duplicates
         director_names = []
-        for director in movie_info.get('director', []):
-            if director['name'] not in director_names:
-                director_names.append(director['name'])
-                line += "vDirector : %s|\n" % director['name']
-                LOGGER.debug("3,vDirector : %s", director['name'])
+        for director in movie_info.get("director", []):
+            if director["name"] not in director_names:
+                director_names.append(director["name"])
+                line += "vDirector : %s|\n" % director["name"]
+                LOGGER.debug("3,vDirector : %s", director["name"])
         # vWriter
         # go through list, omitting duplicates
         writer_names = []
-        for writer in movie_info.get('writer', []):
-            if writer['name'] not in writer_names:
-                writer_names.append(writer['name'])
-                line += "vWriter : %s|\n" % writer['name']
-                LOGGER.debug("3,vWriter : %s", writer['name'])
+        for writer in movie_info.get("writer", []):
+            if writer["name"] not in writer_names:
+                writer_names.append(writer["name"])
+                line += "vWriter : %s|\n" % writer["name"]
+                LOGGER.debug("3,vWriter : %s", writer["name"])
         # vActor
         # go through list, omitting duplicates
         actor_names = []
-        for actor in movie_info.get('cast', []):
-            if actor['name'] not in actor_names:
-                actor_names.append(actor['name'])
-                line += "vActor : %s|\n" % actor['name']
-                LOGGER.debug("3,vActor : %s", actor['name'])
+        for actor in movie_info.get("cast", []):
+            if actor["name"] not in actor_names:
+                actor_names.append(actor["name"])
+                line += "vActor : %s|\n" % actor["name"]
+                LOGGER.debug("3,vActor : %s", actor["name"])
 
         LOGGER.debug("2,Writing to %s", metadata_file_name)
 
         # only when we are about to write file make metadata dir (e.g. .meta) if
         #   we need to
         common.mkdir_if_needed(os.path.dirname(metadata_file_name))
-        with open(metadata_file_name, 'w') as out_file:
+        with open(metadata_file_name, "w") as out_file:
             out_file.writelines(line)
 
     def link_genres(self, work_dir, file_name, metadata_path, genres):
@@ -511,11 +543,12 @@ class MovieData():
             link = os.path.join(genrepath, metadata_dir)
             mk_link(link, metadata_path)
 
-    def parse_movie(self, search_dir, filename, metadata_file_name,
-            is_trailer=False):
+    def parse_movie(self, search_dir, filename, metadata_file_name, is_trailer=False):
         (title, tags) = title_from_filename(filename)
 
         movie_info = self.get_movie_info(title, is_trailer=is_trailer)
 
         if movie_info is not None:
-            self.format_movie_data(movie_info, search_dir, filename, metadata_file_name, tags)
+            self.format_movie_data(
+                movie_info, search_dir, filename, metadata_file_name, tags
+            )

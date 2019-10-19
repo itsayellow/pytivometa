@@ -112,7 +112,8 @@
 import json
 import logging
 import re
-#import urllib.error
+
+# import urllib.error
 import urllib.request
 import urllib.parse
 
@@ -131,6 +132,7 @@ def debug_fxn(func):
     """Function decorator that prints the function name and the arguments used
     in the function call before executing the function
     """
+
     def func_wrapper(*args, **kwargs):
         log_string = "FXN:" + func.__qualname__ + "(\n"
         for arg in args[1:]:
@@ -140,7 +142,9 @@ def debug_fxn(func):
         log_string += "        )"
         LOGGER.info(log_string)
         return func(*args, **kwargs)
+
     return func_wrapper
+
 
 @debug_fxn
 def get_session_token():
@@ -152,17 +156,14 @@ def get_session_token():
     """
     # execute POST: send apikey, receive session token
     tvdb_api_login_url = TVDB_API_URL + "login"
-    post_fields = {'apikey': TVDB_APIKEY}
-    headers = {
-            'Content-type': 'application/json',
-            'Accept': 'application/json'
-            }
+    post_fields = {"apikey": TVDB_APIKEY}
+    headers = {"Content-type": "application/json", "Accept": "application/json"}
 
     request = urllib.request.Request(
-            tvdb_api_login_url,
-            data=json.dumps(post_fields).encode('ascii'),
-            headers=headers
-            )
+        tvdb_api_login_url,
+        data=json.dumps(post_fields).encode("ascii"),
+        headers=headers,
+    )
     LOGGER.debug("before AUTH request")
     try:
         json_reply_raw = urllib.request.urlopen(request)
@@ -174,7 +175,7 @@ def get_session_token():
 
     json_reply = json_reply_raw.read().decode()
     json_data = json.loads(json_reply)
-    tvdb_sess_token = json_data['token']
+    tvdb_sess_token = json_data["token"]
 
     return tvdb_sess_token
 
@@ -192,9 +193,9 @@ class Tvdb:
             url (str): full URL to access
         """
         headers = {
-                'Authorization': 'Bearer '+ self.session_token,
-                'Accept': 'application/json'
-                }
+            "Authorization": "Bearer " + self.session_token,
+            "Accept": "application/json",
+        }
         if headers_extra is not None:
             headers.update(headers_extra)
 
@@ -243,11 +244,11 @@ class Tvdb:
             ]
         """
         search_string = urllib.parse.quote(search_string)
-        tvdb_search_series_url = TVDB_API_URL + "search/series?name="+ search_string
+        tvdb_search_series_url = TVDB_API_URL + "search/series?name=" + search_string
 
         json_data = self._tvdb_get(tvdb_search_series_url)
 
-        return json_data['data']
+        return json_data["data"]
 
     @debug_fxn
     def get_series_info(self, tvdb_series_id):
@@ -300,32 +301,33 @@ class Tvdb:
         tvdb_series_info_url = TVDB_API_URL + "series/" + tvdb_series_id
 
         json_data = self._tvdb_get(tvdb_series_info_url)
-        series_info = json_data['data']
+        series_info = json_data["data"]
 
         json_data_actors = self._tvdb_get(tvdb_series_info_url + "/actors")
-        #http.client.BadStatusLine: <html>
+        # http.client.BadStatusLine: <html>
         #   when I accidentally erroneously gave <cr> in tvdb_series_id
-        series_info_actors = json_data_actors['data']
+        series_info_actors = json_data_actors["data"]
 
         # sort by last name after sortOrder
         def sortorder_then_lastname(item):
-            last_name_re = re.search(r'\s(\S+)$', item['name'])
+            last_name_re = re.search(r"\s(\S+)$", item["name"])
             if last_name_re:
-                return '%02d%s'%(item['sortOrder'], last_name_re.group(1))
+                return "%02d%s" % (item["sortOrder"], last_name_re.group(1))
 
-            return '%02d'%item['sortOrder']
+            return "%02d" % item["sortOrder"]
 
-        #series_info_actors.sort(key=lambda x: x['sortOrder'])
+        # series_info_actors.sort(key=lambda x: x['sortOrder'])
         series_info_actors.sort(key=sortorder_then_lastname)
 
-        actors = [actdata['name'] for actdata in series_info_actors]
-        series_info['actors'] = actors
+        actors = [actdata["name"] for actdata in series_info_actors]
+        series_info["actors"] = actors
 
         return series_info
 
     @debug_fxn
-    def get_episode_info(self, tvdb_series_id, season=None, episode=None,
-            year=None, month=None, day=None):
+    def get_episode_info(
+        self, tvdb_series_id, season=None, episode=None, year=None, month=None, day=None
+    ):
         """Given a series ID, return info on a particular episode
 
         Args:
@@ -337,22 +339,28 @@ class Tvdb:
         """
         if season is None or episode is None:
             (season, episode) = self.get_season_ep_from_airdate(
-                    tvdb_series_id, year, month, day
-                    )
+                tvdb_series_id, year, month, day
+            )
 
-        get_episode_id_url = TVDB_API_URL + "series/" + tvdb_series_id + \
-                "/episodes/query?airedSeason=" + season + \
-                "&airedEpisode=" + episode
+        get_episode_id_url = (
+            TVDB_API_URL
+            + "series/"
+            + tvdb_series_id
+            + "/episodes/query?airedSeason="
+            + season
+            + "&airedEpisode="
+            + episode
+        )
         json_data = self._tvdb_get(get_episode_id_url)
-        episode_list_info = json_data['data']
+        episode_list_info = json_data["data"]
 
         assert len(episode_list_info) == 1
 
-        episode_id = str(episode_list_info[0]['id'])
+        episode_id = str(episode_list_info[0]["id"])
 
         get_episode_info_url = TVDB_API_URL + "episodes/" + episode_id
         json_data = self._tvdb_get(get_episode_info_url)
-        episode_info = json_data['data']
+        episode_info = json_data["data"]
         return episode_info
 
     @debug_fxn
@@ -361,7 +369,7 @@ class Tvdb:
         episode = None
 
         # assumes year, month, day are all strings
-        search_date_num = int("%04d%02d%02d"%(int(year), int(month), int(day)))
+        search_date_num = int("%04d%02d%02d" % (int(year), int(month), int(day)))
         LOGGER.debug("searching for episode date %d", search_date_num)
 
         # need to get all pages in /series/{id}/episodes to find air date
@@ -387,28 +395,33 @@ class Tvdb:
                     print(http_error.headers)
                     raise
             else:
-                episode_list = json_data['data']
+                episode_list = json_data["data"]
 
             if episode_list:
                 for episode_info in episode_list:
                     # NOTE: currently episode list seems to be sorted odd!
                     #   All seasons' episode 1, then all seasons' episode 2, ...
-                    if episode_info['firstAired']:
-                        ep_date_re = re.search(r'(\d+)-(\d+)-(\d+)', episode_info['firstAired'])
+                    if episode_info["firstAired"]:
+                        ep_date_re = re.search(
+                            r"(\d+)-(\d+)-(\d+)", episode_info["firstAired"]
+                        )
                         if ep_date_re:
                             year = ep_date_re.group(1)
                             month = ep_date_re.group(2)
                             day = ep_date_re.group(3)
-                            ep_date_num = int("%04d%02d%02d"%(int(year), int(month), int(day)))
-                            LOGGER.debug("2,searching: episode date %d season %s episode %s",
-                                    ep_date_num,
-                                    episode_info['airedSeason'],
-                                    episode_info['airedEpisodeNumber']
-                                    )
+                            ep_date_num = int(
+                                "%04d%02d%02d" % (int(year), int(month), int(day))
+                            )
+                            LOGGER.debug(
+                                "2,searching: episode date %d season %s episode %s",
+                                ep_date_num,
+                                episode_info["airedSeason"],
+                                episode_info["airedEpisodeNumber"],
+                            )
                             if ep_date_num == search_date_num:
                                 # found a match
-                                season = episode_info['airedSeason']
-                                episode = episode_info['airedEpisodeNumber']
+                                season = episode_info["airedSeason"]
+                                episode = episode_info["airedEpisodeNumber"]
                                 done = True
                                 break
             else:

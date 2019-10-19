@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Copyright (c) 2008, Graham Dunn <gmd@kurai.org>
 # Copyright (c) 2009-2011, Josh Harding <theamigo@gmail.com>
 # Copyright (c) 2017, Matthew Clapp <itsayellow+dev@gmail.com>
@@ -30,7 +30,7 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 #    pytivometa - fetches metadata for video files for pytivo
 #    Copyright (c) 2008, Graham Dunn <gmd@kurai.org>
 #    Copyright (c) 2009-2011, Josh Harding <theamigo@gmail.com>
@@ -48,7 +48,7 @@
 #
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 # Version : 0.5
 
@@ -84,11 +84,11 @@ import rpc_search
 
 
 # location of config dir and file for pytivometa
-if sys.platform == 'win32':
+if sys.platform == "win32":
     CONFIG_DIR = os.path.join(
-            os.environ.get('LOCALAPPDATA', os.path.expanduser("~/AppData/Local")),
-            'pytivometa'
-            )
+        os.environ.get("LOCALAPPDATA", os.path.expanduser("~/AppData/Local")),
+        "pytivometa",
+    )
 else:
     CONFIG_DIR = os.path.expanduser("~/.config/pytivometa")
 CONFIG_FILE_PATH = CONFIG_DIR + "/config"
@@ -96,18 +96,25 @@ LOG_FILE_PATH = CONFIG_DIR + "/log.txt"
 NUM_LOGFILE_HIST = 5
 
 # When using a subdir for metadata files, what should it be called
-META_DIR = '.meta'
+META_DIR = ".meta"
 
 # Types of files we want to get metadata for
 VIDEO_FILE_EXTS = [
-        ".mpg", ".avi", ".ogm", ".mkv", ".mp4",
-        ".mov", ".wmv", ".vob", ".m4v", ".flv"
-        ]
+    ".mpg",
+    ".avi",
+    ".ogm",
+    ".mkv",
+    ".mp4",
+    ".mov",
+    ".wmv",
+    ".vob",
+    ".m4v",
+    ".flv",
+]
 
 # root logger
 LOGGER = logging.getLogger(__name__)
-LOGGED_MODULES = [__name__, 'movie_data', 'tv_data', 'rpc_search',
-        'tvdb_api_v2']
+LOGGED_MODULES = [__name__, "movie_data", "tv_data", "rpc_search", "tvdb_api_v2"]
 
 
 def logging_setup(debug_level=False):
@@ -122,9 +129,9 @@ def logging_setup(debug_level=False):
     logfile_path = os.path.realpath(os.path.expanduser(LOG_FILE_PATH))
     # rename all old log files
     #   (log.txt.2 -> log.txt.3, log.txt.1 -> log.txt.2, log.txt -> log.txt.1
-    for i in range(NUM_LOGFILE_HIST-1, -1, -1):
-        fname = logfile_path + ".%d"%i if i != 0 else logfile_path
-        fname_plus_1 = logfile_path + ".%d"%(i+1)
+    for i in range(NUM_LOGFILE_HIST - 1, -1, -1):
+        fname = logfile_path + ".%d" % i if i != 0 else logfile_path
+        fname_plus_1 = logfile_path + ".%d" % (i + 1)
         if os.path.exists(fname):
             os.replace(fname, fname_plus_1)
 
@@ -132,17 +139,19 @@ def logging_setup(debug_level=False):
     f_handler = logging.FileHandler(logfile_path)
     f_handler.setLevel(logging.DEBUG)
     # create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     # add formatter to f_handler
     f_handler.setFormatter(formatter)
 
     ## create console handler and set level to debug
-    #c_handler = logging.StreamHandler()
-    #c_handler.setLevel(logging.DEBUG)
+    # c_handler = logging.StreamHandler()
+    # c_handler.setLevel(logging.DEBUG)
     ## create formatter
-    #formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ## add formatter to c_handler
-    #c_handler.setFormatter(formatter)
+    # c_handler.setFormatter(formatter)
 
     # set global log level to either INFO or DEBUG depending on config
     if debug_level:
@@ -153,18 +162,18 @@ def logging_setup(debug_level=False):
     # config all loggers
     for logger_name in LOGGED_MODULES:
         logging.getLogger(logger_name).setLevel(global_log_level)
-        #logging.getLogger(logger_name).addHandler(c_handler)
+        # logging.getLogger(logger_name).addHandler(c_handler)
         logging.getLogger(logger_name).addHandler(f_handler)
 
     # used to config root logger, but imdbpy module then spews to stdout :(
-    #logging.getLogger().setLevel(global_log_level)
-    #logging.getLogger().addHandler(f_handler)
+    # logging.getLogger().setLevel(global_log_level)
+    # logging.getLogger().addHandler(f_handler)
 
     log_eff_level = LOGGER.getEffectiveLevel()
     LOGGER.log(
-            log_eff_level,
-            "Global log level set to %s", logging.getLevelName(log_eff_level)
-            )
+        log_eff_level, "Global log level set to %s", logging.getLevelName(log_eff_level)
+    )
+
 
 def get_video_files(dirname, dir_files):
     """Get list of file info objects for files of particular extensions, and
@@ -183,17 +192,18 @@ def get_video_files(dirname, dir_files):
 
     return video_files
 
+
 def tvinfo_from_filename(filename):
     # Regexes for filenames that match TV shows.
     #   group 1: series search string (i.e. series name)
     # ?P<name> at the beginning of a group calls the group 'name'
     tv_res = [
-            r'(.+)[Ss](?P<season>\d\d?)[Ee](?P<episode>\d+)',
-            r'(.+?)(?: -)? ?(?P<season>\d+)[Xx](?P<episode>\d+)',
-            r'(.*).(?P<year>\d\d\d\d).(?P<month>\d+).(?P<day>\d+).*',
-            r'(.*).(?P<month>\d+).(?P<day>\d+).(?P<year>\d\d\d\d).*',
-            r'(?i)(.+)(?P<season>\d?\d)(?P<episode>\d\d).*sitv' # (?i) == re.I
-            ]
+        r"(.+)[Ss](?P<season>\d\d?)[Ee](?P<episode>\d+)",
+        r"(.+?)(?: -)? ?(?P<season>\d+)[Xx](?P<episode>\d+)",
+        r"(.*).(?P<year>\d\d\d\d).(?P<month>\d+).(?P<day>\d+).*",
+        r"(.*).(?P<month>\d+).(?P<day>\d+).(?P<year>\d\d\d\d).*",
+        r"(?i)(.+)(?P<season>\d?\d)(?P<episode>\d\d).*sitv",  # (?i) == re.I
+    ]
 
     for tv_re in tv_res:
         match = re.search(tv_re, filename)
@@ -204,73 +214,84 @@ def tvinfo_from_filename(filename):
     tv_info = {}
     if match:
         # fill in tv_info if we matched this filename to a regex
-        tv_info['series'] = re.sub(r'[._]', ' ', match.group(1)).strip()
+        tv_info["series"] = re.sub(r"[._]", " ", match.group(1)).strip()
         if match.lastindex >= 4:
             # str(int()) strips out leading zeroes
-            tv_info['year'] = str(int(match.group('year')))
-            tv_info['month'] = str(int(match.group('month')))
-            tv_info['day'] = str(int(match.group('day')))
+            tv_info["year"] = str(int(match.group("year")))
+            tv_info["month"] = str(int(match.group("month")))
+            tv_info["day"] = str(int(match.group("day")))
         else:
-            tv_info['season'] = str(int(match.group('season')))
-            tv_info['episode'] = str(int(match.group('episode')))
+            tv_info["season"] = str(int(match.group("season")))
+            tv_info["episode"] = str(int(match.group("episode")))
 
-        LOGGER.debug("2,    Series: %s\n" \
-                "    Season: %s\n" \
-                "    Episode: %s\n" \
-                "    Year: %s\n" \
-                "    Month: %s\n" \
-                "    Day: %s",
-                tv_info['series'],
-                tv_info.get('season', ''),
-                tv_info.get('episode', ''),
-                tv_info.get('year', ''),
-                tv_info.get('month', ''),
-                tv_info.get('day', '')
-                )
+        LOGGER.debug(
+            "2,    Series: %s\n"
+            "    Season: %s\n"
+            "    Episode: %s\n"
+            "    Year: %s\n"
+            "    Month: %s\n"
+            "    Day: %s",
+            tv_info["series"],
+            tv_info.get("season", ""),
+            tv_info.get("episode", ""),
+            tv_info.get("year", ""),
+            tv_info.get("month", ""),
+            tv_info.get("day", ""),
+        )
 
     return tv_info
 
+
 def check_interactive():
-    if sys.platform not in ['win32', 'cygwin']:
+    if sys.platform not in ["win32", "cygwin"]:
         # On unix-like platforms, set interactive mode when running from a
         #   terminal
         if os.isatty(sys.stdin.fileno()):
             return True
     # On windows systems set interactive when running from a console
-    elif 'PROMPT' in list(os.environ.keys()):
+    elif "PROMPT" in list(os.environ.keys()):
         return True
     return False
 
+
 def create_genre_dir(genre_dir):
     # Python doesn't support making symlinks on Windows.
-    if sys.platform in ['win32', 'cygwin']:
-        print("The genre feature doesn't work on Windows as symlinks "
-                "aren't well supported.")
+    if sys.platform in ["win32", "cygwin"]:
+        print(
+            "The genre feature doesn't work on Windows as symlinks "
+            "aren't well supported."
+        )
         genre_dir = None
     else:
         if not os.path.exists(genre_dir):
             os.makedirs(genre_dir, 0o755)
         elif not os.path.isdir(genre_dir):
             raise OSError(
-                    'Can\'t create "' + genre_dir + '" as a dir, a ' + \
-                            'file already exists with that name.'
-                    )
+                "Can't create \""
+                + genre_dir
+                + '" as a dir, a '
+                + "file already exists with that name."
+            )
         else:
-            print("Note: If you've removed videos, there may be old "
-                    "symlinks in '" + genre_dir + "'.  If there's "
-                    "nothing else in there, you can just remove the "
-                    "whole thing first, then run this again (e.g. "
-                    "rm -rf '" + genre_dir + "'), but be careful.")
+            print(
+                "Note: If you've removed videos, there may be old "
+                "symlinks in '" + genre_dir + "'.  If there's "
+                "nothing else in there, you can just remove the "
+                "whole thing first, then run this again (e.g. "
+                "rm -rf '" + genre_dir + "'), but be careful."
+            )
     return genre_dir
 
-def process_dir(dir_proc, dir_files, tv_data_acc, movie_data_acc,
-        use_metadir=False, clobber=False):
+
+def process_dir(
+    dir_proc, dir_files, tv_data_acc, movie_data_acc, use_metadir=False, clobber=False
+):
     LOGGER.debug("\n## Looking for videos in: %s", dir_proc)
 
     video_files = get_video_files(dir_proc, dir_files)
 
     # See if we're in a "Trailer" folder.
-    is_trailer = 'trailer' in os.path.abspath(dir_proc).lower()
+    is_trailer = "trailer" in os.path.abspath(dir_proc).lower()
 
     # dir to put metadata in is either dir_proc or dir_proc/META_DIR
     if use_metadir or os.path.isdir(os.path.join(dir_proc, META_DIR)):
@@ -279,7 +300,7 @@ def process_dir(dir_proc, dir_files, tv_data_acc, movie_data_acc,
         meta_dir = dir_proc
 
     for filename in video_files:
-        meta_filepath = os.path.join(meta_dir, filename + '.txt')
+        meta_filepath = os.path.join(meta_dir, filename + ".txt")
 
         LOGGER.debug("\n--->working on: %s", filename)
         LOGGER.debug("2,Metafile is: %s", meta_filepath)
@@ -295,9 +316,10 @@ def process_dir(dir_proc, dir_files, tv_data_acc, movie_data_acc,
                 tv_data_acc.parse_tv(tv_info, meta_filepath, dir_proc)
             else:
                 # assume movie if filename not matching tv
-                movie_data_acc.parse_movie(dir_proc, filename, meta_filepath,
-                        is_trailer=is_trailer,
-                        )
+                movie_data_acc.parse_movie(
+                    dir_proc, filename, meta_filepath, is_trailer=is_trailer
+                )
+
 
 def process_command_line(argv):
     """Process command line invocation arguments and switches.
@@ -314,131 +336,152 @@ def process_command_line(argv):
     #   argument_default=SUPPRESS means do not add option to namespace
     #       if it is not present (we use separate defaults fxn)
     parser = argparse.ArgumentParser(
-            argument_default=argparse.SUPPRESS,
-            description="Retrieve information from TVDB and IMDB to add "\
-                    "TiVo metadatada to all media files in the current "\
-                    "directory.  TV info from http://www.thetvdb.com/ ."\
-                    "They welcome user contributions of show data."
-                    )
+        argument_default=argparse.SUPPRESS,
+        description="Retrieve information from TVDB and IMDB to add "
+        "TiVo metadatada to all media files in the current "
+        "directory.  TV info from http://www.thetvdb.com/ ."
+        "They welcome user contributions of show data.",
+    )
 
     # optional positional list of directories:
     parser.add_argument(
-            "dir", nargs="*", default=['.'],
-            help="Specific directory(-ies) to process. (Default is current "\
-                    "directory.)"
-            )
+        "dir",
+        nargs="*",
+        default=["."],
+        help="Specific directory(-ies) to process. (Default is current directory.)",
+    )
 
     # switches/options:
     parser.add_argument(
-            "-c", "--createconfig", action="store_true",
-            help="Create config file: " + CONFIG_FILE_PATH + \
-                    " with default settings and immediately exit."
-            )
+        "-c",
+        "--createconfig",
+        action="store_true",
+        help="Create config file: "
+        + CONFIG_FILE_PATH
+        + " with default settings and immediately exit.",
+    )
     parser.add_argument(
-            "-d", "--debug", action="store_true",
-            help="More detailed debugging messages are printed to log file."
-            )
+        "-d",
+        "--debug",
+        action="store_true",
+        help="More detailed debugging messages are printed to log file.",
+    )
     parser.add_argument(
-            "-f", "--force", action="store_true", dest="clobber",
-            help="Force overwrite of existing metadata"
-            )
+        "-f",
+        "--force",
+        action="store_true",
+        dest="clobber",
+        help="Force overwrite of existing metadata",
+    )
     parser.add_argument(
-            "-t", "--tidy", action="store_true", dest="metadir",
-            help="Save metadata files in .meta subdirectory. "
-            )
+        "-t",
+        "--tidy",
+        action="store_true",
+        dest="metadir",
+        help="Save metadata files in .meta subdirectory. ",
+    )
     parser.add_argument(
-            "-r", "--recursive", action="store_true",
-            help="Generate metadata for all files in sub dirs too."
-            )
+        "-r",
+        "--recursive",
+        action="store_true",
+        help="Generate metadata for all files in sub dirs too.",
+    )
     parser.add_argument(
-            "-g", "--genre",
-            help="Specify a directory in which to place symlinks to shows, "\
-                    "organized by genre."
-            )
+        "-g",
+        "--genre",
+        help="Specify a directory in which to place symlinks to shows, "
+        "organized by genre.",
+    )
     parser.add_argument(
-            "-w", "--wait", dest="timeout", type=int,
-            help="How many seconds to wait for a connection to thetvdb.com "\
-                    "before giving up. (Default: 5s)"
-            )
+        "-w",
+        "--wait",
+        dest="timeout",
+        type=int,
+        help="How many seconds to wait for a connection to thetvdb.com "
+        "before giving up. (Default: 5s)",
+    )
 
     args = parser.parse_args(argv)
 
     return args
 
+
 def get_config_file():
     config_data = {}
     config_filepath = os.path.expanduser(CONFIG_FILE_PATH)
     if os.path.isfile(config_filepath):
-        with open(config_filepath, 'r') as config_fh:
+        with open(config_filepath, "r") as config_fh:
             for line in config_fh:
-                line = re.sub(r'#.*', '', line)
+                line = re.sub(r"#.*", "", line)
                 line = line.lstrip()
-                line = line.rstrip('\n\r')
+                line = line.rstrip("\n\r")
                 if "=" in line:
-                    (key, value) = line.split('=', maxsplit=1)
+                    (key, value) = line.split("=", maxsplit=1)
                     key = key.strip()
                     config_data[key] = value
 
     # convert 'true' or 'True' to True, else False
-    if 'metadir' in config_data:
-        config_data['metadir'] = 'true' in config_data['metadir'].lower()
-    if 'recursive' in config_data:
-        config_data['recursive'] = 'true' in config_data['recursive'].lower()
-    if 'clobber' in config_data:
-        config_data['clobber'] = 'true' in config_data['clobber'].lower()
+    if "metadir" in config_data:
+        config_data["metadir"] = "true" in config_data["metadir"].lower()
+    if "recursive" in config_data:
+        config_data["recursive"] = "true" in config_data["recursive"].lower()
+    if "clobber" in config_data:
+        config_data["clobber"] = "true" in config_data["clobber"].lower()
 
     # convert str number to int
-    if 'timeout' in config_data:
-        config_data['timeout'] = int(config_data['timeout'])
-    if 'debug' in config_data:
-        config_data['debug'] = 'true' in config_data['debug'].lower()
+    if "timeout" in config_data:
+        config_data["timeout"] = int(config_data["timeout"])
+    if "debug" in config_data:
+        config_data["debug"] = "true" in config_data["debug"].lower()
 
     return config_data
+
 
 def default_config_values():
     """Master location of all default config values
     """
     config_data = {
-            'clobber': False,
-            'createconfig': False,
-            'debug': False,
-            'genre': None,
-            'metadir': False,
-            'recursive': False,
-            'timeout': 5,
-            'country': 'USA',
-            'language': 'English'
-            }
+        "clobber": False,
+        "createconfig": False,
+        "debug": False,
+        "genre": None,
+        "metadir": False,
+        "recursive": False,
+        "timeout": 5,
+        "country": "USA",
+        "language": "English",
+    }
     return config_data
+
 
 def create_config_file():
     def_config = default_config_values()
     config_default_lines = [
-            "# pytivometa config file",
-            "# Command-line options will override these options.",
-            "\n# for RPC searches.  Omit or leave blank to disable.",
-            "# If username is present and password is blank, user will be",
-            "#     asked for password upon every execution of program.",
-            "username=",
-            "password=",
-            "\n# When searching for matching entries, prefer descriptions",
-            "#     in 'language' and info matching 'country'",
-            "language=%s"%def_config['language'],
-            "country=%s"%def_config['country'],
-            "\n# Save metadata files in .meta subdirectory: True or False",
-            "metadir=%s"%def_config['metadir'],
-            "\n# How many seconds to wait for a connection to thetvdb.com",
-            "timeout=%d"%def_config['timeout'],
-            "\n# Generate metadata for all files in sub dirs too: True or False",
-            "recursive=%s"%def_config['recursive'],
-            "\n# Specify a directory in which to place symlinks to shows, ",
-            "#    organized by genre.  Leave blank to disable.",
-            "genre=",
-            "\n# Force overwrite of existing metadata: True or False",
-            "clobber=%s"%def_config['clobber'],
-            "\n# Extra debug messages in log file: True or False",
-            "debug=%s"%def_config['debug'],
-            ]
+        "# pytivometa config file",
+        "# Command-line options will override these options.",
+        "\n# for RPC searches.  Omit or leave blank to disable.",
+        "# If username is present and password is blank, user will be",
+        "#     asked for password upon every execution of program.",
+        "username=",
+        "password=",
+        "\n# When searching for matching entries, prefer descriptions",
+        "#     in 'language' and info matching 'country'",
+        "language=%s" % def_config["language"],
+        "country=%s" % def_config["country"],
+        "\n# Save metadata files in .meta subdirectory: True or False",
+        "metadir=%s" % def_config["metadir"],
+        "\n# How many seconds to wait for a connection to thetvdb.com",
+        "timeout=%d" % def_config["timeout"],
+        "\n# Generate metadata for all files in sub dirs too: True or False",
+        "recursive=%s" % def_config["recursive"],
+        "\n# Specify a directory in which to place symlinks to shows, ",
+        "#    organized by genre.  Leave blank to disable.",
+        "genre=",
+        "\n# Force overwrite of existing metadata: True or False",
+        "clobber=%s" % def_config["clobber"],
+        "\n# Extra debug messages in log file: True or False",
+        "debug=%s" % def_config["debug"],
+    ]
     config_filepath = os.path.realpath(os.path.expanduser(CONFIG_FILE_PATH))
 
     print("Creating default config file: " + CONFIG_FILE_PATH)
@@ -449,11 +492,13 @@ def create_config_file():
     try:
         os.makedirs(os.path.dirname(config_filepath), exist_ok=True)
     except OSError:
-        print("Couldn't make config file, error creating directory: " +\
-                os.path.dirname(CONFIG_FILE_PATH))
+        print(
+            "Couldn't make config file, error creating directory: "
+            + os.path.dirname(CONFIG_FILE_PATH)
+        )
         return
     try:
-        with open(config_filepath, 'w') as config_fh:
+        with open(config_filepath, "w") as config_fh:
             for line in config_default_lines:
                 print(line, file=config_fh)
     except:
@@ -461,6 +506,7 @@ def create_config_file():
         print("Couldn't make config file: " + CONFIG_FILE_PATH)
         raise
     os.chmod(config_filepath, stat.S_IRUSR + stat.S_IWUSR)
+
 
 def get_rpc(username=None, password=None):
     # get RPC username and password if it exists
@@ -471,8 +517,10 @@ def get_rpc(username=None, password=None):
         try:
             rpc_remote = rpc_search.Remote(username, password)
         except rpc_search.AuthError:
-            print("Bad password or username for RPC."
-                    "    Unable to use RPC search capability")
+            print(
+                "Bad password or username for RPC."
+                "    Unable to use RPC search capability"
+            )
             LOGGER.debug("No rpc_remote")
             rpc_remote = None
     else:
@@ -482,6 +530,7 @@ def get_rpc(username=None, password=None):
         print("Successful login to RPC.  RPC info enabled.")
 
     return rpc_remote
+
 
 def main(argv):
     # start with config default values
@@ -494,11 +543,11 @@ def main(argv):
     config.update(vars(process_command_line(argv)))
 
     # Set up logging
-    logging_setup(config['debug'])
+    logging_setup(config["debug"])
 
     # create default config file in proper place if requested, and immediately
     #   exit
-    if config['createconfig']:
+    if config["createconfig"]:
         create_config_file()
         return 0
 
@@ -506,53 +555,59 @@ def main(argv):
     interactive = check_interactive()
 
     # create/set genre dir if specified and possible
-    if config['genre']:
-        genre_dir = create_genre_dir(config['genre'])
+    if config["genre"]:
+        genre_dir = create_genre_dir(config["genre"])
     else:
         genre_dir = None
 
     # get rpc_remote if possible
     rpc_remote = get_rpc(
-            username=config.get('username', None),
-            password=config.get('password', None)
-            )
+        username=config.get("username", None), password=config.get("password", None)
+    )
 
     # Initalize tv_data access
     tv_data_acc = tv_data.TvData(
-            interactive=interactive,
-            clobber=config['clobber'],
-            rpc_remote=rpc_remote
-            )
+        interactive=interactive, clobber=config["clobber"], rpc_remote=rpc_remote
+    )
     # Initalize movie_data access
     movie_data_acc = movie_data.MovieData(
-            interactive=interactive,
-            genre_dir=genre_dir,
-            country=config['country'],
-            lang=config['language'],
-            rpc_remote=rpc_remote,
-            )
+        interactive=interactive,
+        genre_dir=genre_dir,
+        country=config["country"],
+        lang=config["language"],
+        rpc_remote=rpc_remote,
+    )
 
     # process all dirs
-    for search_dir in config['dir']:
-        if config['recursive']:
+    for search_dir in config["dir"]:
+        if config["recursive"]:
             for (dirpath, _, dir_files) in os.walk(search_dir):
                 dirname = os.path.basename(dirpath)
                 # only non-hidden dirs (no dirs starting with .)
                 #   but '.' dir is OK
-                if not re.search(r'\..+', dirname):
-                    process_dir(dirpath, dir_files, tv_data_acc, movie_data_acc,
-                            use_metadir=config['metadir'],
-                            clobber=config['clobber'],
-                            )
+                if not re.search(r"\..+", dirname):
+                    process_dir(
+                        dirpath,
+                        dir_files,
+                        tv_data_acc,
+                        movie_data_acc,
+                        use_metadir=config["metadir"],
+                        clobber=config["clobber"],
+                    )
         else:
             dir_files = os.listdir(search_dir)
-            process_dir(search_dir, dir_files, tv_data_acc, movie_data_acc,
-                    use_metadir=config['metadir'],
-                    clobber=config['clobber'],
-                    )
+            process_dir(
+                search_dir,
+                dir_files,
+                tv_data_acc,
+                movie_data_acc,
+                use_metadir=config["metadir"],
+                clobber=config["clobber"],
+            )
 
     # exit status 0 if everything's ok
     return 0
+
 
 if __name__ == "__main__":
     try:

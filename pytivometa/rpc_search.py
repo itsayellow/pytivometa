@@ -53,12 +53,13 @@ import random
 import re
 import socket
 import ssl
-#import sys
+
+# import sys
 import json
 import pprint
 
 
-TIVO_ADDR = 'middlemind.tivo.com'
+TIVO_ADDR = "middlemind.tivo.com"
 TIVO_PORT = 443
 
 # Set up logger
@@ -71,6 +72,7 @@ PP = pprint.PrettyPrinter(indent=4, depth=3)
 def debug_fxn(func):
     """Function decorator that prints the function name and the arguments used
     """
+
     def func_wrapper(*args, **kwargs):
         log_string = "FXN:" + func.__qualname__ + "(\n"
         for arg in args[1:]:
@@ -80,7 +82,9 @@ def debug_fxn(func):
         log_string += "        )"
         LOGGER.info(log_string)
         return func(*args, **kwargs)
+
     return func_wrapper
+
 
 def debug_fxn_omit(omit_args=None, omit_kwargs=None):
     """Function decorator that prints the function name and the arguments used
@@ -91,6 +95,7 @@ def debug_fxn_omit(omit_args=None, omit_kwargs=None):
         omit_args = []
     if omit_kwargs is None:
         omit_kwargs = []
+
     def debug_fxn_int(func):
         def func_wrapper(*args, **kwargs):
             log_string = "FXN:" + func.__qualname__ + "(\n"
@@ -107,34 +112,46 @@ def debug_fxn_omit(omit_args=None, omit_kwargs=None):
             log_string += "        )"
             LOGGER.info(log_string)
             return func(*args, **kwargs)
+
         return func_wrapper
+
     return debug_fxn_int
+
 
 class Error(Exception):
     """Base class for all RPC errors
     """
+
     pass
+
 
 class AuthError(Error):
     """Error raised if RPC authentication error (e.g. username/pass)
     """
+
     pass
+
 
 class MindTimeoutError(Error):
     """RPC returns response that it timed out.  Caller can try again
     """
+
     pass
+
 
 class MindInternalError(Error):
     """RPC/Mind responded with 'Internal error'
     """
+
     pass
+
 
 class Remote(object):
     """Used to initiate and maintain SSL RPC socket access to Mind
     """
+
     @debug_fxn_omit(omit_args=[1])
-    def __init__(self, username, password, lang='English'):
+    def __init__(self, username, password, lang="English"):
         """Initialize Remote TiVo mind SSL socket connection
 
         Args:
@@ -155,23 +172,22 @@ class Remote(object):
         self.lang = lang
 
         # unique ID for entire session
-        self.session_id = random.randrange(0x26c000, 0x27dc20)
+        self.session_id = random.randrange(0x26C000, 0x27DC20)
         # unique ID for each request
         self.rpc_id = 0
         # initialize SSL socket
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ssl_socket = ssl.wrap_socket(
-                self.socket,
-                certfile=os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)),
-                    'cdata.pem'
-                    )
-                )
+            self.socket,
+            certfile=os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "cdata.pem"
+            ),
+        )
         try:
             self.ssl_socket.connect((TIVO_ADDR, TIVO_PORT))
         except:
-            print('connect error')
-            LOGGER.error('SSL socket initial connection error', exc_info=True)
+            print("connect error")
+            LOGGER.error("SSL socket initial connection error", exc_info=True)
             # re-raise so we know exact exception to enumerate code
             raise
 
@@ -189,7 +205,7 @@ class Remote(object):
         self.rpc_id = self.rpc_id + 1
         return rpc_id
 
-    @debug_fxn_omit(omit_kwargs=['credential'])
+    @debug_fxn_omit(omit_kwargs=["credential"])
     def _rpc_request(self, req_type, monitor=False, **kwargs):
         """Format key=value pairs into string for RPC request to TiVo Mind
 
@@ -204,33 +220,38 @@ class Remote(object):
         Returns:
             str: actual json-formatted request with headers, body, etc.
         """
-        if 'bodyId' in kwargs:
-            body_id = kwargs['bodyId']
+        if "bodyId" in kwargs:
+            body_id = kwargs["bodyId"]
         else:
-            body_id = ''
+            body_id = ""
 
-        headers = '\r\n'.join((
-                'Type: request',
-                'RpcId: %d' % self._get_rpc_id(),
-                'SchemaVersion: 14',
-                'Content-Type: application/json',
-                'RequestType: %s' % req_type,
-                'ResponseCount: %s' % (monitor and 'multiple' or 'single'),
-                'BodyId: %s' % body_id,
-                'X-ApplicationName: Quicksilver',
-                'X-ApplicationVersion: 1.2',
-                'X-ApplicationSessionId: 0x%x' % self.session_id,
-                )) + '\r\n'
+        headers = (
+            "\r\n".join(
+                (
+                    "Type: request",
+                    "RpcId: %d" % self._get_rpc_id(),
+                    "SchemaVersion: 14",
+                    "Content-Type: application/json",
+                    "RequestType: %s" % req_type,
+                    "ResponseCount: %s" % (monitor and "multiple" or "single"),
+                    "BodyId: %s" % body_id,
+                    "X-ApplicationName: Quicksilver",
+                    "X-ApplicationVersion: 1.2",
+                    "X-ApplicationSessionId: 0x%x" % self.session_id,
+                )
+            )
+            + "\r\n"
+        )
 
         req_obj = dict(**kwargs)
-        req_obj.update({'type': req_type})
+        req_obj.update({"type": req_type})
 
-        body = json.dumps(req_obj) + '\n'
+        body = json.dumps(req_obj) + "\n"
 
         # The "+ 2" is for the '\r\n' we'll add to the headers next.
-        start_line = 'MRPC/2 %d %d' % (len(headers) + 2, len(body))
+        start_line = "MRPC/2 %d %d" % (len(headers) + 2, len(body))
 
-        return '\r\n'.join((start_line, headers, body))
+        return "\r\n".join((start_line, headers, body))
 
     @debug_fxn
     def _read(self):
@@ -243,11 +264,11 @@ class Remote(object):
         # TODO: do we need to check for ssl_socket timeouts, error?
 
         # read buffer is bytes
-        buf_raw = b''
+        buf_raw = b""
 
         while True:
             buf_raw += self.ssl_socket.read(16)
-            match = re.match(r'MRPC/2 (\d+) (\d+)\r\n', buf_raw.decode('utf-8'))
+            match = re.match(r"MRPC/2 (\d+) (\d+)\r\n", buf_raw.decode("utf-8"))
             if match:
                 start_line = match.group(0)
                 head_len = int(match.group(1))
@@ -259,15 +280,15 @@ class Remote(object):
             buf_raw += self.ssl_socket.read(1024)
         buf = buf_raw[:need_len]
 
-        #LOGGER.debug('READ %s', buf)
-        head_val = buf[:-1*body_len].decode('utf-8')
-        LOGGER.debug('header: %s', head_val)
-        rpc_id = int(re.search(r'RpcId: (\d+)\r\n', head_val).group(1))
-        LOGGER.debug('rpc_id: %d', rpc_id)
+        # LOGGER.debug('READ %s', buf)
+        head_val = buf[: -1 * body_len].decode("utf-8")
+        LOGGER.debug("header: %s", head_val)
+        rpc_id = int(re.search(r"RpcId: (\d+)\r\n", head_val).group(1))
+        LOGGER.debug("rpc_id: %d", rpc_id)
 
-        returnval = json.loads(buf[-1 * body_len:].decode('utf-8'))
+        returnval = json.loads(buf[-1 * body_len :].decode("utf-8"))
 
-        if returnval.get('code', '') == 'mindUnavailable':
+        if returnval.get("code", "") == "mindUnavailable":
             raise MindTimeoutError()
 
         return returnval
@@ -280,12 +301,10 @@ class Remote(object):
         """
         # the following nukes password in data so it isn't logged
         data_logged = re.sub(
-                r'(["\']password["\']\s*:).+',
-                r'\1 *** REDACTED ***',
-                data
-                )
-        LOGGER.debug('SEND %s', data_logged)
-        bytes_written = self.ssl_socket.send(data.encode('utf-8'))
+            r'(["\']password["\']\s*:).+', r"\1 *** REDACTED ***", data
+        )
+        LOGGER.debug("SEND %s", data_logged)
+        bytes_written = self.ssl_socket.send(data.encode("utf-8"))
         LOGGER.debug("%d bytes written", bytes_written)
 
     @debug_fxn_omit(omit_args=[1])
@@ -301,13 +320,16 @@ class Remote(object):
         Raises:
             AuthError: for any failure to authenticate SSL RPC connection
         """
-        self._write(self._rpc_request('bodyAuthenticate',
+        self._write(
+            self._rpc_request(
+                "bodyAuthenticate",
                 credential={
-                        'type': 'mmaCredential',
-                        'username': username,
-                        'password': password,
-                        }
-                ))
+                    "type": "mmaCredential",
+                    "username": username,
+                    "password": password,
+                },
+            )
+        )
         result = self._read()
         # Successful response:
         #   {
@@ -365,8 +387,8 @@ class Remote(object):
         #               "text: 'Authentication Failed'",
         #       'type': 'error'
         #   }
-        if result['type'] == 'error':
-            LOGGER.error('Authentication failed!  RPC response: %s', result['text'])
+        if result["type"] == "error":
+            LOGGER.error("Authentication failed!  RPC response: %s", result["text"])
             raise AuthError
 
     @debug_fxn
@@ -403,72 +425,63 @@ class Remote(object):
         """
         # specifies which fields we ask RPC for, for each series
         collection_fields = [
-                'category',
-                'collectionId',
-                'credit',
-                'title',
-                'partnerCollectionId',
-                'description',
-                'descriptionLanguage',
-                'episodic',
-                'internalRating',
-                'rating',
-                'tvRating'
-                ]
+            "category",
+            "collectionId",
+            "credit",
+            "title",
+            "partnerCollectionId",
+            "description",
+            "descriptionLanguage",
+            "episodic",
+            "internalRating",
+            "rating",
+            "tvRating",
+        ]
         resp_template = [
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'collection',
-                        'isTop',
-                        'isBottom',
-                        ],
-                    'typeName': 'collectionList'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': collection_fields,
-                    'typeName': 'collection'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'categoryId',
-                        'displayRank',
-                        'label',
-                        'topLevel',
-                        ],
-                    'typeName': 'category'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'personId',
-                        'role',
-                        'last',
-                        'first',
-                        'characterName',
-                        'fullName',
-                        ],
-                    'typeName': 'credit'
-                    },
-                ]
+            {
+                "type": "responseTemplate",
+                "fieldName": ["collection", "isTop", "isBottom"],
+                "typeName": "collectionList",
+            },
+            {
+                "type": "responseTemplate",
+                "fieldName": collection_fields,
+                "typeName": "collection",
+            },
+            {
+                "type": "responseTemplate",
+                "fieldName": ["categoryId", "displayRank", "label", "topLevel"],
+                "typeName": "category",
+            },
+            {
+                "type": "responseTemplate",
+                "fieldName": [
+                    "personId",
+                    "role",
+                    "last",
+                    "first",
+                    "characterName",
+                    "fullName",
+                ],
+                "typeName": "credit",
+            },
+        ]
         results = self.rpc_req_generic(
-                'collectionSearch',
-                titleKeyword=title_keywords,
-                collectionType='series',
-                responseTemplate=resp_template,
-                count=25,
-                filterUnavailable='false',
-                includeBroadcast='true',
-                includeFree='true',
-                includePaid='false',
-                includeVod='false',
-                mergeOverridingCollections='true',
-                orderBy='strippedTitle',
-                )
+            "collectionSearch",
+            titleKeyword=title_keywords,
+            collectionType="series",
+            responseTemplate=resp_template,
+            count=25,
+            filterUnavailable="false",
+            includeBroadcast="true",
+            includeFree="true",
+            includePaid="false",
+            includeVod="false",
+            mergeOverridingCollections="true",
+            orderBy="strippedTitle",
+        )
 
-        collection_list = results['collection']
+        collection_list = results["collection"]
 
         LOGGER.debug("ORIGINAL, Total: %d", len(collection_list))
 
@@ -476,29 +489,21 @@ class Remote(object):
         #   do this by hand because e.g. 'English' needs to be able to match
         #   'English' or 'English GB' and no way to do this using rpc filter
         collection_list = [
-                x
-                for x in collection_list
-                if self.lang in x.get('descriptionLanguage', '')
-                ]
+            x for x in collection_list if self.lang in x.get("descriptionLanguage", "")
+        ]
 
-        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d",
-                len(collection_list)
-                )
+        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d", len(collection_list))
 
         # filter for presence of 'partnerCollectionId', useless if absent
-        collection_list = [
-                x
-                for x in collection_list
-                if 'partnerCollectionId' in x
-                ]
+        collection_list = [x for x in collection_list if "partnerCollectionId" in x]
 
-        LOGGER.debug("AFTER FILTERING FOR partnerCollectionId, Total: %d",
-                len(collection_list)
-                )
+        LOGGER.debug(
+            "AFTER FILTERING FOR partnerCollectionId, Total: %d", len(collection_list)
+        )
 
         for collection in collection_list:
-            season1ep1 = self.get_first_aired(collection['collectionId'])
-            collection['firstAired'] = season1ep1.get('originalAirdate', '')
+            season1ep1 = self.get_first_aired(collection["collectionId"])
+            collection["firstAired"] = season1ep1.get("originalAirdate", "")
 
         return collection_list
 
@@ -513,37 +518,31 @@ class Remote(object):
             MindTimeoutError: if mind returns 'code':'mindUnavailable'
         """
         resp_template = [
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'content',
-                        ],
-                    'typeName': 'contentList'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'originalAirdate',
-                        'originalAirYear',
-                        'releaseDate',
-                        ],
-                    'typeName': 'content'
-                    },
-                ]
+            {
+                "type": "responseTemplate",
+                "fieldName": ["content"],
+                "typeName": "contentList",
+            },
+            {
+                "type": "responseTemplate",
+                "fieldName": ["originalAirdate", "originalAirYear", "releaseDate"],
+                "typeName": "content",
+            },
+        ]
         results = self.rpc_req_generic(
-                'contentSearch',
-                collectionId=collection_id,
-                seasonNumber=1,
-                episodeNum=1,
-                count=1,
-                responseTemplate=resp_template,
-                )
+            "contentSearch",
+            collectionId=collection_id,
+            seasonNumber=1,
+            episodeNum=1,
+            count=1,
+            responseTemplate=resp_template,
+        )
 
         returnval = {}
-        if results.get('content', None) is not None:
-            returnval['originalAirdate'] = results['content'][0]['originalAirdate']
-            returnval['originalAirYear'] = results['content'][0]['originalAirYear']
-            returnval['releaseDate'] = results['content'][0]['releaseDate']
+        if results.get("content", None) is not None:
+            returnval["originalAirdate"] = results["content"][0]["originalAirdate"]
+            returnval["originalAirYear"] = results["content"][0]["originalAirYear"]
+            returnval["releaseDate"] = results["content"][0]["releaseDate"]
 
         return returnval
 
@@ -562,70 +561,72 @@ class Remote(object):
         """
         # specifies which fields we ask RPC for, for each series
         collection_fields = [
-                'category',
-                'collectionId',
-                'credit',
-                'title',
-                'partnerCollectionId',
-                'description',
-                'descriptionLanguage',
-                'episodic',
-                'internalRating',
-                'rating',
-                'tvRating'
-                ]
+            "category",
+            "collectionId",
+            "credit",
+            "title",
+            "partnerCollectionId",
+            "description",
+            "descriptionLanguage",
+            "episodic",
+            "internalRating",
+            "rating",
+            "tvRating",
+        ]
         resp_template = [
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': ['collection'],
-                    'typeName': 'collectionList'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': collection_fields,
-                    'typeName': 'collection'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'categoryId',
-                        'displayRank',
-                        'label',
-                        'topLevel',
-                        ],
-                    'typeName': 'category'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'personId',
-                        'role',
-                        'last',
-                        'first',
-                        'characterName',
-                        'fullName',
-                        ],
-                    'typeName': 'credit'
-                    },
-                ]
+            {
+                "type": "responseTemplate",
+                "fieldName": ["collection"],
+                "typeName": "collectionList",
+            },
+            {
+                "type": "responseTemplate",
+                "fieldName": collection_fields,
+                "typeName": "collection",
+            },
+            {
+                "type": "responseTemplate",
+                "fieldName": ["categoryId", "displayRank", "label", "topLevel"],
+                "typeName": "category",
+            },
+            {
+                "type": "responseTemplate",
+                "fieldName": [
+                    "personId",
+                    "role",
+                    "last",
+                    "first",
+                    "characterName",
+                    "fullName",
+                ],
+                "typeName": "credit",
+            },
+        ]
         results = self.rpc_req_generic(
-                'collectionSearch',
-                collectionId=collection_id,
-                responseTemplate=resp_template,
-                count=1,
-                filterUnavailable='false',
-                includeBroadcast='true',
-                includeFree='true',
-                includePaid='false',
-                includeVod='false',
-                mergeOverridingCollections='true',
-                orderBy='strippedTitle',
-                )
-        return results['collection'][0]
+            "collectionSearch",
+            collectionId=collection_id,
+            responseTemplate=resp_template,
+            count=1,
+            filterUnavailable="false",
+            includeBroadcast="true",
+            includeFree="true",
+            includePaid="false",
+            includeVod="false",
+            mergeOverridingCollections="true",
+            orderBy="strippedTitle",
+        )
+        return results["collection"][0]
 
     @debug_fxn
-    def get_program_id(self, collection_id, season_num=None, episode_num=None,
-            year=None, month=None, day=None):
+    def get_program_id(
+        self,
+        collection_id,
+        season_num=None,
+        episode_num=None,
+        year=None,
+        month=None,
+        day=None,
+    ):
         """Return specific program ID given some search criteria. Must have
         (season_num AND episode_num) OR (year AND month AND day)
 
@@ -644,33 +645,29 @@ class Remote(object):
             MindTimeoutError: if mind returns 'code':'mindUnavailable'
         """
         resp_template = [
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'content',
-                        ],
-                    'typeName': 'contentList'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'partnerContentId',
-                        ],
-                    'typeName': 'content'
-                    },
-                ]
+            {
+                "type": "responseTemplate",
+                "fieldName": ["content"],
+                "typeName": "contentList",
+            },
+            {
+                "type": "responseTemplate",
+                "fieldName": ["partnerContentId"],
+                "typeName": "content",
+            },
+        ]
         if season_num is not None and episode_num is not None:
             LOGGER.debug("rpc: season episode")
             results = self.rpc_req_generic(
-                    'contentSearch',
-                    collectionId=collection_id,
-                    seasonNumber=season_num,
-                    episodeNum=episode_num,
-                    count=1,
-                    responseTemplate=resp_template,
-                    )
-            if 'content' in results:
-                program_id = results['content'][0]['partnerContentId']
+                "contentSearch",
+                collectionId=collection_id,
+                seasonNumber=season_num,
+                episodeNum=episode_num,
+                count=1,
+                responseTemplate=resp_template,
+            )
+            if "content" in results:
+                program_id = results["content"][0]["partnerContentId"]
             else:
                 program_id = None
 
@@ -678,12 +675,9 @@ class Remote(object):
             LOGGER.debug("rpc: year month day")
             # search through all episodes, looking for air_date match
             result = self.get_program_id_airdate(
-                    collection_id,
-                    year=year,
-                    month=month,
-                    day=day,
-                    )
-            program_id = result.get('partnerContentId', None)
+                collection_id, year=year, month=month, day=day
+            )
+            program_id = result.get("partnerContentId", None)
         else:
             # TODO: real error handling
             print("Error, not enough info to find specific episode")
@@ -692,8 +686,7 @@ class Remote(object):
         return program_id
 
     @debug_fxn
-    def get_program_id_airdate(self, collection_id,
-            year=None, month=None, day=None):
+    def get_program_id_airdate(self, collection_id, year=None, month=None, day=None):
         """Get Mind program ID given year AND month AND day
 
         Args:
@@ -709,43 +702,39 @@ class Remote(object):
             MindTimeoutError: if mind returns 'code':'mindUnavailable'
         """
         returnval = {}
-        air_date = "%04d-%02d-%02d"%(int(year), int(month), int(day))
+        air_date = "%04d-%02d-%02d" % (int(year), int(month), int(day))
         resp_template = [
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'content',
-                        'isTop',
-                        'isBottom',
-                        ],
-                    'typeName': 'contentList'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'seasonNumber',
-                        'episodeNum',
-                        'originalAirdate',
-                        'partnerContentId',
-                        ],
-                    'typeName': 'content'
-                    },
-                ]
+            {
+                "type": "responseTemplate",
+                "fieldName": ["content", "isTop", "isBottom"],
+                "typeName": "contentList",
+            },
+            {
+                "type": "responseTemplate",
+                "fieldName": [
+                    "seasonNumber",
+                    "episodeNum",
+                    "originalAirdate",
+                    "partnerContentId",
+                ],
+                "typeName": "content",
+            },
+        ]
         results_per_req = 25
         i = 0
         done = False
         while not done:
             results = self.rpc_req_generic(
-                    'contentSearch',
-                    collectionId=collection_id,
-                    count=results_per_req,
-                    offset=results_per_req*i,
-                    responseTemplate=resp_template,
-                    )
-            if results['isBottom']:
+                "contentSearch",
+                collectionId=collection_id,
+                count=results_per_req,
+                offset=results_per_req * i,
+                responseTemplate=resp_template,
+            )
+            if results["isBottom"]:
                 done = True
-            for result in results['content']:
-                if result.get('originalAirdate', '') == air_date:
+            for result in results["content"]:
+                if result.get("originalAirdate", "") == air_date:
                     returnval = result
                     done = True
                     break
@@ -770,7 +759,7 @@ class Remote(object):
         """
         LOGGER.debug("ORIGINAL, Total: %d", len(collection_list))
         # DEBUG DELETEME
-        #for coll in collection_list:
+        # for coll in collection_list:
         #    LOGGER.debug("--------")
         #    LOGGER.debug("title: " + str(coll['title']))
         #    LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
@@ -781,17 +770,15 @@ class Remote(object):
         #   'English' or 'English GB' or missing descriptionLanguage.
         #   No way to do this using rpc filter
         collection_list = [
-                x
-                for x in collection_list
-                if self.lang in x.get('descriptionLanguage', self.lang)
-                ]
+            x
+            for x in collection_list
+            if self.lang in x.get("descriptionLanguage", self.lang)
+        ]
 
-        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d",
-                len(collection_list)
-                )
+        LOGGER.debug("AFTER LANGUAGE FILTERING, Total: %d", len(collection_list))
 
         # DEBUG DELETEME
-        #for coll in collection_list:
+        # for coll in collection_list:
         #    LOGGER.debug("--------")
         #    LOGGER.debug("title: " + str(coll['title']))
         #    LOGGER.debug("movieYear: " + str(coll.get('movieYear', '')))
@@ -800,18 +787,18 @@ class Remote(object):
         #   also look for 'epgProvider:' starting partnerCollectionId, otherwise
         #   not useful for pytivo
         collection_list = [
-                x
-                for x in collection_list
-                if x.get('partnerCollectionId', '').startswith('epgProvider:')
-                ]
+            x
+            for x in collection_list
+            if x.get("partnerCollectionId", "").startswith("epgProvider:")
+        ]
 
         LOGGER.debug(
-                "AFTER FILTERING FOR partnerCollectionId: epgProvider:, Total: %d",
-                len(collection_list)
-                )
+            "AFTER FILTERING FOR partnerCollectionId: epgProvider:, Total: %d",
+            len(collection_list),
+        )
 
         # DEBUG DELETEME
-        #for coll in collection_list:
+        # for coll in collection_list:
         #    LOGGER.debug("--------")
         #    LOGGER.debug("title: %s", str(coll['title']))
         #    LOGGER.debug("movieYear: %s", str(coll.get('movieYear', '')))
@@ -822,23 +809,21 @@ class Remote(object):
             year = int(year)
             old_collection_list = collection_list
             collection_list = [
-                    x
-                    for x in collection_list
-                    if year == x.get('movieYear', 0)
-                    ]
+                x for x in collection_list if year == x.get("movieYear", 0)
+            ]
             if not collection_list:
                 # if no movies left, try supplied year + 1 or year - 1
                 LOGGER.debug("Trying year +/- 1")
                 collection_list = [
-                        x
-                        for x in old_collection_list
-                        if year - 1 <= x.get('movieYear', 0) <= year + 1
-                        ]
+                    x
+                    for x in old_collection_list
+                    if year - 1 <= x.get("movieYear", 0) <= year + 1
+                ]
 
         LOGGER.debug("AFTER YEAR FILTERING, Total: %d", len(collection_list))
 
         # DEBUG DELETEME
-        #for coll in collection_list:
+        # for coll in collection_list:
         #    LOGGER.debug("--------")
         #    LOGGER.debug("title: %s", str(coll['title']))
         #    LOGGER.debug("movieYear: %s", str(coll.get('movieYear', '')))
@@ -862,59 +847,50 @@ class Remote(object):
         """
         # specifies which fields we ask RPC for, for each movie
         collection_fields = [
-                        'category',
-                        'collectionId',
-                        'credit',
-                        'title',
-                        'partnerCollectionId',
-                        'description',
-                        'descriptionLanguage',
-                        'internalRating',
-                        'movieYear',
-                        'mpaaRating',
-                        'partnerCollectionId',
-                        'rating',
-                        'starRating',
-                        'tvRating'
-                        ]
+            "category",
+            "collectionId",
+            "credit",
+            "title",
+            "partnerCollectionId",
+            "description",
+            "descriptionLanguage",
+            "internalRating",
+            "movieYear",
+            "mpaaRating",
+            "partnerCollectionId",
+            "rating",
+            "starRating",
+            "tvRating",
+        ]
         resp_template = [
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'collection',
-                        'isTop',
-                        'isBottom',
-                        ],
-                    'typeName': 'collectionList'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': collection_fields,
-                    'typeName': 'collection'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'categoryId',
-                        'displayRank',
-                        'label',
-                        'topLevel',
-                        ],
-                    'typeName': 'category'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'personId',
-                        'role',
-                        'last',
-                        'first',
-                        'characterName',
-                        'fullName',
-                        ],
-                    'typeName': 'credit'
-                    },
-                ]
+            {
+                "type": "responseTemplate",
+                "fieldName": ["collection", "isTop", "isBottom"],
+                "typeName": "collectionList",
+            },
+            {
+                "type": "responseTemplate",
+                "fieldName": collection_fields,
+                "typeName": "collection",
+            },
+            {
+                "type": "responseTemplate",
+                "fieldName": ["categoryId", "displayRank", "label", "topLevel"],
+                "typeName": "category",
+            },
+            {
+                "type": "responseTemplate",
+                "fieldName": [
+                    "personId",
+                    "role",
+                    "last",
+                    "first",
+                    "characterName",
+                    "fullName",
+                ],
+                "typeName": "credit",
+            },
+        ]
 
         is_bottom = False
         collection_list = []
@@ -925,36 +901,36 @@ class Remote(object):
             # TODO: do we need to trap MindTimeoutError here so we don't
             #   start over from offset=0?
             results = self.rpc_req_generic(
-                    'collectionSearch',
-                    titleKeyword=title_keywords,
-                    collectionType='movie',
-                    responseTemplate=resp_template,
-                    count=results_per_req,
-                    offset=results_per_req*offset,
-                    filterUnavailable='false',
-                    includeBroadcast='true',
-                    includeFree='true',
-                    includePaid='false',
-                    includeVod='false',
-                    mergeOverridingCollections='true',
-                    orderBy='strippedTitle',
-                    )
+                "collectionSearch",
+                titleKeyword=title_keywords,
+                collectionType="movie",
+                responseTemplate=resp_template,
+                count=results_per_req,
+                offset=results_per_req * offset,
+                filterUnavailable="false",
+                includeBroadcast="true",
+                includeFree="true",
+                includePaid="false",
+                includeVod="false",
+                mergeOverridingCollections="true",
+                orderBy="strippedTitle",
+            )
 
-            if 'code' in results:
+            if "code" in results:
                 # Mind errors have a 'code'
-                if results['code'] == 'internalError':
-                    print(results['text'])
+                if results["code"] == "internalError":
+                    print(results["text"])
                     raise MindInternalError()
 
-            if 'collection' in results:
-                collection_list = results['collection']
+            if "collection" in results:
+                collection_list = results["collection"]
             else:
                 print("Unknown error.  results:")
                 PP.pprint(results)
                 return []
 
-            is_bottom = results['isBottom']
-            #isTop = results['isTop']
+            is_bottom = results["isBottom"]
+            # isTop = results['isTop']
 
             offset += 1
 
@@ -962,16 +938,16 @@ class Remote(object):
 
         if len(collection_list) > 1:
             LOGGER.debug(
-                    "%d in collection_list after filtering, is one of these best:",
-                    len(collection_list)
-                    )
+                "%d in collection_list after filtering, is one of these best:",
+                len(collection_list),
+            )
             for coll in collection_list:
                 LOGGER.debug("-----")
                 for key in sorted(coll):
                     LOGGER.debug("%s: %s", key, str(coll[key]))
         if collection_list:
-            LOGGER.debug(collection_list[0]['collectionId'])
-            content_info = self.search_movie_content(collection_list[0]['collectionId'])
+            LOGGER.debug(collection_list[0]["collectionId"])
+            content_info = self.search_movie_content(collection_list[0]["collectionId"])
             collection_list[0].update(content_info)
 
         if not collection_list:
@@ -993,39 +969,35 @@ class Remote(object):
         """
         # specifies which fields we ask RPC for, for each movie content
         content_fields = [
-                        'movieYear',
-                        'description',
-                        'partnerCollectionId',
-                        'partnerContentId',
-                        'title'
-                        ]
+            "movieYear",
+            "description",
+            "partnerCollectionId",
+            "partnerContentId",
+            "title",
+        ]
         resp_template = [
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': [
-                        'content',
-                        'isTop',
-                        'isBottom',
-                        ],
-                    'typeName': 'contentList'
-                    },
-                {
-                    'type': 'responseTemplate',
-                    'fieldName': content_fields,
-                    'typeName': 'content'
-                    },
-                ]
+            {
+                "type": "responseTemplate",
+                "fieldName": ["content", "isTop", "isBottom"],
+                "typeName": "contentList",
+            },
+            {
+                "type": "responseTemplate",
+                "fieldName": content_fields,
+                "typeName": "content",
+            },
+        ]
         results = self.rpc_req_generic(
-                'contentSearch',
-                collectionId=collection_id,
-                count=25,
-                #levelOfDetail='high',
-                responseTemplate=resp_template,
-                )
+            "contentSearch",
+            collectionId=collection_id,
+            count=25,
+            # levelOfDetail='high',
+            responseTemplate=resp_template,
+        )
 
-        assert len(results['content']) == 1
+        assert len(results["content"]) == 1
 
-        content = results['content'][0]
+        content = results["content"][0]
         for key in sorted(content):
             LOGGER.debug(key + ": " + str(content[key]))
 

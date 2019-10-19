@@ -29,7 +29,7 @@ LOGGER.addHandler(logging.NullHandler())
 
 
 def ask_user(options_text, option_returns, max_options=5):
-    indent = " "*4
+    indent = " " * 4
 
     # Get number of movies found
     num_choices = len(option_returns)
@@ -42,21 +42,19 @@ def ask_user(options_text, option_returns, max_options=5):
         option_text = ""
         option_text_lines = options_text[i].splitlines()
         for line in option_text_lines:
-            option_text += textwrap.fill(
-                    line,
-                    width=75,
-                    initial_indent=indent,
-                    subsequent_indent=indent
-                    ) + "\n"
+            option_text += (
+                textwrap.fill(
+                    line, width=75, initial_indent=indent, subsequent_indent=indent
+                )
+                + "\n"
+            )
         option_text = option_text.strip()
         if num_choices < 10:
-            print("%d   %s"%(i, option_text))
+            print("%d   %s" % (i, option_text))
         else:
-            print("%2d  %s"%(i, option_text))
+            print("%2d  %s" % (i, option_text))
     print("")
-    choice_num = input(
-            "Please choose the correct option, or 's' to skip [0]: "
-            )
+    choice_num = input("Please choose the correct option, or 's' to skip [0]: ")
 
     if not choice_num:
         # Empty string, default to the top choice
@@ -73,13 +71,14 @@ def ask_user(options_text, option_returns, max_options=5):
                 choice_num = None
 
     if choice_num is not None:
-        print("Option %d chosen."%choice_num)
+        print("Option %d chosen." % choice_num)
         returnval = option_returns[choice_num]
     else:
         print("No choice recorded, skipping...")
         returnval = None
 
     return returnval
+
 
 def mkdir_if_needed(dirname):
     # Don't use os.makedirs() because that would only matter if -p named a
@@ -88,6 +87,8 @@ def mkdir_if_needed(dirname):
         os.mkdir(dirname, 0o755)
     elif not os.path.isdir(dirname):
         raise OSError(
-                'Can\'t create "' + dirname + '" as a dir, a file already ' +\
-                        'exists with that name.'
-                )
+            "Can't create \""
+            + dirname
+            + '" as a dir, a file already '
+            + "exists with that name."
+        )

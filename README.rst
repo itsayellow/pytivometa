@@ -13,27 +13,21 @@ Installation
 
 pytivometa requires Python 3.  Make sure Python 3 is installed on your system.
 
-To install required modules for pytivometa to work, execute the following
-command::
+Install pipx on your system, possibly with::
 
-    pip3 install -r requirements.txt
+    pip install pipx
 
-On Windows, you may need to run pip3 from a command prompt in "run as
-administrator" mode (right-click on the Command Prompt in the Start Menu and
-select "Run as Administrator") to allow the installation of new python modules.
+Then use pipx to install pytivometa and automatically put it in your binary
+path::
 
-Note: you may consider using the latest github version of IMDbPY.  The imdb web
-page format changes often, and imdbpy must update frequently to accurately
-scrape it.  Updates to imdbpy on pypi are often much more infrequent than is
-necessary to preserve functionality. (See
-https://github.com/alberanid/imdbpy#installation)
+    pipx install --spec git+https://github.com/itsayellow/pytivometa pytivometa
 
 Running
 -------
 
-To run, execute ``pytivometa.py`` in the ``pytivometa`` directory from the
-command line.  Be sure to keep all the files in the ``pytivometa`` directory
-together in the same directory.
+To run, execute ``pytivometa`` from the command line.
+
+Use ``pytivometa --help`` for help.
 
 Thanks
 ------

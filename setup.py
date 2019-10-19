@@ -31,13 +31,11 @@ setup(
         "Programming Language :: Python :: 3.8",
     ],
     description="Creates metadata for pytivo corresponding to video files.",
-    entry_points={"console_scripts": ["pytivometa = pytivometa.cli:pytivometa"]},
+    entry_points={"console_scripts": ["pytivometa = pytivometa.pytivometa:cli_start"]},
     install_requires=requirements,
     long_description=readme + "\n",
-    #include_package_data=True,
-    package_data = {
-        '' : ["*.pem"]
-    },
+    # include_package_data=True,
+    package_data={"": ["*.pem"]},
     keywords="pytivo",
     name="pytivometa",
     packages=find_packages(include=["pytivometa", "pytivometa.*"]),

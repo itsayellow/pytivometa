@@ -78,9 +78,9 @@ import re
 import stat
 import sys
 
-import movie_data
-import tv_data
-import rpc_search
+import pytivometa.movie_data
+import pytivometa.rpc_search
+import pytivometa.tv_data
 
 
 # location of config dir and file for pytivometa
@@ -609,7 +609,7 @@ def main(argv):
     return 0
 
 
-if __name__ == "__main__":
+def cli_start():
     try:
         status = main(sys.argv)
     except KeyboardInterrupt:
@@ -621,4 +621,8 @@ if __name__ == "__main__":
         LOGGER.error("Uncaught error: ", exc_info=True)
         raise
 
-    sys.exit(status)
+    return status
+
+
+if __name__ == "__main__":
+    sys.exit(cli_start())

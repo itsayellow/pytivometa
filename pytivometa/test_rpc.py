@@ -15,9 +15,10 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import rpc_search
 import pprint
 import json
+
+import pytivometa.rpc_search
 
 PP = pprint.PrettyPrinter(indent=4, depth=3)
 

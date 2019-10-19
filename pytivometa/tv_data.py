@@ -25,8 +25,8 @@ import re
 from time import strptime
 
 
-import common
-import tvdb_api_v2
+import pytivometa.common
+import pytivometa.tvdb_api_v2
 
 
 # Set up logger

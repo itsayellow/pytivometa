@@ -29,8 +29,8 @@ import sys
 import imdb
 
 
-import common
-import rpc_search
+import pytivometa.common
+import pytivometa.rpc_search
 
 
 # Set up logger

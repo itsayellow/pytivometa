@@ -30,7 +30,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
     ],
-    description="Creates metadata for pytivo corresponding to video files.",
+    description="Creates pytivo metadata for video files.",
     entry_points={"console_scripts": ["pytivometa = pytivometa.pytivometa:cli_start"]},
     install_requires=requirements,
     long_description=readme + "\n",

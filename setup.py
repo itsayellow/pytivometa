@@ -38,6 +38,7 @@ setup(
     package_data={"": ["*.pem"]},
     keywords="pytivo",
     name="pytivometa",
+    url="https://github.com/itsayellow/pytivometa",
     packages=find_packages(include=["pytivometa", "pytivometa.*"]),
     setup_requires=setup_requirements,
     test_suite="tests",

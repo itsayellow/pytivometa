@@ -504,6 +504,7 @@ def create_config_file():
     except:
         # TODO: find specific error, replace raise with return
         print("Couldn't make config file: " + CONFIG_FILE_PATH)
+        LOGGER.error("Error writing config file", exc_info=True)
         raise
     os.chmod(config_filepath, stat.S_IRUSR + stat.S_IWUSR)
 
@@ -515,8 +516,8 @@ def get_rpc(username=None, password=None):
 
     if username and password:
         try:
-            rpc_remote = rpc_search.Remote(username, password)
-        except rpc_search.AuthError:
+            rpc_remote = pytivometa.rpc_search.Remote(username, password)
+        except pytivometa.rpc_search.AuthError:
             print(
                 "Bad password or username for RPC."
                 "    Unable to use RPC search capability"
@@ -566,11 +567,11 @@ def main(argv):
     )
 
     # Initalize tv_data access
-    tv_data_acc = tv_data.TvData(
+    tv_data_acc = pytivometa.tv_data.TvData(
         interactive=interactive, clobber=config["clobber"], rpc_remote=rpc_remote
     )
     # Initalize movie_data access
-    movie_data_acc = movie_data.MovieData(
+    movie_data_acc = pytivometa.movie_data.MovieData(
         interactive=interactive,
         genre_dir=genre_dir,
         country=config["country"],
@@ -616,7 +617,7 @@ def cli_start():
         print("\nStopped by Keyboard Interrupt", file=sys.stderr)
         # exit error code for Ctrl-C
         status = 130
-    except Exception as error:
+    except Exception:
         # make sure any uncaught errors end up in log
         LOGGER.error("Uncaught error: ", exc_info=True)
         raise

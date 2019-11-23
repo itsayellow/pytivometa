@@ -25,7 +25,7 @@ PP = pprint.PrettyPrinter(indent=4, depth=3)
 with open("test_rpc.conf", "r") as conf_fh:
     conf_data = json.loads(conf_fh.read())
 
-mind_remote = rpc_search.Remote(conf_data["username"], conf_data["password"])
+mind_remote = pytivometa.rpc_search.Remote(conf_data["username"], conf_data["password"])
 
 # -----------------------------------------------------------------------------
 # Reference

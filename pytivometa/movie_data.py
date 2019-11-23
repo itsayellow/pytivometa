@@ -78,14 +78,14 @@ def extract_tags(title):
     # fmt: off
     taglist = {
         # Strip these out       : return these instead
-        r'(\d{3,4})([IiPp])'    : r'\1\2', #720p,1080p,1080i,720P,etc
-        r'(?i)Telecine'         : r'TC',    #Telecine,telecine
+        r'(\d{3,4})([IiPp])'    : r'\1\2',  # 720p,1080p,1080i,720P,etc
+        r'(?i)Telecine'         : r'TC',    # Telecine,telecine
         r'TC'                   : r'TC',
-        r'(?i)Telesync'         : r'TS',    #Telesync,telesync
+        r'(?i)Telesync'         : r'TS',    # Telesync,telesync
         r'TS'                   : r'TS',
         r'CAM'                  : r'CAM',
-        r'(?i)CD ?(\d)'         : r'CD\1', #CD1,CD2,cd1,cd3,etc
-        r'(?i)\(?Disc ?(\d)\)?' : r'CD\1', #Disc 1,Disc 2,disc 1,etc
+        r'(?i)CD ?(\d)'         : r'CD\1',  # CD1,CD2,cd1,cd3,etc
+        r'(?i)\(?Disc ?(\d)\)?' : r'CD\1',  # Disc 1,Disc 2,disc 1,etc
     }
     # fmt: on
     for tag in list(taglist.keys()):
@@ -266,7 +266,7 @@ class MovieData:
             options_text = []
             for result in results:
                 options_text.append(result["long imdb title"])
-            imdb_movie_info = common.ask_user(options_text, results, max_options=5)
+            imdb_movie_info = pytivometa.common.ask_user(options_text, results, max_options=5)
             print("------------------------------------")
         else:
             # automatically pick first match
@@ -285,7 +285,7 @@ class MovieData:
                     rpc_info = self.rpc_remote.search_movie(
                         imdb_movie_info["title"], year=imdb_movie_info.get("year", None)
                     )
-                except rpc_search.MindTimeoutError:
+                except pytivometa.rpc_search.MindTimeoutError:
                     print("RPC Timeout, trying again...")
                     tries_left -= 1
                 else:
@@ -325,7 +325,7 @@ class MovieData:
                 #   actors + everyone else who worked on the movie
                 # imdb_access.update(imdb_movie_info, 'full credits')
             except:
-                LOGGER.debug("Warning: unable to retrieve full credits.")
+                LOGGER.error("Error: unable to retrieve full credits.", exc_info=True)
 
             if is_trailer:
                 try:
@@ -526,14 +526,14 @@ class MovieData:
 
         # only when we are about to write file make metadata dir (e.g. .meta) if
         #   we need to
-        common.mkdir_if_needed(os.path.dirname(metadata_file_name))
+        pytivometa.common.mkdir_if_needed(os.path.dirname(metadata_file_name))
         with open(metadata_file_name, "w") as out_file:
             out_file.writelines(line)
 
     def link_genres(self, work_dir, file_name, metadata_path, genres):
         for this_genre in genres:
             genrepath = os.path.join(self.genre_dir, this_genre)
-            common.mkdir_if_needed(genrepath)
+            pytivometa.common.mkdir_if_needed(genrepath)
             # Create a symlink to the video
             link = os.path.join(genrepath, file_name)
             file_path = os.path.join(work_dir, file_name)

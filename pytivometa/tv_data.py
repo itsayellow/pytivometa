@@ -212,7 +212,7 @@ def format_episode_data(ep_data, meta_filepath):
     if metadata_text:
         # only when we are about to write file make metadata dir (e.g. .meta) if
         #   we need to
-        common.mkdir_if_needed(os.path.dirname(meta_filepath))
+        pytivometa.common.mkdir_if_needed(os.path.dirname(meta_filepath))
         with open(meta_filepath, "w") as out_file:
             out_file.write(metadata_text)
 
@@ -223,7 +223,7 @@ def write_series_file_info(series_file_info, filepath):
 
     # only when we are about to write file make metadata dir (e.g. .meta) if
     #   we need to
-    common.mkdir_if_needed(os.path.dirname(filepath))
+    pytivometa.common.mkdir_if_needed(os.path.dirname(filepath))
     with open(filepath, "w") as series_id_fh:
         for key in series_file_info:
             print(key + ":" + str(series_file_info[key]), file=series_id_fh)
@@ -246,7 +246,7 @@ class TvData:
             TvData object instance
         """
         # TVDB access
-        self.tvdb_access = tvdb_api_v2.Tvdb()
+        self.tvdb_access = pytivometa.tvdb_api_v2.Tvdb()
 
         # RPC access
         self.rpc_remote = rpc_remote
@@ -302,7 +302,7 @@ class TvData:
                 options_text.append(text_option)
 
             tvdb_series_ids = [s["id"] for s in series]
-            tvdb_series_id = common.ask_user(
+            tvdb_series_id = pytivometa.common.ask_user(
                 options_text, tvdb_series_ids, max_options=5
             )
             print("------------------------------------")

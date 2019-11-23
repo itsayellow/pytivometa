@@ -140,7 +140,7 @@ def title_from_filename(filename):
     #   or brackets)
     # Using the year when searching IMDb will help, so try to find it.
     year_match1 = re.match(
-        r"(.*?\w+.*?)(?:([[(])|(\W))(.*?)((?:19|20)\d\d)(?(2)[])]|(\3|$))(.*?)$", title
+        r"(.*?\w+.*?)(?:([\[(])|(\W))(.*?)((?:19|20)\d\d)(?(2)[])]|(\3|$))(.*?)$", title
     )
     if year_match1:
         (tags, _) = extract_tags(title)

@@ -13,7 +13,7 @@ Installation
 
 pytivometa requires Python 3.  Make sure Python 3 is installed on your system.
 
-Install [pipx](https://github.com/pipxproject/pipx) on your system, possibly with::
+Install `pipx <https://github.com/pipxproject/pipx>`_ on your system, possibly with::
 
     pip install pipx
 

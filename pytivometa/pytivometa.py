@@ -114,7 +114,7 @@ VIDEO_FILE_EXTS = [
 
 # root logger
 LOGGER = logging.getLogger(__name__)
-LOGGED_MODULES = [__name__, "movie_data", "tv_data", "rpc_search", "tvdb_api_v2"]
+LOGGED_MODULES = [__name__, "pytivometa.movie_data", "pytivometa.tv_data", "pytivometa.rpc_search", "pytivometa.tvdb_api_v2"]
 
 
 def logging_setup(debug_level=False):

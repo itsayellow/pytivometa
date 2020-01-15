@@ -35,3 +35,6 @@ Thanks
 Based on the original pytivometathis by Graham Dunn and later Josh Harding
 (https://sourceforge.net/projects/pytivometathis/).  This version has been
 ported to python3 and extensively modified.
+
+Thanks to KenV99 for his mind query code.
+https://github.com/KenV99/Tivo-Mind-Query

@@ -389,7 +389,7 @@ class Remote(object):
         #   }
         if result["type"] == "error":
             LOGGER.error("Authentication failed!  RPC response: %s", result["text"])
-            raise AuthError
+            raise AuthError(result["text"])
 
     @debug_fxn
     def rpc_req_generic(self, req_type, **kwargs):

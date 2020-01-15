@@ -77,6 +77,7 @@ import os.path
 import re
 import stat
 import sys
+import textwrap
 
 import pytivometa.movie_data
 import pytivometa.rpc_search
@@ -114,7 +115,13 @@ VIDEO_FILE_EXTS = [
 
 # root logger
 LOGGER = logging.getLogger(__name__)
-LOGGED_MODULES = [__name__, "pytivometa.movie_data", "pytivometa.tv_data", "pytivometa.rpc_search", "pytivometa.tvdb_api_v2"]
+LOGGED_MODULES = [
+    __name__,
+    "pytivometa.movie_data",
+    "pytivometa.tv_data",
+    "pytivometa.rpc_search",
+    "pytivometa.tvdb_api_v2",
+]
 
 
 def logging_setup(debug_level=False):
@@ -517,11 +524,14 @@ def get_rpc(username=None, password=None):
     if username and password:
         try:
             rpc_remote = pytivometa.rpc_search.Remote(username, password)
-        except pytivometa.rpc_search.AuthError:
+        except pytivometa.rpc_search.AuthError as e:
+            print("Error connecting to Tivo mind via RPC:")
             print(
-                "Bad password or username for RPC."
-                "    Unable to use RPC search capability"
+                textwrap.TextWrapper(
+                    width=79, initial_indent=" " * 4, subsequent_indent=" " * 4
+                ).fill(str(e))
             )
+            print("Unable to use RPC search capability")
             LOGGER.debug("No rpc_remote")
             rpc_remote = None
     else:

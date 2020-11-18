@@ -7,3 +7,20 @@ https://sourceforge.net/p/kmttg/code/HEAD/tree/trunk/images/
 openssl pkcs12 -in cdata.p12 -out cdata.pem -nodes
 # turns it into a cdata.pem that you can then use with:
 #   self.ssl_socket = ssl.wrap_socket(self.socket, certfile='cdata.pem')
+
+
+kmttg refers to password (??)
+https://sourceforge.net/p/kmttg/code/4378/
+--- a/trunk/src/com/tivo/kmttg/rpc/TiVoRPC.java
++++ b/trunk/src/com/tivo/kmttg/rpc/TiVoRPC.java
+@@ -207,8 +207,8 @@
+         try {
+            KeyStore keyStore = KeyStore.getInstance("PKCS12");
+            // This is default USA password
+-           String password = "5vPNhg6sV4tD"; // expires 12/18/2020
+-           //String password = "LwrbLEFYvG"; // expires 4/29/2018
++           String password = "XF7x4714qw"; // expires 12/11/2022
++           //String password = "5vPNhg6sV4tD"; // expires 12/18/2020
+            InputStream keyInput;
+            if (cdata == null) {
+               // Installation dir cdata.p12 file takes priority if it exists

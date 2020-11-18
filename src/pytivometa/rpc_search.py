@@ -47,17 +47,15 @@
 #       "type": <"error" or ?>
 #   }
 
+# import sys
+import json
 import logging
 import os.path
+import pprint
 import random
 import re
 import socket
 import ssl
-
-# import sys
-import json
-import pprint
-
 
 TIVO_ADDR = "middlemind.tivo.com"
 TIVO_PORT = 443
@@ -185,7 +183,8 @@ class Remote(object):
         )
         try:
             self.ssl_socket.connect((TIVO_ADDR, TIVO_PORT))
-        except:
+        except Exception:
+            # TODO: make specific exception type
             print("connect error")
             LOGGER.error("SSL socket initial connection error", exc_info=True)
             # re-raise so we know exact exception to enumerate code

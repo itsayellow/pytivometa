@@ -18,16 +18,14 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime
 import logging
 import os.path
 import re
+from datetime import datetime
 from time import strptime
-
 
 import pytivometa.common
 import pytivometa.tvdb_api_v2
-
 
 # Set up logger
 LOGGER = logging.getLogger(__name__)

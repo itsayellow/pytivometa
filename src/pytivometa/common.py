@@ -22,7 +22,6 @@ import logging
 import os.path
 import textwrap
 
-
 # Set up logger
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())

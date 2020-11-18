@@ -112,11 +112,10 @@
 import json
 import logging
 import re
+import urllib.parse
 
 # import urllib.error
 import urllib.request
-import urllib.parse
-
 
 TVDB_APIKEY = "22FF0E9C529331C6"
 TVDB_API_URL = "https://api.thetvdb.com/"

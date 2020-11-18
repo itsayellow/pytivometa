@@ -50,10 +50,6 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------------
 
-# Version : 0.5
-
-# Python required: > 3.0
-
 """Look in current directory, or specified directory, find all video files,
 fetch their metadata, and write metadata out into format that pytivo can
 parse and use.
@@ -78,11 +74,11 @@ import re
 import stat
 import sys
 import textwrap
+from typing import List
 
 import pytivometa.movie_data
 import pytivometa.rpc_search
 import pytivometa.tv_data
-
 
 # location of config dir and file for pytivometa
 if sys.platform == "win32":
@@ -152,12 +148,12 @@ def logging_setup(debug_level=False):
     # add formatter to f_handler
     f_handler.setFormatter(formatter)
 
-    ## create console handler and set level to debug
+    # # create console handler and set level to debug
     # c_handler = logging.StreamHandler()
     # c_handler.setLevel(logging.DEBUG)
-    ## create formatter
+    # # create formatter
     # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    ## add formatter to c_handler
+    # # add formatter to c_handler
     # c_handler.setFormatter(formatter)
 
     # set global log level to either INFO or DEBUG depending on config
@@ -445,8 +441,7 @@ def get_config_file():
 
 
 def default_config_values():
-    """Master location of all default config values
-    """
+    """Master location of all default config values"""
     config_data = {
         "clobber": False,
         "createconfig": False,
@@ -508,8 +503,7 @@ def create_config_file():
         with open(config_filepath, "w") as config_fh:
             for line in config_default_lines:
                 print(line, file=config_fh)
-    except:
-        # TODO: find specific error, replace raise with return
+    except IOError:
         print("Couldn't make config file: " + CONFIG_FILE_PATH)
         LOGGER.error("Error writing config file", exc_info=True)
         raise
@@ -543,7 +537,7 @@ def get_rpc(username=None, password=None):
     return rpc_remote
 
 
-def main(argv):
+def main(argv: List[str]) -> int:
     # start with config default values
     config = default_config_values()
 

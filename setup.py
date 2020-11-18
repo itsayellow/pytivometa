@@ -1,48 +1,14 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
-"""The setup script."""
+import sys
 
-from setuptools import setup, find_packages
-from pathlib import Path
+from setuptools import setup  # type: ignore
 
-HERE = Path(__file__).resolve()
+if sys.version_info < (3, 5, 0):
+    sys.exit(
+        "Python 3.6 or later is required. "
+        "See https://github.com/pipxproject/pipx "
+        "for installation instructions."
+    )
 
-with open("README.rst") as readme_file:
-    readme = readme_file.read()
-
-requirements = ["IMDbPY>=6.5"]
-
-setup_requirements = []
-
-test_requirements = []
-
-setup(
-    author="Matthew A. Clapp",
-    author_email="itsayellow+dev@gmail.com",
-    python_requires=">=3.5",
-    classifiers=[
-        "Development Status :: 3 Beta",
-        "Intended Audience :: Developers",
-        "Natural Language :: English",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-    ],
-    description="Creates pytivo metadata for video files.",
-    entry_points={"console_scripts": ["pytivometa = pytivometa.pytivometa:cli_start"]},
-    install_requires=requirements,
-    long_description=readme + "\n",
-    # include_package_data=True,
-    package_data={"": ["*.pem"]},
-    keywords="pytivo",
-    name="pytivometa",
-    url="https://github.com/itsayellow/pytivometa",
-    packages=find_packages(include=["pytivometa", "pytivometa.*"]),
-    setup_requires=setup_requirements,
-    test_suite="tests",
-    tests_require=test_requirements,
-    version="0.2.2",
-    zip_safe=False,
-)
+setup()

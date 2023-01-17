@@ -1,6 +1,45 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pytivometa"
+dynamic = ["version"]
+description = "Creates pytivo metadata for video files."
+readme = "README.rst"
+license = "MIT"
+requires-python = ">=3.5"
+authors = [
+    { name = "Matthew A. Clapp", email = "itsayellow+dev@gmail.com" },
+]
+keywords = [
+    "pytivo",
+]
+classifiers = [
+    "Natural Language :: English",
+]
+dependencies = [
+    "IMDbPY>=6.5",
+]
+
+[project.scripts]
+pytivometa = "pytivometa.pytivometa:cli_start"
+
+[project.urls]
+Homepage = "https://github.com/itsayellow/pytivometa"
+
+[tool.hatch.version]
+path = "src/pytivometa/__about__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/pytivometa",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/ src",
+]
 
 [tool.isort]
 profile = "black"
